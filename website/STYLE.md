@@ -36,7 +36,7 @@ These rules apply to every page under `website/src/content/docs/`. Pages that fo
 - Write short, plain sentences in the present tense. One idea per sentence.
 - Give every Rule an example where it matters, such as the SQL that triggers a finding and the SQL
   that fixes it.
-- Use neutral orders-style examples (orders, customers, products, payments). See `AGENTS.md`.
+- Use neutral orders-style examples (orders, customers, products, payments).
 
 ## No history
 
