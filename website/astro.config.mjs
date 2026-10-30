@@ -5,7 +5,7 @@ import { sqlcleanDark, sqlcleanLight } from './src/code-themes.mjs';
 import { redirects, sidebar } from './src/navigation.mjs';
 
 export default defineConfig({
-	site: 'https://sqlclean.com',
+	site: 'https://sqlclean.io',
 	redirects,
 	integrations: [
 		starlight({
@@ -18,10 +18,10 @@ export default defineConfig({
 			},
 			favicon: '/favicon.png',
 			head: [
-				{ tag: 'meta', attrs: { property: 'og:image', content: 'https://sqlclean.com/assets/og-sqlclean-docs.png' } },
+				{ tag: 'meta', attrs: { property: 'og:image', content: 'https://sqlclean.io/assets/og-sqlclean-docs.png' } },
 				{ tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
 				{ tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
-				{ tag: 'meta', attrs: { name: 'twitter:image', content: 'https://sqlclean.com/assets/og-sqlclean-docs.png' } },
+				{ tag: 'meta', attrs: { name: 'twitter:image', content: 'https://sqlclean.io/assets/og-sqlclean-docs.png' } },
 			],
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/sqlstack-io/sqlclean' },
