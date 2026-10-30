@@ -3,6 +3,7 @@
 use globset::Glob;
 use sqlclean::sql_lint::main::validate_dialect::validate_dialect;
 
+use crate::config::constants::MAX_INDENT;
 use crate::config::models::Config;
 
 pub(crate) fn validate(config: &Config) -> Result<(), String> {
@@ -15,6 +16,11 @@ pub(crate) fn validate(config: &Config) -> Result<(), String> {
     validate_globs(&config.exclude)?;
     if config.line_width == 0 {
         return Err("[format] line_width must be positive".to_owned());
+    }
+    if !(1..=MAX_INDENT).contains(&config.indent) {
+        return Err(format!(
+            "[format] indent must be between 1 and {MAX_INDENT}"
+        ));
     }
     let thresholds = config.rules.thresholds;
     if thresholds.max_literal_length == 0 || thresholds.max_ranking_order_by == 0 {

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::config::_helpers::file_schema::ConfigFile;
 use crate::config::_helpers::validation::validate;
 use crate::config::constants::{
-    CONFIG_FILE_NAME, DEFAULT_DIALECT, DEFAULT_INCLUDE, DEFAULT_LINE_WIDTH,
+    CONFIG_FILE_NAME, DEFAULT_DIALECT, DEFAULT_INCLUDE, DEFAULT_INDENT, DEFAULT_LINE_WIDTH,
 };
 use crate::config::models::{Config, RulesConfig};
 
@@ -51,6 +51,7 @@ fn effective_config(root: PathBuf, file: ConfigFile) -> Config {
         exclude: file.exclude,
         dialects: file.dialects,
         line_width: file.format.line_width.unwrap_or(DEFAULT_LINE_WIDTH),
+        indent: file.format.indent.unwrap_or(DEFAULT_INDENT),
         rules: RulesConfig {
             select: file.rules.select,
             ignore: file.rules.ignore,

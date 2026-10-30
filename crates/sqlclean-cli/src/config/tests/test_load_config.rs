@@ -97,6 +97,11 @@ fn given_invalid_values_when_loading_then_each_is_rejected_with_its_reason() -> 
             config_text: "[format]\nline_width = 0\n",
             expected_error: "line_width must be positive",
         },
+        RejectedConfigTestCase {
+            description: "an indent of zero is rejected",
+            config_text: "[format]\nindent = 0\n",
+            expected_error: "indent must be between 1 and 8",
+        },
     ];
     for test_case in &test_cases {
         let directory = tempfile::tempdir().map_err(|error| error.to_string())?;

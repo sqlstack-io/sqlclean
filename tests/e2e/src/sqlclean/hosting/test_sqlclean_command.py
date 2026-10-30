@@ -165,6 +165,34 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
             expected_exit=0,
             expected_files={"models/q.sql": "SELECT 1;\n\nSELECT 2\n"},
         ),
+        RewriteTestCase(
+            description="format indents four spaces by default",
+            config=DUCKDB,
+            files={"models/q.sql": "with a as (select 1 as x) select x from a\n"},
+            arguments=("format",),
+            expected_exit=0,
+            expected_files={
+                "models/q.sql": "WITH a AS (\n    SELECT 1 AS x\n)\n\nSELECT x\nFROM a\n"
+            },
+        ),
+        RewriteTestCase(
+            description="format indents by the configured width",
+            config=DUCKDB + "[format]\nindent = 2\n",
+            files={"models/q.sql": "with a as (select 1 as x) select x from a\n"},
+            arguments=("format",),
+            expected_exit=0,
+            expected_files={
+                "models/q.sql": "WITH a AS (\n  SELECT 1 AS x\n)\n\nSELECT x\nFROM a\n"
+            },
+        ),
+        RewriteTestCase(
+            description="a file of only comments keeps its final newline",
+            config=DUCKDB,
+            files={"models/q.sql": "-- only a comment\n"},
+            arguments=("format", "--check"),
+            expected_exit=0,
+            expected_files={"models/q.sql": "-- only a comment\n"},
+        ),
     ],
     ids=lambda case: case.description,
 )

@@ -15,6 +15,8 @@ pub struct Config {
     pub exclude: Vec<String>,
     pub dialects: Vec<DialectOverride>,
     pub line_width: usize,
+    /// Spaces per indent step in formatted SQL.
+    pub indent: usize,
     pub rules: RulesConfig,
 }
 

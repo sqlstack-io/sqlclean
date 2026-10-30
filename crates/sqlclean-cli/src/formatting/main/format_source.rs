@@ -8,7 +8,12 @@ use sqlclean::sql_lint::models::{FormatRequest, FormatResponse};
 use crate::formatting::constants::{FORMAT_REFUSAL as REFUSAL, STATEMENT_SEPARATOR};
 
 /// `text` in canonical layout ending in one newline, or why the formatter left it unchanged.
-pub fn format_source(text: &str, dialect: &str, line_width: usize) -> Result<String, String> {
+pub fn format_source(
+    text: &str,
+    dialect: &str,
+    line_width: usize,
+    indent: usize,
+) -> Result<String, String> {
     let facts = file_facts(text, dialect)?;
     let characters: Vec<char> = text.chars().collect();
     let mut boundaries: Vec<usize> = facts
@@ -24,23 +29,34 @@ pub fn format_source(text: &str, dialect: &str, line_width: usize) -> Result<Str
     for end in boundaries {
         let chunk: String = characters[start..end].iter().collect();
         start = end;
-        let formatted: String = format_statement(chunk.trim(), dialect, line_width)?;
+        let formatted: String = format_statement(chunk.trim(), dialect, line_width, indent)?;
         if !formatted.trim().is_empty() {
             chunks.push(formatted.trim_end().to_owned());
         }
     }
     if chunks.is_empty() {
-        return Ok(text.trim().to_owned());
+        let comments: &str = text.trim();
+        return Ok(if comments.is_empty() {
+            String::new()
+        } else {
+            format!("{comments}\n")
+        });
     }
     Ok(chunks.join(STATEMENT_SEPARATOR) + "\n")
 }
 
-fn format_statement(sql: &str, dialect: &str, line_width: usize) -> Result<String, String> {
+fn format_statement(
+    sql: &str,
+    dialect: &str,
+    line_width: usize,
+    indent: usize,
+) -> Result<String, String> {
     let request = FormatRequest {
         version: LINT_API_VERSION,
         sql: sql.to_owned(),
         dialect: dialect.to_owned(),
         line_width: Some(line_width),
+        indent: Some(indent),
         ..FormatRequest::default()
     };
     let response: FormatResponse = format_requests(vec![request])

@@ -73,6 +73,20 @@ fn given_lines_over_the_width_when_formatting_then_each_wrap_rule_applies_idempo
             expected_sql: "SELECT\n  COALESCE(\n    __sqb_lint_0__,\n    b\n  ) AS amount\nFROM orders",
         },
         test_types::LineWrapTestCase {
+            description: "a nested expression breaks only the levels that overflow",
+            sql: "select round(100 * ((sum(discount_amount) / nullif(sum(gross_amount), 0))::numeric(38, 6)), 2)::numeric(9, 4) as discount_share from orders",
+            line_width: 100,
+            token_widths: &[],
+            expected_sql: "SELECT\n  ROUND(\n    100 * ((SUM(discount_amount) / NULLIF(SUM(gross_amount), 0))::numeric(38, 6)),\n    2\n  )::numeric(9, 4) AS discount_share\nFROM orders",
+        },
+        test_types::LineWrapTestCase {
+            description: "a call that fits after a leading operator stays on one line",
+            sql: "select (budget_amount_minor / nullif((power(10, minor_unit_exponent)::numeric(38, 0)), 0))::numeric(38, 6) as budget_amount from orders",
+            line_width: 80,
+            token_widths: &[],
+            expected_sql: "SELECT\n  (\n    budget_amount_minor\n    / NULLIF((POWER(10, minor_unit_exponent)::numeric(38, 0)), 0)\n  )::numeric(38, 6) AS budget_amount\nFROM orders",
+        },
+        test_types::LineWrapTestCase {
             description: "lines within the width are unchanged",
             sql: "select coalesce(first_amount, second_amount) as amount from orders",
             line_width: 100,

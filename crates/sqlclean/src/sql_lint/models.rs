@@ -161,6 +161,9 @@ pub struct FormatRequest {
     pub max_function_call_depth: Option<usize>,
     #[serde(default)]
     pub line_width: Option<usize>,
+    /// Spaces per indent step; two when absent.
+    #[serde(default)]
+    pub indent: Option<usize>,
     #[serde(default)]
     pub token_widths: HashMap<String, usize>,
 }

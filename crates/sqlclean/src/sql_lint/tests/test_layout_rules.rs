@@ -9,6 +9,13 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
 -> Result<(), String> {
     let test_cases = [
         test_types::LayoutRuleTestCase {
+            description: "a leading comma after a line comment moves to the end of that line",
+            dialect: "duckdb",
+            sql: "select order_id -- the key\n,amount from orders",
+            line_width: 100,
+            expected_sql: "SELECT\n  order_id, -- the key\n  amount\nFROM orders",
+        },
+        test_types::LayoutRuleTestCase {
             description: "a long Snowflake FROM VALUES puts each unsplit row on its own line",
             dialect: "snowflake",
             sql: "SELECT * FROM VALUES (1, '2024-01-15', 'PAID', 'north warehouse', 'priority shipping'), (2, '2024-01-16', 'OPEN', 'south warehouse', 'standard shipping')",

@@ -7,7 +7,8 @@ use polyglot_sql::tokens::TokenType;
 
 use crate::sql_lint::constants::OPEN_PARENTHESIS;
 
-const CONTINUATION_INDENT: usize = 2;
+/// The indent step of the parse-tree layout every printed statement starts from.
+const PARSED_INDENT: usize = 2;
 const COMMA: &str = ",";
 const SINGLE_SPACE: &str = " ";
 const BETWEEN_KEYWORD: &str = "BETWEEN";
@@ -73,6 +74,8 @@ pub(crate) struct PrintedSql<'a> {
     /// Gaps that line wrapping must keep: inside VALUES rows and type parameter lists.
     locked: Vec<bool>,
     token_widths: &'a HashMap<String, usize>,
+    /// Spaces per indent step.
+    indent: usize,
 }
 
 /// One printed line; end columns are absent when comments or multi-line tokens pin it.
@@ -119,6 +122,7 @@ impl<'a> PrintedSql<'a> {
             partners,
             locked,
             token_widths,
+            indent: PARSED_INDENT,
         }))
     }
 
@@ -252,6 +256,157 @@ fn newline(indentation: usize) -> String {
 }
 
 impl PrintedSql<'_> {
+    /// Re-indent every line from the parse-tree indent step to `indent` spaces per step.
+    pub(crate) fn set_indent(&mut self, indent: usize) {
+        if indent == self.indent {
+            return;
+        }
+        let step = self.indent;
+        let scale = |spaces: usize| spaces / step * indent + spaces % step;
+        for gap in &mut self.gaps {
+            if !gap.contains('\n') {
+                continue;
+            }
+            let comment_start = if gap.contains("/*") {
+                gap.rfind('\n').unwrap_or(0)
+            } else {
+                0
+            };
+            let (kept, scaled) = gap.split_at(comment_start);
+            let mut rebuilt = kept.to_string();
+            for (position, segment) in scaled.split('\n').enumerate() {
+                if position > 0 {
+                    rebuilt.push('\n');
+                    let spaces = segment.len() - segment.trim_start_matches(' ').len();
+                    rebuilt.push_str(&" ".repeat(scale(spaces)));
+                    rebuilt.push_str(&segment[spaces..]);
+                } else {
+                    rebuilt.push_str(segment);
+                }
+            }
+            *gap = rebuilt;
+        }
+        self.indent = indent;
+    }
+
+    /// Rejoin each multi-line expression group, innermost first, whose joined line fits.
+    pub(crate) fn join_fitting_groups(&mut self, line_width: usize) {
+        let mut openers: Vec<usize> = (0..self.len())
+            .filter(|&index| self.tokens[index] == OPEN_PARENTHESIS)
+            .collect();
+        openers.sort_by_key(|&index| std::cmp::Reverse(self.depths[index]));
+        for opener in openers {
+            let Some(closer) = self.partners[opener] else {
+                continue;
+            };
+            if !self.spans_lines(opener, closer) || !self.joinable_group(opener, closer) {
+                continue;
+            }
+            let (first, _) = self.line_of(opener);
+            let (_, last) = self.line_of(closer);
+            let indentation = self.indentation(first);
+            let fits = |start: usize| {
+                self.joined_width(start, last, indentation)
+                    .is_some_and(|width| width <= line_width)
+            };
+            let start = if fits(first) {
+                first
+            } else if let Some(operator) = self.leading_operator_before(first, opener)
+                && fits(operator)
+            {
+                operator
+            } else {
+                continue;
+            };
+            for index in opener + 1..=closer {
+                if self.gaps[index].contains('\n') {
+                    self.gaps[index] = self.joined_gap(index).to_string();
+                }
+            }
+            if start != first {
+                self.gaps[start] = newline(indentation);
+            }
+        }
+    }
+
+    /// The last binary operator on the line from `first` that applies to the group at `opener`.
+    fn leading_operator_before(&self, first: usize, opener: usize) -> Option<usize> {
+        (first + 1..opener).rev().find(|&index| {
+            self.depths[index] == self.depths[opener]
+                && LEADING_OPERATORS.contains(&self.upper(index).as_str())
+                && self.gaps[index] == SINGLE_SPACE
+                && self.ends_operand(index - 1)
+        })
+    }
+
+    /// Move a comma that follows a line comment to the end of the commented line.
+    pub(crate) fn attach_commas_before_comments(&mut self) {
+        for index in 1..self.len().saturating_sub(1) {
+            if self.tokens[index] != COMMA {
+                continue;
+            }
+            let Some((comment, rest)) = self.gaps[index].split_once('\n') else {
+                continue;
+            };
+            if !comment.trim_start().starts_with("--") || !rest.trim().is_empty() {
+                continue;
+            }
+            let (comment, rest) = (comment.to_string(), rest.to_string());
+            let next = self.gaps[index + 1].trim_start_matches(' ').to_string();
+            self.gaps[index] = String::new();
+            self.gaps[index + 1] = if next.starts_with('\n') {
+                comment + &next
+            } else {
+                format!("{comment}\n{rest}{next}")
+            };
+        }
+    }
+
+    fn joinable_group(&self, opener: usize, closer: usize) -> bool {
+        (opener + 1..closer).all(|index| {
+            !(self.kinds[index] == TokenType::Select
+                || self.is(index, VALUES_KEYWORD)
+                || (self.is(index, CASE_KEYWORD)
+                    && self
+                        .case_end(index)
+                        .is_none_or(|end| self.spans_lines(index, end))))
+        })
+    }
+
+    /// The width of tokens `first..=last` on one line at `indentation`; `None` when comments pin.
+    fn joined_width(&self, first: usize, last: usize, indentation: usize) -> Option<usize> {
+        let trailing = self.gaps[last + 1].split('\n').next().unwrap_or_default();
+        let pinned = !trailing.trim().is_empty()
+            || (first + 1..=last).any(|index| !self.gaps[index].trim().is_empty())
+            || (first..=last).any(|index| self.tokens[index].contains('\n'));
+        if pinned {
+            return None;
+        }
+        let mut width = indentation;
+        for index in first..=last {
+            if index > first {
+                width += if self.gaps[index].contains('\n') {
+                    self.joined_gap(index).len()
+                } else {
+                    self.gaps[index].chars().count()
+                };
+            }
+            width += self.width(index);
+        }
+        Some(width)
+    }
+
+    /// The gap before `index` once its line break is removed.
+    fn joined_gap(&self, index: usize) -> &'static str {
+        if self.tokens[index - 1] == OPEN_PARENTHESIS
+            || matches!(self.tokens[index].as_str(), ")" | ",")
+        {
+            ""
+        } else {
+            SINGLE_SPACE
+        }
+    }
+
     /// Apply the layout rules that only move existing line breaks before wrapping.
     pub(crate) fn arrange_clauses(&mut self, line_width: usize) {
         for index in 0..self.len() {
@@ -368,11 +523,11 @@ impl PrintedSql<'_> {
             && self.tokens[values - 1] == OPEN_PARENTHESIS
             && let Some(closer) = self.partners[values - 1]
         {
-            self.set_break(values, &newline(indentation + CONTINUATION_INDENT));
+            self.set_break(values, &newline(indentation + self.indent));
             self.set_break(closer, &newline(indentation));
-            indentation += CONTINUATION_INDENT;
+            indentation += self.indent;
         }
-        let row_line = newline(indentation + CONTINUATION_INDENT);
+        let row_line = newline(indentation + self.indent);
         for (opener, _) in rows {
             self.set_break(opener, &row_line);
         }
@@ -684,7 +839,7 @@ impl PrintedSql<'_> {
         let values_row = self.tokens[line.first] == OPEN_PARENTHESIS && self.locked[line.first + 1];
         !values_row
             && (self.break_before(line, &CHAIN_KEYWORDS, 0)
-                || self.break_before(line, &ARITHMETIC_OPERATORS, CONTINUATION_INDENT)
+                || self.break_before(line, &ARITHMETIC_OPERATORS, self.indent)
                 || self.break_values_rows(line)
                 || self.explode_group(line)
                 || self.break_after_commas(line))
@@ -708,7 +863,7 @@ impl PrintedSql<'_> {
         {
             return false;
         }
-        let row_line = newline(line.indentation + CONTINUATION_INDENT);
+        let row_line = newline(line.indentation + self.indent);
         for (opener, _) in rows {
             self.gaps[opener] = row_line.clone();
         }
@@ -751,9 +906,9 @@ impl PrintedSql<'_> {
             return false;
         };
         if closer > line.last {
-            self.indent_lines(opener + 1, closer - 1, CONTINUATION_INDENT);
+            self.indent_lines(opener + 1, closer - 1, self.indent);
         }
-        let inner = newline(line.indentation + CONTINUATION_INDENT);
+        let inner = newline(line.indentation + self.indent);
         if self.is(opener, CASE_KEYWORD) {
             self.explode_case(opener, closer, line.indentation);
             return true;
@@ -823,7 +978,7 @@ impl PrintedSql<'_> {
 
     /// Put each WHEN, THEN and ELSE of a one-line CASE on its own line and END under CASE.
     fn explode_case(&mut self, case: usize, end: usize, indentation: usize) {
-        let inner = newline(indentation + CONTINUATION_INDENT);
+        let inner = newline(indentation + self.indent);
         let depth = self.depths[case];
         let mut nested = 0_usize;
         for index in case + 1..end {
@@ -900,7 +1055,7 @@ impl PrintedSql<'_> {
         else {
             return false;
         };
-        let indentation = newline(line.indentation + CONTINUATION_INDENT);
+        let indentation = newline(line.indentation + self.indent);
         let mut changed = false;
         for index in line.first..line.last {
             if self.depths[index] == depth && self.tokens[index] == COMMA && !self.locked[index + 1]

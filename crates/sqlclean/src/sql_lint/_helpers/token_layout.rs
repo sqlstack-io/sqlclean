@@ -343,7 +343,12 @@ pub(crate) fn verify_printed_tokens(
             return Err(TOKEN_PRESERVATION_FAILURE.to_string());
         }
     }
-    if comment_positions(before, before_tokens) != comment_positions(after, after_tokens) {
+    let attached = comments_stay_attached(
+        &comment_positions(before, before_tokens),
+        &comment_positions(after, after_tokens),
+        after_tokens,
+    );
+    if !attached {
         return Err(COMMENT_ATTACHMENT_FAILURE.to_string());
     }
     if !string_breaks(before, before_tokens).is_subset(&string_breaks(after, after_tokens)) {
@@ -364,6 +369,26 @@ impl KeywordRecase {
 
 pub(crate) fn tokenize(sql: &str, dialect: &Dialect) -> Result<Vec<Token>, String> {
     dialect.tokenize(sql).map_err(|error| error.to_string())
+}
+
+/// Whether every comment keeps its place, allowing a line comment to move just past a comma.
+fn comments_stay_attached(
+    before: &[(String, usize)],
+    after: &[(String, usize)],
+    after_tokens: &[Token],
+) -> bool {
+    before.len() == after.len()
+        && before.iter().zip(after).all(
+            |((before_text, before_position), (after_text, after_position))| {
+                before_text == after_text
+                    && (before_position == after_position
+                        || (*after_position == before_position + 1
+                            && before_text.starts_with("--")
+                            && after_tokens
+                                .get(*before_position)
+                                .is_some_and(|token| token.token_type == TokenType::Comma)))
+            },
+        )
 }
 
 fn comment_positions(sql: &str, tokens: &[Token]) -> Vec<(String, usize)> {

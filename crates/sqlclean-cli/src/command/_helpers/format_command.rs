@@ -17,7 +17,7 @@ pub(crate) fn run(config: &Config, arguments: &FormatArgs) -> Result<u8, String>
     let (mut changed, mut refused): (usize, usize) = (0, 0);
     let results: Vec<Result<String, String>> = files
         .par_iter()
-        .map(|file| format_source(&file.text, &file.dialect, config.line_width))
+        .map(|file| format_source(&file.text, &file.dialect, config.line_width, config.indent))
         .collect();
     for (file, result) in files.iter().zip(results) {
         let formatted: String = match result {

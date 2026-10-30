@@ -25,6 +25,7 @@ pub(crate) struct ConfigFile {
 #[serde(deny_unknown_fields)]
 pub(crate) struct FormatTable {
     pub(crate) line_width: Option<usize>,
+    pub(crate) indent: Option<usize>,
 }
 
 #[derive(Debug, Default, Deserialize)]

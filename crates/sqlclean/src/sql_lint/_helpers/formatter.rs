@@ -23,6 +23,8 @@ thread_local! {
     pub(crate) static RELAYOUTS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
+/// Spaces per indent step when a request does not choose.
+const DEFAULT_INDENT: usize = 2;
 const NOT_IDEMPOTENT_FAILURE: &str = "native formatter output is not idempotent";
 const UNSUPPORTED_SQL_FAILURE: &str =
     "native formatter could not safely restore literal or cast spelling";
@@ -89,6 +91,7 @@ fn try_format_sql(request: FormatRequest) -> Result<FormatResponse, String> {
     let layout = Layout {
         dialect: &dialect,
         wrap: wrap.as_ref(),
+        indent: request.indent.unwrap_or(DEFAULT_INDENT),
     };
     let (formatted, formatted_tokens, oracle) = format_layout(&original, &layout, &parse_options)?;
     let changed = formatted != original;
@@ -171,10 +174,11 @@ fn relayout(
     Ok(layout.print(&authored, oracle)?.0)
 }
 
-/// The dialect and optional line wrapping every printed layout uses.
+/// The dialect, indent and optional line wrapping every printed layout uses.
 struct Layout<'a> {
     dialect: &'a Dialect,
     wrap: Option<&'a WrapOptions<'a>>,
+    indent: usize,
 }
 
 impl Layout<'_> {
@@ -189,6 +193,11 @@ impl Layout<'_> {
         let Some(mut sql) = PrintedSql::parse(&printed, self.dialect, token_widths)? else {
             return Ok((printed, recases, texts));
         };
+        sql.set_indent(self.indent);
+        sql.attach_commas_before_comments();
+        if let Some(wrap) = self.wrap {
+            sql.join_fitting_groups(wrap.line_width);
+        }
         sql.arrange_clauses(self.wrap.map_or(usize::MAX, |wrap| wrap.line_width));
         if let Some(wrap) = self.wrap {
             wrap_lines(&mut sql, wrap.line_width);
