@@ -18,12 +18,13 @@
 #   SQLFLUFF  sqlfluff executable (default: sqlfluff)
 #   PROCESSES SQLFluff worker processes (default: nproc). SQLClean and sqruff pick their own.
 #
-# Default variants: sqlclean sqlclean_all sqlclean_format sqruff sqlfluff.
+# Default variants: sqlclean sqlclean_all sqlclean_custom sqlclean_format sqruff sqlfluff.
 set -u
 CORPUS=$(realpath "$1")
 OUT=$(realpath -m "$2")
 ROUNDS=$3
 shift 3
+HERE=$(cd "$(dirname "$0")" && pwd)
 SQLCLEAN=${SQLCLEAN:-sqlclean}
 SQRUFF=${SQRUFF:-sqruff}
 SQLFLUFF=${SQLFLUFF:-sqlfluff}
@@ -34,16 +35,18 @@ trap 'rm -rf "$WORK"' EXIT
 declare -A CMD
 CMD[sqlclean]="$SQLCLEAN check --output-format json"
 CMD[sqlclean_all]="$SQLCLEAN check --select SQC --output-format json"
+# The default Rules plus the three Python Rules in rules/, copied into the work directory.
+CMD[sqlclean_custom]="$SQLCLEAN check --config custom.toml --output-format json"
 # sqruff's and SQLFluff's default rules include layout; SQLClean checks layout with its formatter.
 CMD[sqlclean_format]="$SQLCLEAN format --check"
 CMD[sqruff]="$SQRUFF lint -f json ."
 CMD[sqlfluff]="$SQLFLUFF lint -f json --processes $PROCESSES --disable-progress-bar ."
 # SQLClean reuses results for unchanged files; the others have no result cache.
-WARM_VARIANTS=" sqlclean sqlclean_all "
+WARM_VARIANTS=" sqlclean sqlclean_all sqlclean_custom "
 
 VARIANTS=("$@")
 if [ ${#VARIANTS[@]} -eq 0 ]; then
-  VARIANTS=(sqlclean sqlclean_all sqlclean_format sqruff sqlfluff)
+  VARIANTS=(sqlclean sqlclean_all sqlclean_custom sqlclean_format sqruff sqlfluff)
 fi
 for v in "${VARIANTS[@]}"; do
   if [ -z "${CMD[$v]+set}" ]; then
@@ -83,6 +86,10 @@ for round in $(seq 1 "$ROUNDS"); do
     if [ $((round % 2)) -eq 0 ]; then v=${VARIANTS[$((n - 1 - i))]}; else v=${VARIANTS[$i]}; fi
     rm -rf "${WORK:?}/$v"
     cp -a "$CORPUS" "$WORK/$v"
+    if [ "$v" = sqlclean_custom ]; then
+      cp -r "$HERE/rules" "$WORK/$v/bench_rules"
+      printf 'dialect = "snowflake"\n[rules]\ncustom = ["bench_rules"]\n' >"$WORK/$v/custom.toml"
+    fi
     sync
     measure "$v" cold "$round"
     [[ $WARM_VARIANTS == *" $v "* ]] && measure "$v" warm "$round"

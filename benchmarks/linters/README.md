@@ -35,6 +35,7 @@ and peak memory with `/usr/bin/time`, and every lint command writes JSON finding
 |---|---|
 | `sqlclean` | `sqlclean check --output-format json` (13 default Rules) |
 | `sqlclean_all` | `sqlclean check --select SQC --output-format json` (all 45 Rules) |
+| `sqlclean_custom` | `sqlclean check --config custom.toml --output-format json` (default Rules and the three Python Rules in `rules/`) |
 | `sqlclean_format` | `sqlclean format --check` |
 | `sqruff` | `sqruff lint -f json .` |
 | `sqlfluff` | `sqlfluff lint -f json --processes $(nproc) --disable-progress-bar .` |

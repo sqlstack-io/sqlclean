@@ -14,6 +14,7 @@ SCENARIOS: tuple[str, ...] = ("cold", "warm")
 VARIANT_ORDER: tuple[str, ...] = (
     "sqlclean",
     "sqlclean_all",
+    "sqlclean_custom",
     "sqlclean_format",
     "sqruff",
     "sqlfluff",
@@ -21,6 +22,7 @@ VARIANT_ORDER: tuple[str, ...] = (
 LABELS: dict[str, str] = {
     "sqlclean": "SQLClean, default Rules",
     "sqlclean_all": "SQLClean, every built-in Rule",
+    "sqlclean_custom": "SQLClean, default Rules and three Python Rules",
     "sqlclean_format": "SQLClean formatter, `format --check`",
     "sqruff": "sqruff, default rules",
     "sqlfluff": "SQLFluff, default rules",
