@@ -339,3 +339,23 @@ def test_given_unchanged_files_when_checking_again_then_custom_rules_come_from_t
     assert (first.returncode, cached.returncode, changed.returncode) == test_case.expected_exits
     assert test_case.expected_cached_code in cached.stdout
     assert test_case.expected_error in changed.stderr
+
+
+def test_given_many_files_when_checking_custom_rules_then_every_host_share_reports(
+    tmp_path: Path,
+) -> None:
+    files: dict[str, str] = {
+        f"models/m{index:04}.sql": f"SELECT a FROM {'tmp_x' if index % 3 == 0 else 'x'}\n"
+        for index in range(1200)
+    }
+    write_project(tmp_path, config=CUSTOM, files={"sql_rules/naming.py": SAMPLE_RULES, **files})
+
+    completed: subprocess.CompletedProcess[str] = run(
+        tmp_path, "check", "--output-format", "json", "--select", "XSQCNAME001", environment={}
+    )
+    report: dict[str, list[dict[str, object]]] = json.loads(completed.stdout)
+
+    assert completed.returncode == 1, completed.stderr
+    assert [finding["path"] for finding in report["findings"]] == [
+        f"models/m{index:04}.sql" for index in range(0, 1200, 3)
+    ]

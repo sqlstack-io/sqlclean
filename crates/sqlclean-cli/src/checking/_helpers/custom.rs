@@ -2,6 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sha2::{Digest, Sha256};
 use sqlclean::sql_facts::main::file_facts::file_facts;
 
@@ -12,10 +13,12 @@ use crate::config::models::Config;
 use crate::discovery::models::SourceFile;
 use crate::hosting::constants::EVALUATE_MODE;
 use crate::hosting::main::run_host::run_host;
-use crate::hosting::models::{HostFile, HostFinding, HostRequest};
+use crate::hosting::models::{HostFile, HostFinding, HostRequest, HostResponse, HostResult};
 
 const FILE_RESULT_KEY: &str = "custom-file";
 const REPOSITORY_RESULT_KEY: &str = "custom-repository";
+/// The fewest files worth starting another host process for.
+const MIN_FILES_PER_HOST: usize = 250;
 
 /// What custom evaluation needs besides the files.
 pub(crate) struct CustomEvaluation<'a> {
@@ -37,7 +40,7 @@ pub(crate) fn custom_findings(
         .partition(|rule| rule.subject != RuleSubject::Repository);
     let mut findings: Vec<Finding> = Vec::new();
     let mut misses: Vec<(String, Option<String>, String)> = Vec::new();
-    let mut host_files: Vec<HostFile> = Vec::new();
+    let mut pending: Vec<(&SourceFile, Vec<String>)> = Vec::new();
     for file in files {
         let mut missing: Vec<String> = Vec::new();
         for rule in &file_rules {
@@ -53,7 +56,7 @@ pub(crate) fn custom_findings(
             }
         }
         if !missing.is_empty() {
-            host_files.push(host_file(file, missing)?);
+            pending.push((file, missing));
         }
     }
     let repository_digest: String = repository_digest(files);
@@ -77,19 +80,17 @@ pub(crate) fn custom_findings(
     if misses.is_empty() {
         return Ok(findings);
     }
+    let mut host_files: Vec<HostFile> = pending
+        .into_par_iter()
+        .map(|(file, missing)| host_file(file, missing))
+        .collect::<Result<_, _>>()?;
     if !missing_repository.is_empty() {
         host_files = with_every_file(files, host_files)?;
     }
-    let response = run_host(&HostRequest {
-        mode: EVALUATE_MODE.to_owned(),
-        root: evaluation.config.root.to_string_lossy().into_owned(),
-        custom: evaluation.config.rules.custom.clone(),
-        options,
-        files: host_files,
-        repository_rules: missing_repository,
-    })?;
+    let results: Vec<HostResult> =
+        evaluate_on_hosts(evaluation, options, host_files, missing_repository)?;
     let mut by_subject: BTreeMap<(Option<String>, String), Vec<HostFinding>> = BTreeMap::new();
-    for result in response.results {
+    for result in results {
         by_subject.insert((result.path, result.code), result.findings);
     }
     for (key, path, code) in misses {
@@ -102,6 +103,46 @@ pub(crate) fn custom_findings(
         }
     }
     Ok(findings)
+}
+
+/// Evaluate on one host per share of the files; repository Rules need every file in one host.
+fn evaluate_on_hosts(
+    evaluation: &CustomEvaluation<'_>,
+    options: BTreeMap<String, serde_json::Value>,
+    host_files: Vec<HostFile>,
+    repository_rules: Vec<String>,
+) -> Result<Vec<HostResult>, String> {
+    let request = |files: Vec<HostFile>, repository_rules: Vec<String>| HostRequest {
+        mode: EVALUATE_MODE.to_owned(),
+        root: evaluation.config.root.to_string_lossy().into_owned(),
+        custom: evaluation.config.rules.custom.clone(),
+        options: options.clone(),
+        files,
+        repository_rules,
+    };
+    let hosts: usize =
+        (host_files.len() / MIN_FILES_PER_HOST).clamp(1, rayon::current_num_threads());
+    if hosts == 1 || !repository_rules.is_empty() {
+        return Ok(run_host(&request(host_files, repository_rules))?.results);
+    }
+    let share: usize = host_files.len().div_ceil(hosts);
+    let mut shares: Vec<Vec<HostFile>> = Vec::with_capacity(hosts);
+    let mut rest: Vec<HostFile> = host_files;
+    while rest.len() > share {
+        let tail: Vec<HostFile> = rest.split_off(share);
+        shares.push(rest);
+        rest = tail;
+    }
+    shares.push(rest);
+    let responses: Vec<Result<HostResponse, String>> = shares
+        .into_par_iter()
+        .map(|files| run_host(&request(files, Vec::new())))
+        .collect();
+    let mut results: Vec<HostResult> = Vec::new();
+    for response in responses {
+        results.extend(response?.results);
+    }
+    Ok(results)
 }
 
 fn rule_options(
