@@ -1,0 +1,59 @@
+[workspace]
+members = [
+    "crates/sqlclean",
+    "crates/sqlclean-cli",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.1" # x-release-please-version
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+repository = "https://github.com/sqlstack-io/sqlclean"
+# SQLBuild builds these crates as dependencies, so they must not require a newer toolchain than it.
+rust-version = "1.88"
+
+[workspace.dependencies]
+clap = { version = "4", features = ["derive"] }
+globset = "0.4"
+ignore = "0.4"
+tempfile = "3"
+toml = "0.9"
+# The same Polyglot source and revision as SQLBuild, so a build that contains both compiles it once.
+polyglot-sql = { git = "https://github.com/sqlstack-io/polyglot.git", rev = "8767d688c5b504ad609645e27ab77a260d91c5a1", default-features = false, features = [
+    "ast-tools",
+    "builder",
+    "all-dialects",
+    "semantic",
+    "stacker",
+] }
+polyglot-sql-function-catalogs = { git = "https://github.com/sqlstack-io/polyglot.git", rev = "8767d688c5b504ad609645e27ab77a260d91c5a1", default-features = false, features = [
+    "dialect-duckdb",
+] }
+rayon = "1"
+regex = "1"
+rustc-hash = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+similar = "2"
+sqlclean = { path = "crates/sqlclean" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unreachable_pub = "deny"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+await_holding_lock = "deny"
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 1
+debug = false
+
+[profile.release]
+strip = "symbols"

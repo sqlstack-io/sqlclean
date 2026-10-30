@@ -1,0 +1,49 @@
+[targets.python]
+analyzer = "python"
+roots = ["src/sqlclean"]
+tests = ["tests"]
+tooling = []
+select = ["FF"]
+
+[[targets.python.rule_exceptions]]
+rule = "FFL105"
+path = "src/sqlclean/hosting/main/serve.py"
+reason = "The native sqlclean command starts the custom Rule host with `python -c` and imports this entry by path."
+
+[targets.rust]
+analyzer = "rust"
+roots = ["crates"]
+tests = []
+tooling = []
+rule_packs = ["rust"]
+select = ["FPRS"]
+
+[[targets.rust.rule_exceptions]]
+rule = "FPRSL105"
+path = "crates/sqlclean/src/sql_lint/main/engine.rs"
+reason = "Integration surface: SQLBuild's Python bindings lint through `lint_json`; the sqlclean CLI uses `lint` instead."
+
+[[targets.rust.rule_exceptions]]
+rule = "FPRSL105"
+path = "crates/sqlclean/src/sql_lint/main/batch_engine.rs"
+reason = "Integration surface: SQLBuild's lint_text domain lints many SQL texts in one call through `lint_batch_json`."
+
+[[targets.rust.rule_exceptions]]
+rule = "FPRSL105"
+path = "crates/sqlclean/src/sql_lint/main/formatter.rs"
+reason = "Integration surface: SQLBuild's Python bindings format through `format_json`."
+
+[[targets.rust.rule_exceptions]]
+rule = "FPRSL105"
+path = "crates/sqlclean/src/sql_quality/main/declared_relation_keys.rs"
+reason = "Integration surface: SQLBuild's compiled views derive the relation keys its models declare through this entry."
+
+[[targets.rust.rule_exceptions]]
+rule = "FPRSL105"
+path = "crates/sqlclean/src/sql_tokens/main/builtin_function_names.rs"
+reason = "This entry exists for the sql_lint tests, which the analyzer does not count as importers."
+
+[[targets.rust.rule_exceptions]]
+rule = "FPRSL105"
+path = "crates/sqlclean/src/sql_tokens/main/query_fingerprint.rs"
+reason = "This test-support entry checks that fixes preserve meaning in the sql_lint tests, which the analyzer does not count as importers."

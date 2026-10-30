@@ -1,0 +1,83 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sqlclean"
+version = "0.0.1"
+description = "Fast, opinionated SQL linting and deterministic formatting, with custom Rules in Python"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = ["sql", "lint", "linter", "formatter", "duckdb", "snowflake"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Rust",
+  "Programming Language :: SQL",
+  "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+  "sqlclean-cli==0.0.1", # x-release-please-version
+]
+
+[project.optional-dependencies]
+ast = [
+  "polyglot-sql-chio==0.13.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/sqlstack-io/sqlclean"
+Issues = "https://github.com/sqlstack-io/sqlclean/issues"
+Repository = "https://github.com/sqlstack-io/sqlclean"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sqlclean"]
+
+[dependency-groups]
+dev = [
+  "commitizen>=4.9.1",
+  "fensu>=0.28.0",
+  "pre-commit>=4.3.0",
+  "pytest>=8.4.2",
+  "pytest-xdist>=3.8.0",
+  "ruff>=0.12.0",
+  "ty>=0.0.1a19",
+]
+
+[tool.uv]
+cache-keys = [
+  { file = "pyproject.toml" },
+]
+
+[tool.uv.sources]
+sqlclean-cli = { path = "packages/sqlclean-cli" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "PLR0913", "PLR0915", "UP"]
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-statements = 70
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/test_*.py" = ["E501"]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "pep621"
+version_scheme = "semver2"
+update_changelog_on_bump = false
