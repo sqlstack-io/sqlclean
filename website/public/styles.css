@@ -893,6 +893,83 @@ footer a {
 	animation-name: hv-l2;
 }
 
+/* Benchmark race: real elapsed time; the script drives it, the markup shows final results. */
+.race {
+	display: grid;
+	align-content: center;
+	gap: 14px;
+	box-sizing: border-box;
+	width: 520px;
+	max-width: 100%;
+	font-size: 13px;
+	white-space: normal;
+}
+
+
+.race-row {
+	display: grid;
+	grid-template-columns: 9.5em minmax(0, 1fr) 6.5em;
+	align-items: center;
+	gap: 12px;
+}
+
+.race-row .cmd {
+	white-space: nowrap;
+}
+
+.race-bar {
+	height: 10px;
+	border-radius: var(--radius);
+	background: var(--inner-line);
+	overflow: hidden;
+}
+
+.race-fill {
+	display: block;
+	height: 100%;
+	background: var(--faint);
+	transform-origin: left;
+}
+
+.race .is-sqlclean .race-fill {
+	background: var(--primary);
+}
+
+.race-time {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.race .is-sqlclean .race-time {
+	color: var(--primary);
+	font-weight: 500;
+}
+
+.race-foot {
+	font-variant-numeric: tabular-nums;
+}
+
+.race-foot a {
+	color: inherit;
+}
+
+.race:not(.is-live) .race-clock {
+	display: none;
+}
+
+@media (max-width: 620px) {
+	.race {
+		width: 100%;
+		min-height: 0;
+		font-size: 11px;
+	}
+
+	.race-row {
+		grid-template-columns: 10em minmax(0, 1fr) 5em;
+		gap: 8px;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.hero-visual .hv-a,
 	.hero-visual .hv-b,

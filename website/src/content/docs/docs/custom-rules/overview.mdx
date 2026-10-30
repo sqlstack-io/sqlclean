@@ -139,6 +139,9 @@ A Repository Rule passes the statement or file each finding belongs to as `subje
 
 - Custom Rules run after the built-in Rules, on files that parse. A file with a
   [parse error](/docs/rules/overview/#parse-errors-sqc999) gets no custom Rule findings.
+- From 500 files, Statement and File Rules split the files across one Python process per CPU. A
+  Rule can't share state between files, so anything that spans files belongs in a Repository Rule,
+  which always runs in one process with every file.
 - The working directory is the configuration root, and `PYTHONHASHSEED` is `0`, so iterating a set
   of strings gives the same order on every run.
 - Results are cached with the built-in results. Editing any Python file under `[rules] custom`

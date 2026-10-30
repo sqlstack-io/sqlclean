@@ -12,12 +12,25 @@ SQLFluff ran once.
 |---|---:|---:|---:|---:|
 | `sqlclean check` (13 default Rules) | **0.81 s** | 2.5 s | 48 MiB | 1× |
 | `sqlclean check --select SQC` (all 45 Rules) | **1.33 s** | 3.8 s | 140 MiB | 1.6× |
+| `sqlclean check` with three [custom Rules](#custom-rules) | **2.27 s** | 6.9 s | 182 MiB | 2.8× |
 | `sqlclean format --check` | **3.03 s** | 11.5 s | 49 MiB | 3.7× |
 | `sqruff lint` | 41.0 s | 114 s | 235 MiB | 51× |
 | `sqlfluff lint --processes 4` | 919 s | 2,796 s | 992 MiB | 1,135× |
 
 Run again with nothing changed, `sqlclean check` reads its result cache and finishes in 0.23 s.
 sqruff and SQLFluff have no result cache, so a second run costs the same as the first.
+
+## Custom Rules
+
+The custom variant adds three Python Rules from `benchmarks/linters/rules/` to the default Rules:
+marts must not read raw sources, staging models read only sources and seeds, and no model calls a
+nondeterministic function such as `CURRENT_TIMESTAMP`. They report 3,355 findings on top of the
+default Rules' 3,872.
+
+SQLClean builds each statement's facts in Rust and evaluates statement and file Rules in one Python
+process per CPU, so custom Rules use every core. A Rule over the whole repository runs in one
+process, because it reads every file. Run again with nothing changed, the custom variant reads its
+result cache and finishes in 0.46 s.
 
 ## Comparing like with like
 

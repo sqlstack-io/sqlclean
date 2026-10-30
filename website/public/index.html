@@ -56,11 +56,11 @@
 				<div class="hero-text">
 					<p class="eyebrow">Rust-powered · Free and open source · Apache-2.0</p>
 					<h1>Clean SQL, every time</h1>
-					<p class="tagline">A fast SQL linter and formatter.</p>
+					<p class="tagline">A SQL linter and formatter, 50× faster than sqruff.</p>
 					<p class="lede">
 						SQLClean flags SQL that runs but is easy to get wrong, like <code>= NULL</code>, applies safe fixes, and
-						formats every file one way. It checks 10,000 files in under a second. Your team's own Rules are a few
-						lines of Python.
+						formats every file one way. Your team's own Rules are plain Python functions, and 10,000 files still
+						check in about two seconds.
 					</p>
 					<div class="actions">
 						<div class="install">
@@ -72,21 +72,28 @@
 					</div>
 				</div>
 				<div
-					class="terminal hero-visual"
+					class="terminal hero-visual race"
 					role="img"
-					aria-label="sqlclean fix turns a two-line query with COUNT(1) and a bare JOIN into a formatted query with COUNT(*) and INNER JOIN, then reports that all checks passed."
-				><span class="hv-stack"><span class="hv-a"><span class="cm">-- models/orders.sql</span>
-<span class="kw">select</span> o.order_id, <span class="fn">count</span>(<span class="num">1</span>) <span class="kw">as</span> items <span class="kw">from</span> orders o
-<span class="kw">join</span> order_items i <span class="kw">on</span> i.order_id = o.order_id <span class="kw">group by</span> o.order_id</span><span class="hv-b"><span class="cm">-- models/orders.sql</span>
-<span class="kw">SELECT</span>
-    o.order_id,
-    <span class="fn">COUNT</span>(*) <span class="kw">AS</span> items
-<span class="kw">FROM</span> orders o
-<span class="kw">INNER JOIN</span> order_items i
-    <span class="kw">ON</span> i.order_id = o.order_id
-<span class="kw">GROUP BY</span>
-    o.order_id</span></span>
-<span class="hv-l hv-l0"><span class="cmd">sqlclean fix</span></span><span class="hv-l hv-l1">Fixed 2 problem(s) and changed 1 file(s).</span><span class="hv-l hv-l2"><span class="ok strong">All checks passed.</span></span></div>
+					aria-label="Linting the same 10,282 SQL files on 4 CPUs: sqlclean check finishes in 0.81 seconds, sqruff takes 41 seconds and SQLFluff 919 seconds."
+					data-race
+				>
+					<span class="dim race-head">-- 10,282 Snowflake files · 4 CPUs · real time</span>
+					<span class="race-row is-sqlclean" data-seconds="0.81"
+						><span class="cmd">sqlclean check</span><span class="race-bar"><span class="race-fill"></span></span
+						><span class="race-time">0.81 s</span></span
+					>
+					<span class="race-row" data-seconds="41"
+						><span class="cmd">sqruff lint</span><span class="race-bar"><span class="race-fill" style="transform: scaleX(0.0198)"></span></span
+						><span class="race-time">41 s</span></span
+					>
+					<span class="race-row" data-seconds="919"
+						><span class="cmd">sqlfluff lint</span><span class="race-bar"><span class="race-fill" style="transform: scaleX(0.0009)"></span></span
+						><span class="race-time">15 min</span></span
+					>
+					<span class="race-foot dim"
+						><span class="race-clock">elapsed 0.0 s · </span><a href="/docs/benchmarks/">See the benchmark</a></span
+					>
+				</div>
 			</div>
 
 			<section>
@@ -235,8 +242,9 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
 								<span class="num">04 · Make lessons permanent</span>
 								<h3>Turn review comments into Rules</h3>
 								<p>
-									A custom Rule is a Python function that reads the tables, joins, columns and literals of each statement,
-									already located for you. Here marts must read staging models, never raw tables.
+									A custom Rule is a Python function over the tables, joins, columns and literals of each statement,
+									already parsed and located for you. No regular expressions, no parser to learn. Here marts must read
+									staging models, never raw tables.
 								</p>
 								<p class="more"><a href="/docs/custom-rules/overview/">Write a custom Rule →</a></p>
 							</div>
@@ -362,33 +370,21 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
 			<section>
 				<div class="wrap">
 					<div class="section-head">
-						<h2>Built for big SQL repositories</h2>
-						<p>The rest of what makes SQLClean easy to adopt.</p>
+						<h2>Fast, and still yours to extend</h2>
+						<p>Measured on the same 10,282 SQL files. <a href="/docs/benchmarks/">See the benchmark →</a></p>
 					</div>
 					<div class="grid">
 						<div class="item">
-							<h3>13 Rules on by default, 45 in all</h3>
-							<p>The defaults cover NULLs, joins, ordering and duplicates. The other 32 cover style and structure, and you opt in to them.</p>
+							<h3>50× faster than sqruff</h3>
+							<p><code>sqlclean check</code> takes 0.8 s, sqruff 41 s and SQLFluff 15 minutes. Unchanged files come from the cache, so a rerun takes 0.2 s.</p>
 						</div>
 						<div class="item">
-							<h3>Faster than sqruff and SQLFluff</h3>
-							<p>On 10,282 files, <code>sqlclean check</code> takes 0.8 s with defaults; sqruff takes 41 s and SQLFluff 15 minutes. <a href="/docs/benchmarks/">See the benchmark →</a></p>
+							<h3>Custom Rules in plain Python</h3>
+							<p>A Rule reads the tables, joins and columns of each query, not its text. With three custom Rules, the same files check in 2.3 s.</p>
 						</div>
 						<div class="item">
-							<h3>A dialect per folder</h3>
-							<p>Set one dialect for the project and override it for any folder, such as Snowflake models beside DuckDB tests.</p>
-						</div>
-						<div class="item">
-							<h3>Exact locations</h3>
-							<p>Findings and fixes use character offsets, so multibyte text doesn't shift an edit.</p>
-						</div>
-						<div class="item">
-							<h3>Text, JSON and SARIF</h3>
-							<p>Readable in a terminal, structured for scripts, and annotated in code review.</p>
-						</div>
-						<div class="item">
-							<h3>An embeddable Rust crate</h3>
-							<p>The Rules and formatter live in their own crate, so another tool can run them under its own codes.</p>
+							<h3>Safe fixes by default</h3>
+							<p>A fix that could change which rows a query returns waits for <code>--unsafe-fixes</code>. A fix that breaks parsing is thrown away.</p>
 						</div>
 					</div>
 				</div>
@@ -459,6 +455,30 @@ Fixed 1 problem(s) and changed 1 file(s).
 				document.documentElement.dataset.theme = next;
 				localStorage.setItem('sqlclean-theme', next);
 			});
+			(function () {
+				var race = document.querySelector('[data-race]');
+				if (!race || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+				var rows = Array.prototype.map.call(race.querySelectorAll('.race-row'), function (row) {
+					return { seconds: Number(row.dataset.seconds), fill: row.querySelector('.race-fill'), time: row.querySelector('.race-time') };
+				});
+				var clock = race.querySelector('.race-clock');
+				var lead = 0.6, run = 8, hold = 2.4, start = null;
+				race.classList.add('is-live');
+				function frame(now) {
+					if (start === null) start = now;
+					var elapsed = Math.min(Math.max((now - start) / 1000 - lead, 0), run);
+					rows.forEach(function (row) {
+						var done = elapsed >= row.seconds;
+						row.fill.style.transform = 'scaleX(' + Math.min(elapsed / row.seconds, 1) + ')';
+						row.time.textContent = done ? row.seconds.toFixed(2) + ' s ✓' : (100 * elapsed / row.seconds).toFixed(1) + '%';
+						row.time.classList.toggle('ok', done);
+					});
+					clock.textContent = 'elapsed ' + elapsed.toFixed(1) + ' s · ';
+					if ((now - start) / 1000 > lead + run + hold) start = now;
+					requestAnimationFrame(frame);
+				}
+				requestAnimationFrame(frame);
+			})();
 			document.querySelectorAll('[data-copy]').forEach(function (button) {
 				button.addEventListener('click', function () {
 					navigator.clipboard.writeText(button.dataset.copy).then(function () {
