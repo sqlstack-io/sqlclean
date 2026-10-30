@@ -6,7 +6,7 @@ pub(crate) struct StatementFactsTestCase {
     pub(crate) expected_text: &'static str,
     pub(crate) expected_terminator: &'static str,
     pub(crate) expected_ctes: &'static [&'static str],
-    pub(crate) expected_tables: &'static [(&'static str, &'static str)],
+    pub(crate) expected_tables: &'static [(&'static str, &'static str, &'static str)],
     pub(crate) expected_joins: &'static [(&'static str, &'static str, bool, &'static str)],
     pub(crate) expected_stars: &'static [&'static str],
     pub(crate) expected_functions: &'static [&'static str],

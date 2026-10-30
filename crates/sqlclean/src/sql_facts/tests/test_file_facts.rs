@@ -22,7 +22,11 @@ SELECT r.order_id, UPPER(c.name) AS name, 'é' AS mark\n\
 FROM recent AS r LEFT JOIN customers AS c ON r.customer_id = c.customer_id",
             expected_terminator: ";",
             expected_ctes: &["recent"],
-            expected_tables: &[("shop.orders", "o"), ("recent", "r"), ("customers", "c")],
+            expected_tables: &[
+                ("shop.orders", "o", "shop.orders"),
+                ("recent", "r", "recent"),
+                ("customers", "c", "customers"),
+            ],
             expected_joins: &[(
                 "LEFT",
                 "customers",
@@ -42,7 +46,7 @@ FROM recent AS r LEFT JOIN customers AS c ON r.customer_id = c.customer_id",
             expected_text: "SELECT COUNT(*) FROM customers",
             expected_terminator: "",
             expected_ctes: &[],
-            expected_tables: &[("customers", "")],
+            expected_tables: &[("customers", "", "customers")],
             expected_joins: &[],
             expected_stars: &[],
             expected_functions: &["COUNT"],
@@ -57,7 +61,7 @@ FROM recent AS r LEFT JOIN customers AS c ON r.customer_id = c.customer_id",
             expected_text: "SELECT a.id FROM a CROSS JOIN b",
             expected_terminator: "",
             expected_ctes: &[],
-            expected_tables: &[("a", ""), ("b", "")],
+            expected_tables: &[("a", "", "a"), ("b", "", "b")],
             expected_joins: &[("CROSS", "b", false, "CROSS JOIN b")],
             expected_stars: &[],
             expected_functions: &[],
@@ -72,7 +76,7 @@ FROM recent AS r LEFT JOIN customers AS c ON r.customer_id = c.customer_id",
             expected_text: "SELECT a.id FROM a INNER JOIN (SELECT id FROM b) AS s ON a.id = s.id LEFT JOIN c USING (id) WHERE LEFT(a.name, 1) = 'x'",
             expected_terminator: "",
             expected_ctes: &[],
-            expected_tables: &[("a", ""), ("b", ""), ("c", "")],
+            expected_tables: &[("a", "", "a"), ("b", "", "b"), ("c", "", "c")],
             expected_joins: &[
                 (
                     "INNER",
@@ -115,21 +119,23 @@ FROM recent AS r LEFT JOIN customers AS c ON r.customer_id = c.customer_id",
             .map(|cte| located(cte.start, cte.end))
             .collect();
         assert_eq!(ctes, test_case.expected_ctes, "{}", test_case.description);
-        let tables: Vec<(&str, &str)> = statement
+        let tables: Vec<(&str, &str, String)> = statement
             .tables
             .iter()
             .map(|table| {
                 (
                     table.qualified_name.as_str(),
                     table.alias.as_deref().unwrap_or(""),
+                    located(table.start, table.end),
                 )
             })
             .collect();
-        assert_eq!(
-            tables, test_case.expected_tables,
-            "{}",
-            test_case.description
-        );
+        let expected_tables: Vec<(&str, &str, String)> = test_case
+            .expected_tables
+            .iter()
+            .map(|(name, alias, text)| (*name, *alias, (*text).to_owned()))
+            .collect();
+        assert_eq!(tables, expected_tables, "{}", test_case.description);
         let joins: Vec<(&str, &str, bool, String)> = statement
             .joins
             .iter()

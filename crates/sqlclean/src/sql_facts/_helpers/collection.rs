@@ -155,6 +155,12 @@ fn table_node(node: &Expression) -> Option<TableNode> {
         return None;
     };
     let span: Span = table.span.or(table.name.span)?;
+    let start: usize = [&table.catalog, &table.schema]
+        .into_iter()
+        .flatten()
+        .filter_map(|part| part.span)
+        .map(|part| part.start)
+        .fold(span.start, usize::min);
     let qualified_name: String = [&table.catalog, &table.schema]
         .into_iter()
         .flatten()
@@ -163,7 +169,7 @@ fn table_node(node: &Expression) -> Option<TableNode> {
         .collect::<Vec<&str>>()
         .join(".");
     Some(TableNode {
-        start: span.start,
+        start,
         end: span.end,
         name: table.name.name.clone(),
         qualified_name,
