@@ -13,6 +13,7 @@ from tests.e2e.src.sqlclean.hosting._test_types import (
     CheckTestCase,
     IdempotencyTestCase,
     RewriteTestCase,
+    SarifTestCase,
     SummaryTestCase,
 )
 from tests.e2e.src.sqlclean.hosting.helpers import run, write_project
@@ -217,6 +218,31 @@ def test_given_fixable_findings_when_checking_then_summary_counts_safe_and_unsaf
     completed: subprocess.CompletedProcess[str] = run(tmp_path, "check", environment={})
 
     assert completed.stdout.rstrip().splitlines()[-1] == test_case.expected_summary
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        SarifTestCase(
+            description="the message and remediation read as two sentences",
+            config=DUCKDB + '[rules]\nselect = ["SQC025"]\n',
+            source="select a.id from a join b on a.id = b.id\n",
+            expected_message="JOIN type is implicit. Write INNER JOIN explicitly.",
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_findings_when_reporting_sarif_then_each_result_has_a_readable_message(
+    tmp_path: Path, test_case: SarifTestCase
+) -> None:
+    write_project(tmp_path, config=test_case.config, files={"q.sql": test_case.source})
+
+    completed: subprocess.CompletedProcess[str] = run(
+        tmp_path, "check", "--output-format", "sarif", environment={}
+    )
+    results: list[dict[str, dict[str, str]]] = json.loads(completed.stdout)["runs"][0]["results"]
+
+    assert [result["message"]["text"] for result in results] == [test_case.expected_message]
 
 
 @pytest.mark.parametrize(

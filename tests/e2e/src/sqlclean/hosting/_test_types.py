@@ -59,3 +59,13 @@ class SummaryTestCase:
     config: str
     source: str
     expected_summary: str
+
+
+@dataclass(frozen=True)
+class SarifTestCase:
+    """A project whose SARIF report must carry one result message."""
+
+    description: str
+    config: str
+    source: str
+    expected_message: str

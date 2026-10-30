@@ -36,7 +36,7 @@ pub(crate) fn render_sarif(located: &[LocatedFinding]) -> String {
             json!({
                 "ruleId": finding.code,
                 "level": "error",
-                "message": { "text": format!("{} {}", finding.message, finding.remediation) },
+                "message": { "text": format!("{}. {}", finding.message.trim_end_matches('.'), finding.remediation) },
                 "locations": [{
                     "physicalLocation": {
                         "artifactLocation": { "uri": finding.path },
