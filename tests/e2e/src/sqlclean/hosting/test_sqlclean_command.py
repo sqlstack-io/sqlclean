@@ -1,0 +1,239 @@
+"""End-to-end tests for the sqlclean command on temporary projects."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from tests.e2e.src.sqlclean.hosting._test_types import (
+    CacheTestCase,
+    CheckTestCase,
+    IdempotencyTestCase,
+    RewriteTestCase,
+)
+from tests.e2e.src.sqlclean.hosting.helpers import run, write_project
+from tests.integration.src.sqlclean.rule_testing.helpers import SAMPLE_RULES
+
+DUCKDB: str = 'dialect = "duckdb"\n'
+CROSS_JOIN_ONLY: str = DUCKDB + '[rules]\nselect = ["SQC038"]\n'
+CUSTOM: str = DUCKDB + '[rules]\nselect = ["XSQCNAME", "XSQCSTYLE"]\ncustom = ["sql_rules"]\n'
+CROSS_JOIN_EXCEPTIONS: str = (
+    CROSS_JOIN_ONLY
+    + '[[rules.rule_exceptions]]\nrule = "SQC038"\npath = "models/q.sql"\nrelation = "b"\n'
+    + 'reason = "Every pair is needed."\n'
+    + '[[rules.rule_exceptions]]\nrule = "SQC038"\npath = "models/q.sql"\nrelation = "z"\n'
+    + 'reason = "Removed join."\n'
+)
+NULL_AND_COMMA: str = "select a.id from a, b where a.x = null\n"
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        CheckTestCase(
+            description="a clean file passes",
+            config=CROSS_JOIN_ONLY,
+            files={"models/q.sql": "SELECT a.id FROM a\n"},
+            arguments=(),
+            expected_exit=0,
+            expected_codes=(),
+        ),
+        CheckTestCase(
+            description="selected Rules report in file order",
+            config=DUCKDB,
+            files={"models/q.sql": NULL_AND_COMMA},
+            arguments=("--select", "SQC001,SQC002"),
+            expected_exit=1,
+            expected_codes=("SQC002", "SQC001"),
+        ),
+        CheckTestCase(
+            description="an ignored Rule is skipped",
+            config=DUCKDB,
+            files={"models/q.sql": NULL_AND_COMMA},
+            arguments=("--select", "SQC001,SQC002", "--ignore", "SQC002"),
+            expected_exit=1,
+            expected_codes=("SQC001",),
+        ),
+        CheckTestCase(
+            description="an exception hides its finding and an unmatched one is stale",
+            config=CROSS_JOIN_EXCEPTIONS,
+            files={"models/q.sql": "SELECT a.id FROM a CROSS JOIN b\n"},
+            arguments=(),
+            expected_exit=1,
+            expected_codes=(),
+            expected_stale=("z",),
+        ),
+        CheckTestCase(
+            description="unparseable SQL is reported as a finding",
+            config=CROSS_JOIN_ONLY,
+            files={"models/q.sql": "SELECT FROM WHERE (\n"},
+            arguments=(),
+            expected_exit=1,
+            expected_codes=("SQC999",),
+        ),
+        CheckTestCase(
+            description="custom Rules run with their configured options",
+            config=CUSTOM + '[rules.rule_options.XSQCNAME001]\nprefixes = ["stg_"]\n',
+            files={
+                "sql_rules/naming.py": SAMPLE_RULES,
+                "models/q.sql": "SELECT COUNT(1) AS n FROM stg_orders JOIN tmp_x ON TRUE\n",
+            },
+            arguments=(),
+            expected_exit=1,
+            expected_codes=("XSQCSTYLE001", "XSQCNAME001"),
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_project_when_checking_then_reports_findings_and_exit_status(
+    tmp_path: Path, test_case: CheckTestCase
+) -> None:
+    write_project(tmp_path, config=test_case.config, files=test_case.files)
+
+    completed: subprocess.CompletedProcess[str] = run(
+        tmp_path, "check", "--output-format", "json", *test_case.arguments, environment={}
+    )
+    report: dict[str, list[dict[str, object]]] = json.loads(completed.stdout)
+
+    assert completed.returncode == test_case.expected_exit, completed.stderr
+    assert tuple(finding["code"] for finding in report["findings"]) == test_case.expected_codes
+    assert (
+        tuple(stale["relation"] for stale in report["stale_exceptions"]) == test_case.expected_stale
+    )
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        RewriteTestCase(
+            description="fix applies safe fixes, leaves unsafe ones and formats",
+            config=DUCKDB + '[rules]\nselect = ["SQC001", "SQC002"]\n',
+            files={"models/q.sql": NULL_AND_COMMA},
+            arguments=("fix",),
+            expected_exit=1,
+            expected_files={
+                "models/q.sql": "SELECT a.id\nFROM a\nCROSS JOIN b\nWHERE a.x = NULL\n"
+            },
+        ),
+        RewriteTestCase(
+            description="fix with unsafe fixes applies them too and then passes",
+            config=DUCKDB + '[rules]\nselect = ["SQC001", "SQC002"]\n',
+            files={"models/q.sql": NULL_AND_COMMA},
+            arguments=("fix", "--unsafe-fixes"),
+            expected_exit=0,
+            expected_files={
+                "models/q.sql": "SELECT a.id\nFROM a\nCROSS JOIN b\nWHERE a.x IS NULL\n"
+            },
+        ),
+        RewriteTestCase(
+            description="fix applies custom Rule fixes",
+            config=CUSTOM,
+            files={
+                "sql_rules/naming.py": SAMPLE_RULES,
+                "models/q.sql": "select count(1) as n from orders\n",
+            },
+            arguments=("fix",),
+            expected_exit=0,
+            expected_files={"models/q.sql": "SELECT COUNT(*) AS n\nFROM orders\n"},
+        ),
+        RewriteTestCase(
+            description="fix --diff writes nothing",
+            config=DUCKDB + '[rules]\nselect = ["SQC002"]\n',
+            files={"models/q.sql": "select a.id from a, b\n"},
+            arguments=("fix", "--diff"),
+            expected_exit=1,
+            expected_files={"models/q.sql": "select a.id from a, b\n"},
+        ),
+        RewriteTestCase(
+            description="format --check fails without writing",
+            config=DUCKDB,
+            files={"models/q.sql": "select 1;select 2\n"},
+            arguments=("format", "--check"),
+            expected_exit=1,
+            expected_files={"models/q.sql": "select 1;select 2\n"},
+        ),
+        RewriteTestCase(
+            description="format writes each statement apart with one final newline",
+            config=DUCKDB,
+            files={"models/q.sql": "select 1;select 2"},
+            arguments=("format",),
+            expected_exit=0,
+            expected_files={"models/q.sql": "SELECT 1;\n\nSELECT 2\n"},
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_project_when_rewriting_then_files_and_exit_status_match(
+    tmp_path: Path, test_case: RewriteTestCase
+) -> None:
+    write_project(tmp_path, config=test_case.config, files=test_case.files)
+
+    completed: subprocess.CompletedProcess[str] = run(
+        tmp_path, *test_case.arguments, environment={}
+    )
+    files: dict[str, str] = {
+        path: (tmp_path / path).read_text(encoding="utf-8") for path in test_case.expected_files
+    }
+
+    assert completed.returncode == test_case.expected_exit, completed.stdout + completed.stderr
+    assert files == test_case.expected_files
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        IdempotencyTestCase(
+            description="a formatted query is a fixed point of the formatter",
+            source="select a, b from t where a > 1 and b in (select b from u) order by a",
+            expected_exits=(0, 0),
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_formatted_file_when_formatting_again_then_nothing_changes(
+    tmp_path: Path, test_case: IdempotencyTestCase
+) -> None:
+    write_project(tmp_path, config=DUCKDB, files={"q.sql": test_case.source})
+
+    first: subprocess.CompletedProcess[str] = run(tmp_path, "format", environment={})
+    formatted: str = (tmp_path / "q.sql").read_text(encoding="utf-8")
+    second: subprocess.CompletedProcess[str] = run(tmp_path, "format", "--check", environment={})
+
+    assert (first.returncode, second.returncode) == test_case.expected_exits, second.stdout
+    assert (tmp_path / "q.sql").read_text(encoding="utf-8") == formatted
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        CacheTestCase(
+            description="unchanged files reuse custom Rule results and edited files rerun them",
+            files={
+                "sql_rules/naming.py": SAMPLE_RULES,
+                "models/q.sql": "SELECT * FROM tmp_orders\n",
+            },
+            edited={"models/q.sql": "SELECT * FROM tmp_customers\n"},
+            expected_exits=(1, 1, 2),
+            expected_cached_code="XSQCNAME001",
+            expected_error="missing-python",
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_unchanged_files_when_checking_again_then_custom_rules_come_from_the_cache(
+    tmp_path: Path, test_case: CacheTestCase
+) -> None:
+    write_project(tmp_path, config=CUSTOM, files=test_case.files)
+    no_python: dict[str, str] = {"SQLCLEAN_PYTHON": str(tmp_path / "missing-python")}
+
+    first: subprocess.CompletedProcess[str] = run(tmp_path, "check", environment={})
+    cached: subprocess.CompletedProcess[str] = run(tmp_path, "check", environment=no_python)
+    write_project(tmp_path, config=CUSTOM, files=test_case.edited)
+    changed: subprocess.CompletedProcess[str] = run(tmp_path, "check", environment=no_python)
+
+    assert (first.returncode, cached.returncode, changed.returncode) == test_case.expected_exits
+    assert test_case.expected_cached_code in cached.stdout
+    assert test_case.expected_error in changed.stderr
