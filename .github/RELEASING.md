@@ -26,6 +26,38 @@ Documentation edits usually do release, on purpose: `make skills` copies the doc
 installed skill stays in step with the docs. A homepage or styling change touches only `website/`
 and does not.
 
+## One-time setup
+
+A repository administrator does these once, in a browser:
+
+1. **Release GitHub App.** Install the organization's delivery GitHub App on this repository,
+   with contents, pull requests, issues and actions write access. In Settings > Secrets and
+   variables > Actions, add the variable `RELEASE_APP_ID` (the App ID) and the secret
+   `RELEASE_APP_PRIVATE_KEY` (the full contents of a private key generated under the app's
+   Credentials). Release Please opens release pull requests and dispatches `publish.yml` with
+   this app's token, because events from the default `GITHUB_TOKEN` do not start workflows.
+   Without either setting, the Release Please run fails at its first step and names the missing
+   one.
+2. **PyPI trusted publishers.** For both `sqlclean` and `sqlclean-cli`, add a GitHub publisher
+   with owner `sqlstack-io`, repository `sqlclean`, workflow `publish.yml` and environment
+   `pypi`. GitHub creates the `pypi` environment the first time `publish.yml` uses it.
+3. **Cloudflare Pages.** The `sqlclean` Pages project builds `website/` from this repository.
+   Add `sqlclean.io` and `www.sqlclean.io` under its Custom domains.
+
+Automation tokens, such as a coding agent's GitHub App token or `GITHUB_TOKEN`, usually cannot
+read or write Actions variables, secrets or app installations, and a private key can only be
+downloaded when it is generated. These steps need a person.
+
+## Tooling versions
+
+`uv.lock` is only reproducible with one uv release line: a newer uv rewrites the file's format,
+and the release metadata check then rejects the release pull request. Workflows pin uv 0.12.9
+and `[tool.uv] required-version` in `pyproject.toml` keeps local uv on 0.12, so update both
+together. `make release-rehearsal` (the Release rehearsal job in Verify) applies Release Please's
+version edits on a scratch worktree, refreshes the lockfiles the same way the release workflow
+does, and runs the release metadata check, so a mismatch fails a pull request rather than a
+release.
+
 ## Verify
 
 `verify.yml` classifies a pull request by the paths it changes and runs only the suites it needs.
@@ -35,6 +67,6 @@ The `Verify` job is the one check to require: it passes when every selected suit
 |--------|--------|
 | Only `website/`, `benchmarks/`, root `*.md`, `.github/demos/`, images, `website.yml` | docs skill check and ruff |
 | Also the bundled skill under `crates/sqlclean-cli/skill/` | plus a Linux build and the `sqlclean skills` tests |
-| Anything else, including workflows, Rust, Python, tests and lockfiles | everything: `make verify`, minimum Rust, Windows, three-platform package smoke tests and the source build |
+| Anything else, including workflows, Rust, Python, tests and lockfiles | everything: `make verify`, minimum Rust, Windows, three-platform package smoke tests, the source build and the release rehearsal |
 
 A manual or release dispatch has no pull request diff, so it runs everything.

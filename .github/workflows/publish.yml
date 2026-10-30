@@ -135,6 +135,8 @@ jobs:
         with:
           toolchain: 1.95.0
       - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.9"
       # The sqlclean package is pure Python, so one wheel serves every platform.
       - name: Build Python package sdist and wheel
         run: uv build --sdist --wheel --out-dir dist

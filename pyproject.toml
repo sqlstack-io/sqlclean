@@ -50,6 +50,9 @@ dev = [
 ]
 
 [tool.uv]
+# Keep in step with the uv pinned in .github/workflows: other uv versions rewrite uv.lock
+# differently, which the release metadata check rejects.
+required-version = ">=0.12.9,<0.13"
 cache-keys = [
   { file = "pyproject.toml" },
 ]
