@@ -1,0 +1,55 @@
+[
+	{
+		"label": "Getting Started",
+		"items": [
+			"docs",
+			"docs/quickstart"
+		]
+	},
+	{
+		"label": "Concepts",
+		"items": [
+			"docs/configuration",
+			{
+				"label": "Rules",
+				"collapsed": false,
+				"items": [
+					{
+						"label": "Overview",
+						"slug": "docs/rules/overview"
+					},
+					"docs/rules/reference"
+				]
+			},
+			"docs/formatting"
+		]
+	},
+	{
+		"label": "Custom Rules",
+		"items": [
+			"docs/custom-rules/overview",
+			"docs/custom-rules/statement-facts",
+			"docs/custom-rules/fixes-and-options",
+			"docs/custom-rules/testing"
+		]
+	},
+	{
+		"label": "Integrations",
+		"items": [
+			"docs/integrations",
+			"docs/embedding",
+			"docs/benchmarks"
+		]
+	},
+	{
+		"label": "CLI Reference",
+		"items": [
+			"docs/cli/check",
+			"docs/cli/fix",
+			"docs/cli/format",
+			"docs/cli/rules",
+			"docs/cli/facts",
+			"docs/cli/skills"
+		]
+	}
+]
