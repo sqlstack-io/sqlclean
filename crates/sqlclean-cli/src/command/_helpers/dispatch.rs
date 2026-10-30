@@ -50,6 +50,9 @@ fn execute(cli: Cli) -> Result<u8, String> {
         Command::Rules(arguments) => {
             crate::command::_helpers::rules_command::run(&config, &arguments)
         }
+        Command::Skills(arguments) => {
+            crate::command::_helpers::skills_command::run(&config.root, &arguments)
+        }
         Command::Facts(_) => Ok(EXIT_SUCCESS),
     }
 }

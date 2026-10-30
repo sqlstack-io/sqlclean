@@ -2,7 +2,7 @@
 analyzer = "python"
 roots = ["src/sqlclean"]
 tests = ["tests"]
-tooling = []
+tooling = ["scripts"]
 select = ["FF"]
 
 [[targets.python.rule_exceptions]]
@@ -47,3 +47,7 @@ reason = "This entry exists for the sql_lint tests, which the analyzer does not 
 rule = "FPRSL105"
 path = "crates/sqlclean/src/sql_tokens/main/query_fingerprint.rs"
 reason = "This test-support entry checks that fixes preserve meaning in the sql_lint tests, which the analyzer does not count as importers."
+
+[targets.rust.rule_options.FPRSR311]
+# `skill/` is the agent skill the `sqlclean skills` command embeds; scripts.generate_docs_skill writes its references.
+allowed_entries = ["Cargo.toml", "build.rs", "src/", "tests/", "benches/", "examples/", "README*", "LICENSE*", "skill/"]

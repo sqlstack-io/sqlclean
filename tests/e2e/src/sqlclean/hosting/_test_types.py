@@ -80,3 +80,14 @@ class ManyFilesTestCase:
     file_count: int
     flagged_every: int
     expected_finding_count: int
+
+
+@dataclass(frozen=True)
+class SkillsTestCase:
+    """Files already in a project, a skills invocation and the skill entries it must leave."""
+
+    description: str
+    existing: dict[str, str]
+    arguments: tuple[str, ...]
+    expected_exit: int
+    expected_entries: dict[str, bool]

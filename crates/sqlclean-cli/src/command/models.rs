@@ -30,6 +30,8 @@ pub enum Command {
     Rules(RulesArgs),
     /// Print the structural facts custom Rules read for SQL on standard input, as JSON.
     Facts(FactsArgs),
+    /// Install the SQLClean skill so AI coding agents know its commands and Rules.
+    Skills(SkillsArgs),
 }
 
 /// Rule selection shared by check and fix.
@@ -92,4 +94,17 @@ pub struct RulesArgs {
 pub struct FactsArgs {
     #[arg(long, default_value = "generic")]
     pub dialect: String,
+}
+
+#[derive(Debug, Args)]
+pub struct SkillsArgs {
+    /// Agent to install for: agents, claude or opencode. Repeat for several; default agents and claude.
+    #[arg(long)]
+    pub target: Vec<String>,
+    /// Install under the home directory instead of the configuration root.
+    #[arg(long)]
+    pub global: bool,
+    /// Overwrite skill files that SQLClean did not generate.
+    #[arg(long)]
+    pub force: bool,
 }

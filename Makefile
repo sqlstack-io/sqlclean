@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: check check-ci check-rust develop-native test test-e2e test-integration test-rust test-unit verify
+.PHONY: check check-ci check-docs-skill check-rust develop-native skills test test-e2e test-integration test-rust test-unit verify
 
 check:
 	uv run ruff format .
@@ -14,7 +14,14 @@ check-ci:
 	uv run ruff check .
 	uv run ty check src tests
 	uv run fensu check
+	$(MAKE) --no-print-directory check-docs-skill
 	$(MAKE) --no-print-directory check-rust
+
+check-docs-skill:
+	uv run python -m scripts.check_docs_skill
+
+skills:
+	uv run python -m scripts.generate_docs_skill
 
 check-rust:
 	cargo fmt --check

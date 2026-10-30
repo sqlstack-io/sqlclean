@@ -48,7 +48,8 @@
 			"docs/cli/fix",
 			"docs/cli/format",
 			"docs/cli/rules",
-			"docs/cli/facts"
+			"docs/cli/facts",
+			"docs/cli/skills"
 		]
 	}
 ]

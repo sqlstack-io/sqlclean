@@ -33,4 +33,5 @@ cache-keys = [
   { file = "../../Cargo.lock" },
   { file = "../../crates/*/Cargo.toml" },
   { file = "../../crates/*/src/**/*.rs" },
+  { file = "../../crates/sqlclean-cli/skill/**/*.md" },
 ]

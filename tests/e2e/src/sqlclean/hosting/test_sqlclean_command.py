@@ -15,6 +15,7 @@ from tests.e2e.src.sqlclean.hosting._test_types import (
     ManyFilesTestCase,
     RewriteTestCase,
     SarifTestCase,
+    SkillsTestCase,
     SummaryTestCase,
 )
 from tests.e2e.src.sqlclean.hosting.helpers import run, write_project
@@ -383,3 +384,68 @@ def test_given_many_files_when_checking_custom_rules_then_every_host_share_repor
     assert [finding["path"] for finding in report["findings"]] == [
         f"models/m{index:04}.sql" for index in flagged
     ]
+
+
+GENERATED: str = "<!-- generated-by: sqlclean skills -->"
+STALE_PAGE: str = ".claude/skills/sqlclean/references/docs/removed.md"
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        SkillsTestCase(
+            description="default targets get the skill and its bundled docs",
+            existing={},
+            arguments=(),
+            expected_exit=0,
+            expected_entries={
+                ".agents/skills/sqlclean/SKILL.md": True,
+                ".agents/skills/sqlclean/references/docs/CONTENTS.md": True,
+                ".claude/skills/sqlclean/references/docs/configuration.md": True,
+                ".opencode/skills/sqlclean/SKILL.md": False,
+            },
+        ),
+        SkillsTestCase(
+            description="a generated page the package no longer ships is removed",
+            existing={STALE_PAGE: GENERATED + "\n"},
+            arguments=("--target", "claude"),
+            expected_exit=0,
+            expected_entries={STALE_PAGE: False, ".claude/skills/sqlclean/SKILL.md": True},
+        ),
+        SkillsTestCase(
+            description="a hand-written skill file is not overwritten",
+            existing={".claude/skills/sqlclean/SKILL.md": "my notes\n"},
+            arguments=(),
+            expected_exit=2,
+            expected_entries={
+                ".claude/skills/sqlclean/SKILL.md": False,
+                ".agents/skills/sqlclean/SKILL.md": False,
+            },
+        ),
+        SkillsTestCase(
+            description="--force replaces a hand-written skill file",
+            existing={".claude/skills/sqlclean/SKILL.md": "my notes\n"},
+            arguments=("--force", "--target", "claude"),
+            expected_exit=0,
+            expected_entries={".claude/skills/sqlclean/SKILL.md": True},
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_project_when_installing_skills_then_only_generated_files_are_written(
+    tmp_path: Path, test_case: SkillsTestCase
+) -> None:
+    write_project(tmp_path, config=DUCKDB, files=test_case.existing)
+
+    completed: subprocess.CompletedProcess[str] = run(
+        tmp_path, "skills", *test_case.arguments, environment={}
+    )
+
+    assert completed.returncode == test_case.expected_exit, completed.stderr
+    generated: dict[str, bool] = {
+        path.relative_to(tmp_path).as_posix(): GENERATED in path.read_text(encoding="utf-8")
+        for path in tmp_path.rglob("*.md")
+    }
+    assert {
+        path: generated.get(path, False) for path in test_case.expected_entries
+    } == test_case.expected_entries

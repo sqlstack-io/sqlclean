@@ -35,6 +35,7 @@ sqlclean check [PATHS]...    # report findings; exit 1 when there are any
 sqlclean fix [PATHS]...      # apply safe fixes until stable, then format
 sqlclean format [PATHS]...   # rewrite files in the canonical layout
 sqlclean rules [CODE]        # list the Rules, or explain one
+sqlclean skills              # install the skill for AI coding agents
 ```
 
 - With no paths, a command reads every matching file under the configuration root.

@@ -1,0 +1,78 @@
+<!-- generated-by: sqlclean skills -->
+
+# sqlclean facts
+
+> Print the statement facts custom Rules read for SQL on standard input.
+
+Online: https://sqlclean.io/docs/cli/facts/
+
+`sqlclean facts` parses SQL from standard input and prints the structural facts of each statement
+as one line of JSON. These are the facts a [custom Rule](../custom-rules/overview.md) receives,
+so use it to see what a Rule will read before writing one.
+
+## Usage
+
+```bash
+sqlclean facts [--dialect <DIALECT>] < query.sql
+```
+
+```bash
+echo "SELECT o.order_id, COUNT(*) AS items FROM orders AS o JOIN order_items AS i ON i.order_id = o.order_id WHERE o.status = 'paid' GROUP BY o.order_id;" \
+  | sqlclean facts --dialect duckdb
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--dialect <DIALECT>` | The dialect to parse with (default: `generic`); see [Dialects](../configuration.md#dialects) |
+
+`facts` reads no configuration file and no paths.
+
+## Output
+
+The output, pretty-printed here and trimmed to some of the columns:
+
+```json
+{
+  "statements": [
+    {
+      "index": 0,
+      "kind": "select",
+      "start": 0,
+      "end": 146,
+      "terminated_end": 147,
+      "ctes": [],
+      "tables": [
+        { "start": 42, "end": 48, "name": "orders", "qualified_name": "orders", "alias": "o" },
+        { "start": 59, "end": 70, "name": "order_items", "qualified_name": "order_items", "alias": "i" }
+      ],
+      "joins": [
+        { "start": 54, "end": 102, "kind": "INNER", "relation": "order_items", "has_condition": true }
+      ],
+      "stars": [],
+      "functions": [
+        { "start": 19, "end": 24, "name": "COUNT" }
+      ],
+      "columns": [
+        { "start": 7, "end": 17, "name": "order_id", "qualifier": "o" },
+        { "start": 109, "end": 117, "name": "status", "qualifier": "o" }
+      ],
+      "literals": [
+        { "start": 120, "end": 126, "kind": "string", "text": "'paid'" }
+      ]
+    }
+  ]
+}
+```
+
+Offsets count characters from the start of the input, not bytes. Custom Rules receive the same
+facts with `line`, `column` and `text` added to every node. See
+[Statement facts](../custom-rules/statement-facts.md) for every field.
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | The facts were printed |
+| `2` | The SQL does not parse under the dialect, or the dialect is unknown |

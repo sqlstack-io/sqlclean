@@ -65,6 +65,8 @@ pythonpath = ["."]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+# Generated from the website docs by `make skills`; ruff would reformat their Python examples.
+extend-exclude = ["crates/sqlclean-cli/skill"]
 
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "PLR0913", "PLR0915", "UP"]
