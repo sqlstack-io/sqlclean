@@ -797,9 +797,9 @@ fn unqualified_reference(
         && !is_generated_identifier(&tokens[index])
         && !is_context_value(&tokens[index])
         && !external_identifiers.contains(&tokens[index].text.to_ascii_lowercase())
-        && !projection_aliases
+        && projection_aliases
             .get(&tokens[index].text.to_ascii_lowercase())
-            .is_some_and(|alias_index| *alias_index < index)
+            .is_none_or(|alias_index| *alias_index >= index)
         && previous.is_none_or(|candidate| {
             !matches!(
                 tokens[candidate].token_type,
