@@ -20,6 +20,19 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - name: Check release credentials are configured
+        env:
+          HAS_APP_ID: ${{ vars.RELEASE_APP_ID != '' }}
+          HAS_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY != '' }}
+        run: |
+          missing=()
+          [[ "${HAS_APP_ID}" == true ]] || missing+=("the Actions variable RELEASE_APP_ID")
+          [[ "${HAS_PRIVATE_KEY}" == true ]] || missing+=("the Actions secret RELEASE_APP_PRIVATE_KEY")
+          for item in "${missing[@]}"; do
+            echo "::error title=Release credentials missing::Add ${item} in Settings > Secrets and variables > Actions. See .github/RELEASING.md, One-time setup."
+          done
+          [[ ${#missing[@]} -eq 0 ]]
+
       - name: Create delivery token
         id: delivery-token
         uses: actions/create-github-app-token@v2

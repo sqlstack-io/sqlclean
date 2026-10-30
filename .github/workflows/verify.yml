@@ -166,11 +166,27 @@ jobs:
           "${GITHUB_WORKSPACE}/.source-venv/bin/sqlclean" skills --target agents
           test -s .agents/skills/sqlclean/references/docs/CONTENTS.md
 
+  release-rehearsal:
+    name: Release rehearsal
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.9"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.95.0
+      - run: bash .github/scripts/simulate_release.sh
+
   verify:
     # The single check to require: it passes when every suite the change selected passed.
     name: Verify
     if: always()
-    needs: [changes, light, skills, checks, minimum-rust, windows, native-package-smoke, source-build]
+    needs:
+      [changes, light, skills, checks, minimum-rust, windows, native-package-smoke, source-build, release-rehearsal]
     runs-on: ubuntu-latest
     steps:
       - env:
@@ -181,6 +197,7 @@ jobs:
           SUITES: >-
             ${{ needs.skills.result }} ${{ needs.minimum-rust.result }} ${{ needs.windows.result }}
             ${{ needs.native-package-smoke.result }} ${{ needs.source-build.result }}
+            ${{ needs.release-rehearsal.result }}
         run: |
           if [[ "${CHANGES}" != success || "${LIGHT}" != success ]]; then
             echo "Change classification or the light checks did not pass" >&2
