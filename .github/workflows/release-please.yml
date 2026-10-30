@@ -128,6 +128,8 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
         if: steps.release.outputs.prs_created == 'true'
+        with:
+          version: "0.12.9"
 
       - uses: dtolnay/rust-toolchain@master
         if: steps.release.outputs.prs_created == 'true'

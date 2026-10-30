@@ -42,6 +42,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.9"
       - run: python3 -m scripts.check_docs_skill
       - run: uvx ruff@0.17.3 format --check .
       - run: uvx ruff@0.17.3 check .
@@ -59,6 +61,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: astral-sh/setup-uv@v6
         with:
+          version: "0.12.9"
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --locked --all-groups
@@ -78,6 +81,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: astral-sh/setup-uv@v6
         with:
+          version: "0.12.9"
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --locked --all-groups
@@ -108,6 +112,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: astral-sh/setup-uv@v6
         with:
+          version: "0.12.9"
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --locked --all-groups
@@ -128,6 +133,8 @@ jobs:
           toolchain: 1.95.0
       - uses: Swatinem/rust-cache@v2
       - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.9"
       - run: uv python install 3.12
       - run: uv sync --locked --all-groups
       - run: uv run sqlclean --version
@@ -144,6 +151,8 @@ jobs:
           toolchain: 1.95.0
       - uses: Swatinem/rust-cache@v2
       - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.9"
       - run: uv python install 3.12
       - run: uv build --sdist --out-dir dist
       - run: uvx maturin sdist --out ../../dist
