@@ -58,9 +58,9 @@
 					<h1>Clean SQL, every time</h1>
 					<p class="tagline">A SQL linter and formatter, 50× faster than sqruff.</p>
 					<p class="lede">
-						SQLClean flags SQL that runs but is easy to get wrong, like <code>= NULL</code>, applies safe fixes, and
-						formats every file one way. Your team's own Rules are plain Python functions, and 10,000 files still
-						check in about two seconds.
+						SQLClean flags SQL that runs without an error but rarely does what you meant, such as a comparison with
+						NULL that never matches. It applies safe fixes and formats every file one way. Your team's own Rules are
+						plain Python functions, and 10,000 files still check in about two seconds.
 					</p>
 					<div class="actions">
 						<div class="install">
@@ -380,7 +380,7 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
 						</div>
 						<div class="item">
 							<h3>Custom Rules in plain Python</h3>
-							<p>A Rule reads the tables, joins and columns of each query, not its text. With three custom Rules, the same files check in 2.3 s.</p>
+							<p>A Rule is a Python function over the tables, joins and columns of each query. The Rust engine parses the SQL and builds those facts, so Python only runs your logic: three custom Rules check the same files in 2.3 s.</p>
 						</div>
 						<div class="item">
 							<h3>Safe fixes by default</h3>
@@ -459,7 +459,7 @@ Fixed 1 problem(s) and changed 1 file(s).
 				var race = document.querySelector('[data-race]');
 				if (!race || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 				var rows = Array.prototype.map.call(race.querySelectorAll('.race-row'), function (row) {
-					return { seconds: Number(row.dataset.seconds), fill: row.querySelector('.race-fill'), time: row.querySelector('.race-time') };
+					return { seconds: Number(row.dataset.seconds), fill: row.querySelector('.race-fill'), time: row.querySelector('.race-time'), total: row.querySelector('.race-time').textContent };
 				});
 				var clock = race.querySelector('.race-clock');
 				var lead = 0.6, run = 8, hold = 2.4, start = null;
@@ -470,8 +470,8 @@ Fixed 1 problem(s) and changed 1 file(s).
 					rows.forEach(function (row) {
 						var done = elapsed >= row.seconds;
 						row.fill.style.transform = 'scaleX(' + Math.min(elapsed / row.seconds, 1) + ')';
-						row.time.textContent = done ? row.seconds.toFixed(2) + ' s ✓' : (100 * elapsed / row.seconds).toFixed(1) + '%';
-						row.time.classList.toggle('ok', done);
+						row.time.textContent = done ? row.total + ' ✓' : row.total;
+						row.time.classList.toggle('dim', !done);
 					});
 					clock.textContent = 'elapsed ' + elapsed.toFixed(1) + ' s · ';
 					if ((now - start) / 1000 > lead + run + hold) start = now;
