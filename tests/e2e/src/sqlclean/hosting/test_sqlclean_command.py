@@ -81,6 +81,15 @@ NULL_AND_COMMA: str = "select a.id from a, b where a.x = null\n"
             expected_codes=("SQC038",),
         ),
         CheckTestCase(
+            description="lint is check by another name",
+            config=CROSS_JOIN_ONLY,
+            files={"models/q.sql": "SELECT a.id FROM a CROSS JOIN b\n"},
+            arguments=(),
+            command="lint",
+            expected_exit=1,
+            expected_codes=("SQC038",),
+        ),
+        CheckTestCase(
             description="unparseable SQL is reported as a finding",
             config=CROSS_JOIN_ONLY,
             files={"models/q.sql": "SELECT FROM WHERE (\n"},
@@ -108,7 +117,7 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
     write_project(tmp_path, config=test_case.config, files=test_case.files)
 
     completed: subprocess.CompletedProcess[str] = run(
-        tmp_path, "check", "--output-format", "json", *test_case.arguments, environment={}
+        tmp_path, test_case.command, "--output-format", "json", *test_case.arguments, environment={}
     )
     report: dict[str, list[dict[str, object]]] = json.loads(completed.stdout)
 

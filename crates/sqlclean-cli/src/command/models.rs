@@ -20,6 +20,7 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Report Rule findings without changing any file.
+    #[command(alias = "lint")]
     Check(CheckArgs),
     /// Apply Rule fixes until stable, then format.
     Fix(FixArgs),

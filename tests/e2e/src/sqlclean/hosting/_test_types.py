@@ -16,6 +16,7 @@ class CheckTestCase:
     expected_exit: int
     expected_codes: tuple[str, ...]
     expected_stale: tuple[str, ...] = ()
+    command: str = "check"
 
 
 @dataclass(frozen=True)
