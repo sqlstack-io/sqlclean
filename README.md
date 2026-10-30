@@ -1,10 +1,22 @@
-# SQLClean
+<p align="center">
+  <img src=".github/sqlclean-logo.png" alt="SQLClean" width="100%">
+</p>
 
-Fast, opinionated SQL linting and deterministic formatting, with custom Rules in Python.
+<p align="center">
+  <strong>Clean SQL, every time.</strong> Fast linting, safe fixes and one canonical format.
+</p>
 
 SQLClean checks `.sql` files against built-in Rules, applies their fixes and formats every file in
 one canonical layout. The engine and the `sqlclean` command are written in Rust. Custom Rules
 are plain Python functions that read structural facts about each statement.
+
+<p align="center">
+  <img src=".github/demos/check-fix.gif" alt="sqlclean check reports three findings, then sqlclean fix applies two fixes and formats the file" width="100%">
+</p>
+
+`sqlclean check` reports a bare `JOIN`, a `COUNT(1)` and a temporary table from a custom Rule.
+`sqlclean fix` applies the two fixes and formats the file; the custom Rule's finding has no fix,
+so it stays.
 
 ## Install
 
