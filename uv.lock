@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 
 [[package]]
@@ -615,7 +615,7 @@ wheels = [
 
 [[package]]
 name = "sqlclean"
-version = "0.0.1"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "sqlclean-cli" },
@@ -657,7 +657,7 @@ dev = [
 
 [[package]]
 name = "sqlclean-cli"
-version = "0.0.1"
+version = "0.1.0"
 source = { directory = "packages/sqlclean-cli" }
 
 [[package]]
