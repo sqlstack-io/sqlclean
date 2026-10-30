@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: check check-ci check-docs-skill check-rust develop-native skills test test-e2e test-integration test-rust test-unit verify
+.PHONY: check check-ci check-docs-skill check-rust develop-native release-rehearsal skills test test-e2e test-integration test-rust test-unit verify
 
 check:
 	uv run ruff format .
@@ -19,6 +19,9 @@ check-ci:
 
 check-docs-skill:
 	uv run python -m scripts.check_docs_skill
+
+release-rehearsal:
+	bash .github/scripts/simulate_release.sh
 
 skills:
 	uv run python -m scripts.generate_docs_skill
