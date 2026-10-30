@@ -1,0 +1,98 @@
+---
+title: "sqlclean fix"
+description: "Apply Rule fixes until the files stop changing, then format them."
+sidebar:
+  label: "fix"
+---
+
+`sqlclean fix` applies the fixes of the selected Rules, checks again, and repeats until no fix
+applies. It then formats every file it read and reports the findings that remain.
+
+## Usage
+
+```bash
+sqlclean fix [OPTIONS] [PATHS]...
+```
+
+```bash
+sqlclean fix                    # apply safe fixes, then format
+sqlclean fix --diff             # print the changes without writing them
+sqlclean fix --unsafe-fixes     # also apply fixes that can change query results
+sqlclean fix models/orders.sql  # only this file
+```
+
+Files are chosen as for [`sqlclean check`](/docs/cli/check/).
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `PATHS...` | Files or directories to read; the configuration root when omitted |
+| `--unsafe-fixes` | Also apply fixes their Rules mark unsafe because they can change results |
+| `--diff` | Print the changes as a unified diff instead of writing them |
+| `--select <CODES>` | Rule codes or prefixes to run instead of `[rules] select` |
+| `--ignore <CODES>` | Rule codes or prefixes to skip, in addition to `[rules] ignore` |
+| `--no-cache` | Evaluate every file instead of reusing results for unchanged inputs |
+| `--config <PATH>` | Use this configuration file instead of the nearest `sqlclean.toml` |
+
+Only fixes of selected Rules apply. `sqlclean fix --select SQC005` removes unused CTEs and
+formats the files, and leaves every other finding alone.
+
+## Output
+
+```text
+Fixed 1 problem(s) and changed 1 file(s).
+error[SQC001]: Comparison with NULL is never true
+  --> models/open_orders.sql:7:24
+   |
+ 7 |     WHERE cancelled_at = NULL
+   |                        ^
+  = help: Use IS NULL or IS NOT NULL when testing for NULL.
+  = fix: available with `sqlclean fix --unsafe-fixes`
+
+Found 1 problem (1 fixable with `sqlclean fix --unsafe-fixes`).
+```
+
+The summary line goes to stderr. The remaining findings go to stdout in the same format as
+[`sqlclean check`](/docs/cli/check/#text-output), with positions in the fixed file.
+
+With `--diff`, nothing is written. `fix` prints a unified diff of every file it would change,
+followed by `Would fix N problem(s) and change N file(s).`, and does not list the remaining
+findings:
+
+```diff
+--- a/models/orders.sql
++++ b/models/orders.sql
+@@ -5,7 +5,7 @@
+ FROM orders o
+ JOIN customers c
+     ON o.customer_id = c.customer_id
+-WHERE o.cancelled_at = NULL
++WHERE o.cancelled_at IS NULL
+ GROUP BY
+     o.order_id,
+     c.customer_name
+```
+
+## How fixes are applied
+
+- Each pass checks the files, then applies every eligible fix whose edits do not overlap an earlier
+  fix in the same file. A skipped fix is reconsidered on the next pass.
+- A pass that would turn a file that parses into one that does not is not applied to that file.
+- `fix` stops when a pass applies nothing, and after at most 10 passes.
+- Safe fixes always apply. Unsafe fixes apply only with `--unsafe-fixes`. See
+  [Safe and unsafe fixes](/docs/rules/overview/#safe-and-unsafe-fixes).
+- Fixes from [custom Rules](/docs/custom-rules/fixes-and-options/) apply the same way.
+- Every file is formatted after the last pass, whether or not a fix changed it. A file the
+  formatter cannot format is reported as `<path>: could not format: <reason>` and keeps its fixes.
+
+A file that does not parse gets no fixes and is reported as
+[`SQC999`](/docs/rules/overview/#parse-errors-sqc999).
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Every file is fixed and formatted, and no finding or stale exception remains |
+| `1` | Findings or stale exceptions remain, a file could not be formatted, or `--diff` found changes to make |
+| `2` | The command could not run: invalid arguments, configuration or input, or a custom Rule that failed |

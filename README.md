@@ -65,6 +65,7 @@ dialect = "snowflake"
 
 [format]
 line_width = 100
+indent = 4
 
 [rules]
 select = ["SQC"]              # omit to run the Rules enabled by default

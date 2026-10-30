@@ -9,6 +9,8 @@
 - `src/sqlclean`: the Python package. It owns the `@rule` authoring API, the custom Rule host that the
   executable starts, and the `sqlclean.testing` harness.
 - `packages/sqlclean-cli`: the maturin wheel that ships the executable.
+- `website`: the homepage and the docs (Astro Starlight). Docs pages follow `website/STYLE.md`;
+  change the page a behaviour change affects in the same commit.
 
 ## Conventions
 

@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>SQLClean · Clean SQL, every time</title>
+		<meta
+			name="description"
+			content="SQLClean is a fast SQL linter and formatter written in Rust. It flags SQL that is easy to get wrong, such as comparisons with NULL, applies fixes that are marked safe, formats every file one way, and runs your team's own Rules written in Python. Free and open source."
+		/>
+		<meta property="og:title" content="SQLClean · Clean SQL, every time" />
+		<meta property="og:description" content="Fast SQL linting, safe fixes and one canonical format. Free and open source." />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://sqlclean.com/" />
+		<meta property="og:image" content="https://sqlclean.com/assets/og-sqlclean.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="SQLClean: fast SQL linting, safe fixes and one canonical format." />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:image" content="https://sqlclean.com/assets/og-sqlclean.png" />
+		<link rel="icon" type="image/png" href="assets/icon.png" />
+		<link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="stylesheet" href="styles.css" />
+		<script>
+			(function () {
+				var stored = localStorage.getItem('sqlclean-theme');
+				var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+				document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+			})();
+		</script>
+	</head>
+	<body>
+		<header class="site-header">
+			<div class="wrap">
+				<a class="brand" href="/" aria-label="SQLClean home">
+					<img class="logo-for-light" src="assets/logo-light.png" alt="SQLClean" width="139" height="30" />
+					<img class="logo-for-dark" src="assets/logo-dark.png" alt="SQLClean" width="139" height="30" />
+				</a>
+				<nav class="nav" aria-label="Main">
+					<a class="hide-sm" href="#how">How it works</a>
+					<a href="/docs/">Docs</a>
+					<a class="hide-sm" href="/docs/quickstart/">Quickstart</a>
+					<a class="nav-icon" href="https://github.com/sqlstack-io/sqlclean" aria-label="SQLClean on GitHub">
+						<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" /></svg>
+					</a>
+					<button class="theme-toggle" type="button" aria-label="Toggle dark mode" data-theme-toggle>
+						<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
+						<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+					</button>
+				</nav>
+			</div>
+		</header>
+
+		<main>
+			<div class="hero wrap">
+				<div class="hero-text">
+					<p class="eyebrow">Rust-powered · Free and open source · Apache-2.0</p>
+					<h1>Clean SQL, every time</h1>
+					<p class="tagline">A fast SQL linter and formatter.</p>
+					<p class="lede">
+						SQLClean flags SQL that runs but is easy to get wrong, like <code>= NULL</code>, applies safe fixes, and
+						formats every file one way. It checks 10,000 files in under a second. Your team's own Rules are a few
+						lines of Python.
+					</p>
+					<div class="actions">
+						<div class="install">
+							<span><span class="prompt">$</span> pip install sqlclean</span>
+							<button class="copy" type="button" data-copy="pip install sqlclean">Copy</button>
+						</div>
+						<a class="button primary" href="/docs/quickstart/">Read the docs</a>
+						<a class="button" href="https://github.com/sqlstack-io/sqlclean">View on GitHub</a>
+					</div>
+				</div>
+				<div
+					class="terminal hero-visual"
+					role="img"
+					aria-label="sqlclean fix turns a two-line query with COUNT(1) and a bare JOIN into a formatted query with COUNT(*) and INNER JOIN, then reports that all checks passed."
+				><span class="hv-stack"><span class="hv-a"><span class="cm">-- models/orders.sql</span>
+<span class="kw">select</span> o.order_id, <span class="fn">count</span>(<span class="num">1</span>) <span class="kw">as</span> items <span class="kw">from</span> orders o
+<span class="kw">join</span> order_items i <span class="kw">on</span> i.order_id = o.order_id <span class="kw">group by</span> o.order_id</span><span class="hv-b"><span class="cm">-- models/orders.sql</span>
+<span class="kw">SELECT</span>
+    o.order_id,
+    <span class="fn">COUNT</span>(*) <span class="kw">AS</span> items
+<span class="kw">FROM</span> orders o
+<span class="kw">INNER JOIN</span> order_items i
+    <span class="kw">ON</span> i.order_id = o.order_id
+<span class="kw">GROUP BY</span>
+    o.order_id</span></span>
+<span class="hv-l hv-l0"><span class="cmd">sqlclean fix</span></span><span class="hv-l hv-l1">Fixed 2 problem(s) and changed 1 file(s).</span><span class="hv-l hv-l2"><span class="ok strong">All checks passed.</span></span></div>
+			</div>
+
+			<section>
+				<div class="wrap">
+					<div class="section-head">
+						<h2>Why SQL stays messy</h2>
+					</div>
+					<div class="problem">
+						<div class="card">
+							<h3>Valid isn't the same as correct</h3>
+							<p><code>WHERE x = NULL</code> runs without an error and matches no rows.</p>
+						</div>
+						<div class="card">
+							<h3>Style eats review time</h3>
+							<p>Reviewers argue about commas and casing instead of the logic.</p>
+						</div>
+						<div class="card">
+							<h3>Team rules live in people's heads</h3>
+							<p>"Marts read staging, not raw" holds until someone new misses it.</p>
+						</div>
+						<div class="card">
+							<h3>Autofixes you can't trust</h3>
+							<p>A fix that changes which rows match is a bug, not a cleanup.</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="how">
+				<div class="wrap">
+					<div class="section-head">
+						<h2>From a messy query to a clean one</h2>
+						<p>Check, fix and format, then keep it that way with your own Rules, in CI and before every commit.</p>
+					</div>
+
+					<div class="steps">
+						<p class="step-group">Find the problems</p>
+						<div class="step">
+							<div class="step-text">
+								<span class="num">01 · Catch common mistakes</span>
+								<h3>Flag SQL that runs but is easy to get wrong</h3>
+								<p>
+									Default Rules flag comparisons with <code>NULL</code>, <code>NOT IN</code> lists that contain
+									<code>NULL</code>, and <code>ROW_NUMBER</code> with no deterministic order. Each finding points at the
+									exact characters and says what to write instead.
+								</p>
+								<p class="more"><a href="/docs/rules/overview/">How Rules work →</a></p>
+							</div>
+<pre class="terminal"><span class="cmd">sqlclean check</span>
+<span class="bad">error[SQC018]</span>: ROW_NUMBER has no deterministic ordering
+  --&gt; models/open_orders.sql:2:3
+   |
+ 2 |   ROW_NUMBER() OVER (PARTITION BY o.customer_id) AS order_rank
+   |   <span class="bad">^^^^^^^^^^</span>
+  <span class="dim">= help:</span> Add ORDER BY with a stable tie-breaker inside the window specification.
+
+<span class="bad">error[SQC001]</span>: Comparison with NULL is never true
+  --&gt; models/open_orders.sql:4:22
+   |
+ 4 | WHERE o.cancelled_at = NULL
+   |                      <span class="bad">^</span>
+  <span class="dim">= help:</span> Use IS NULL or IS NOT NULL when testing for NULL.
+  <span class="dim">= fix:</span> available with `sqlclean fix --unsafe-fixes`
+
+<span class="bad">error[SQC019]</span>: NOT IN list contains NULL and can reject every row
+  --&gt; models/open_orders.sql:5:16
+   |
+ 5 |   AND o.status NOT IN ('refunded', NULL)
+   |                <span class="bad">^^^</span>
+  <span class="dim">= help:</span> Remove NULL from the list or express the anti-join with a NULL-safe NOT EXISTS.
+
+Found 3 problems (1 fixable with `sqlclean fix --unsafe-fixes`).</pre>
+						</div>
+
+						<p class="step-group">Fix them</p>
+						<div class="step">
+							<div class="step-text">
+								<span class="num">02 · Fix safely</span>
+								<h3>Apply safe fixes, and hold back the rest</h3>
+								<p>
+									<code>sqlclean fix</code> applies safe fixes until the file is stable, then formats it. A fix that can
+									change which rows match, like <code>= NULL</code> to <code>IS NULL</code>, waits for
+									<code>--unsafe-fixes</code>. A pass that would break parsing is thrown away.
+								</p>
+								<p class="more"><a href="/docs/cli/fix/">How fixing works →</a></p>
+							</div>
+<pre class="terminal"><span class="cmd">sqlclean fix --unsafe-fixes --diff</span>
+<span class="dim">--- a/models/open_orders.sql</span>
+<span class="dim">+++ b/models/open_orders.sql</span>
+<span class="dim">@@ -1,5 +1,8 @@</span>
+<span class="bad">-SELECT o.order_id, o.customer_id, o.total_cents,</span>
+<span class="bad">-  ROW_NUMBER() OVER (PARTITION BY o.customer_id) AS order_rank</span>
+<span class="ok">+SELECT</span>
+<span class="ok">+    o.order_id,</span>
+<span class="ok">+    o.customer_id,</span>
+<span class="ok">+    o.total_cents,</span>
+<span class="ok">+    ROW_NUMBER() OVER (PARTITION BY o.customer_id) AS order_rank</span>
+ FROM orders o
+<span class="bad">-WHERE o.cancelled_at = NULL</span>
+<span class="bad">-  AND o.status NOT IN ('refunded', NULL)</span>
+<span class="ok">+WHERE</span>
+<span class="ok">+    o.cancelled_at IS NULL AND o.status NOT IN ('refunded', NULL)</span>
+Would fix 1 problem(s) and change 1 file(s).</pre>
+						</div>
+
+						<div class="step">
+							<div class="step-text">
+								<span class="num">03 · One canonical format</span>
+								<h3>Stop arguing about layout</h3>
+								<p>
+									Every statement gets the same layout: upper-case keywords, one column per line and each clause on its
+									own line. Formatting a formatted file changes nothing, and SQL the formatter can't lay out safely is reported and left as it is.
+								</p>
+								<p class="more"><a href="/docs/formatting/">How formatting works →</a></p>
+							</div>
+<pre class="terminal"><span class="cmd">sqlclean format --diff models/revenue.sql</span>
+<span class="dim">--- a/models/revenue.sql</span>
+<span class="dim">+++ b/models/revenue.sql</span>
+<span class="dim">@@ -1,3 +1,17 @@</span>
+<span class="bad">-with paid as (select order_id, sum(amount_cents) as paid_cents from payments where status = 'paid' group by order_id)</span>
+<span class="bad">-select o.order_id, o.ordered_at::date as order_date, coalesce(p.paid_cents, 0) as paid_cents</span>
+<span class="bad">-from orders o left join paid p on p.order_id = o.order_id</span>
+<span class="ok">+WITH paid AS (</span>
+<span class="ok">+    SELECT</span>
+<span class="ok">+        order_id,</span>
+<span class="ok">+        SUM(amount_cents) AS paid_cents</span>
+<span class="ok">+    FROM payments</span>
+<span class="ok">+    WHERE status = 'paid'</span>
+<span class="ok">+    GROUP BY</span>
+<span class="ok">+        order_id</span>
+<span class="ok">+)</span>
+<span class="ok">+</span>
+<span class="ok">+SELECT</span>
+<span class="ok">+    o.order_id,</span>
+<span class="ok">+    o.ordered_at::date AS order_date,</span>
+<span class="ok">+    COALESCE(p.paid_cents, 0) AS paid_cents</span>
+<span class="ok">+FROM orders o</span>
+<span class="ok">+LEFT JOIN paid p</span>
+<span class="ok">+    ON p.order_id = o.order_id</span>
+1 file(s) would be reformatted, 0 file(s) already formatted.</pre>
+						</div>
+
+						<p class="step-group">Keep them fixed</p>
+						<div class="step">
+							<div class="step-text">
+								<span class="num">04 · Make lessons permanent</span>
+								<h3>Turn review comments into Rules</h3>
+								<p>
+									A custom Rule is a Python function that reads the tables, joins, columns and literals of each statement,
+									already located for you. Here marts must read staging models, never raw tables.
+								</p>
+								<p class="more"><a href="/docs/custom-rules/overview/">Write a custom Rule →</a></p>
+							</div>
+<pre class="terminal"><span class="cm"># sql_rules/layers.py</span>
+<span class="fn">@rule</span>(
+    <span class="arg">code</span>=<span class="str">&quot;XSQCLAYER001&quot;</span>,
+    <span class="arg">message</span>=<span class="str">&quot;Marts must not read raw tables&quot;</span>,
+    <span class="arg">remediation</span>=<span class="str">&quot;Read the staging model instead.&quot;</span>,
+    <span class="arg">enabled_by_default</span>=<span class="kw">True</span>,
+)
+<span class="kw">def</span> <span class="fn">marts_read_staging</span>(*, statement: <span class="ty">Statement</span>, ctx: <span class="ty">RuleContext</span>) -&gt; <span class="ty">list</span>:
+    <span class="kw">if not</span> statement.path.startswith(<span class="str">&quot;models/marts/&quot;</span>):
+        <span class="kw">return</span> []
+    <span class="kw">return</span> [
+        ctx.finding(<span class="arg">subject</span>=statement, <span class="arg">node</span>=table)
+        <span class="kw">for</span> table <span class="kw">in</span> statement.tables
+        <span class="kw">if</span> table.qualified_name.startswith(<span class="str">&quot;raw.&quot;</span>)
+    ]
+
+<span class="cmd">sqlclean check</span>
+<span class="bad">error[XSQCLAYER001]</span>: Marts must not read raw tables
+  --&gt; models/marts/revenue.sql:5:12
+   |
+ 5 | INNER JOIN raw.payments p
+   |            <span class="bad">^^^^^^^^^^^^</span>
+  <span class="dim">= help:</span> Read the staging model instead.</pre>
+						</div>
+
+						<div class="step">
+							<div class="step-text">
+								<span class="num">05 · Test your Rules</span>
+								<h3>Rules with tests, like any other code</h3>
+								<p>
+									<code>sqlclean.testing</code> parses each case with the same engine as <code>sqlclean check</code> and
+									fails when the number of findings is wrong. It runs every case twice, in opposite file orders, to catch
+									Rules that aren't deterministic.
+								</p>
+								<p class="more"><a href="/docs/custom-rules/testing/">Test a custom Rule →</a></p>
+							</div>
+<pre class="terminal"><span class="cm"># tests/test_layers.py</span>
+<span class="kw">from</span> sqlclean.testing <span class="kw">import</span> <span class="ty">RuleCase</span>, evaluate_rule
+
+<span class="kw">def</span> <span class="fn">test_marts_reading_raw_tables_are_reported</span>() -&gt; <span class="kw">None</span>:
+    evaluate_rule(
+        <span class="arg">rule</span>=marts_read_staging,
+        <span class="arg">test_case</span>=<span class="ty">RuleCase</span>(
+            <span class="arg">description</span>=<span class="str">&quot;a mart joins raw.payments&quot;</span>,
+            <span class="arg">path</span>=<span class="str">&quot;models/marts/revenue.sql&quot;</span>,
+            <span class="arg">source</span>=<span class="str">&quot;SELECT o.order_id FROM stg_orders o JOIN raw.payments p ON …&quot;</span>,
+            <span class="arg">dialect</span>=<span class="str">&quot;duckdb&quot;</span>,
+            <span class="arg">expected_finding_count</span>=<span class="num">1</span>,
+        ),
+    )
+
+<span class="cmd">pytest tests</span>
+..                                                    [100%]
+<span class="ok">2 passed</span> in 0.04s</pre>
+						</div>
+
+						<div class="step">
+							<div class="step-text">
+								<span class="num">06 · Review every exception</span>
+								<h3>Allow a finding once, with a reason</h3>
+								<p>
+									An exception allows one Rule in one file, and for a cross join, one relation, with a reason a reviewer
+									can read. When the SQL changes and the exception no longer matches, <code>sqlclean check</code> fails
+									until it is removed, so allowances never outlive the code they covered.
+								</p>
+								<p class="more"><a href="/docs/rules/overview/">How exceptions work →</a></p>
+							</div>
+<pre class="terminal"><span class="cm"># sqlclean.toml</span>
+[[rules.rule_exceptions]]
+<span class="arg">rule</span> = <span class="str">&quot;SQC038&quot;</span>
+<span class="arg">path</span> = <span class="str">&quot;models/marts/calendar.sql&quot;</span>
+<span class="arg">relation</span> = <span class="str">&quot;regions&quot;</span>
+<span class="arg">reason</span> = <span class="str">&quot;Every date is reported for every region.&quot;</span>
+
+<span class="cmd">sqlclean check</span>
+<span class="bad">error[SQC038]</span>: CROSS JOIN with `markets` creates an explicit cartesian product
+  --&gt; models/marts/calendar.sql:5:1
+   |
+ 5 | CROSS JOIN markets r
+   | <span class="bad">^^^^^</span>
+  <span class="dim">= help:</span> Use a keyed JOIN, or make one side provably at most one row <span class="dim">…</span>
+
+<span class="bad">error</span>: stale rule exception: SQC038 in models/marts/calendar.sql for relation regions
+  matches no finding; remove it from sqlclean.toml</pre>
+						</div>
+
+						<div class="step">
+							<div class="step-text">
+								<span class="num">07 · Run it everywhere</span>
+								<h3>Before every commit and in CI</h3>
+								<p>
+									Ready-made pre-commit hooks check, fix or format staged SQL. In CI, <code>sqlclean check</code> exits
+									non-zero on findings and writes SARIF for code-scanning annotations, or JSON for anything else.
+								</p>
+								<p class="more"><a href="/docs/integrations/">Set up CI and pre-commit →</a></p>
+							</div>
+<pre class="terminal"><span class="cm"># .pre-commit-config.yaml</span>
+<span class="arg">repos</span>:
+  - <span class="arg">repo</span>: https://github.com/sqlstack-io/sqlclean
+    <span class="arg">rev</span>: v0.0.1
+    <span class="arg">hooks</span>:
+      - <span class="arg">id</span>: sqlclean-fix
+      - <span class="arg">id</span>: sqlclean-format
+
+<span class="cmd">sqlclean check --output-format sarif &gt; sqlclean.sarif</span>
+{
+  <span class="str">&quot;version&quot;</span>: <span class="str">&quot;2.1.0&quot;</span>,
+  <span class="str">&quot;runs&quot;</span>: [{
+    <span class="str">&quot;tool&quot;</span>: { <span class="str">&quot;driver&quot;</span>: { <span class="str">&quot;name&quot;</span>: <span class="str">&quot;sqlclean&quot;</span>, <span class="dim">…</span> } },
+    <span class="str">&quot;results&quot;</span>: [{
+      <span class="str">&quot;ruleId&quot;</span>: <span class="str">&quot;XSQCLAYER001&quot;</span>,
+      <span class="str">&quot;message&quot;</span>: { <span class="str">&quot;text&quot;</span>: <span class="str">&quot;Marts must not read raw tables. Read the staging model instead.&quot;</span> },
+      <span class="dim">…</span></pre>
+						</div>
+					</div>
+					<p class="caption">Real output from <code>sqlclean</code> on small example projects, trimmed to the relevant lines.</p>
+				</div>
+			</section>
+
+			<section>
+				<div class="wrap">
+					<div class="section-head">
+						<h2>Built for big SQL repositories</h2>
+						<p>The rest of what makes SQLClean easy to adopt.</p>
+					</div>
+					<div class="grid">
+						<div class="item">
+							<h3>13 Rules on by default, 45 in all</h3>
+							<p>The defaults cover NULLs, joins, ordering and duplicates. The other 32 cover style and structure, and you opt in to them.</p>
+						</div>
+						<div class="item">
+							<h3>Faster than sqruff and SQLFluff</h3>
+							<p>On 10,282 files, <code>sqlclean check</code> takes 0.8 s with defaults; sqruff takes 41 s and SQLFluff 15 minutes. <a href="/docs/benchmarks/">See the benchmark →</a></p>
+						</div>
+						<div class="item">
+							<h3>A dialect per folder</h3>
+							<p>Set one dialect for the project and override it for any folder, such as Snowflake models beside DuckDB tests.</p>
+						</div>
+						<div class="item">
+							<h3>Exact locations</h3>
+							<p>Findings and fixes use character offsets, so multibyte text doesn't shift an edit.</p>
+						</div>
+						<div class="item">
+							<h3>Text, JSON and SARIF</h3>
+							<p>Readable in a terminal, structured for scripts, and annotated in code review.</p>
+						</div>
+						<div class="item">
+							<h3>An embeddable Rust crate</h3>
+							<p>The Rules and formatter live in their own crate, so another tool can run them under its own codes.</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="start">
+				<div class="wrap start">
+					<div>
+						<h2>Start in a minute</h2>
+						<p class="lede">
+							Install it, point it at your SQL, and add a <code>sqlclean.toml</code> when you want to choose a dialect
+							or Rules.
+						</p>
+						<ul>
+							<li>No account, server or plugins to set up.</li>
+							<li>Custom Rules run in the same Python environment as the command.</li>
+							<li>Free and open source, with no paid tier.</li>
+						</ul>
+						<div class="adapters" aria-label="Some supported dialects">
+							<span>DuckDB</span>
+							<span>Snowflake</span>
+							<span>BigQuery</span>
+							<span>PostgreSQL</span>
+							<span>Databricks</span>
+							<span>Redshift</span>
+							<span>ClickHouse</span>
+							<span>SQL Server</span>
+							<span>MySQL</span>
+							<span>Trino</span>
+						</div>
+					</div>
+<pre class="terminal"><span class="cmd">pip install sqlclean</span>
+<span class="cmd">sqlclean check</span>
+<span class="dim">…</span>
+Found 1 problem (1 fixable with `sqlclean fix --unsafe-fixes`).
+<span class="cmd">sqlclean fix --unsafe-fixes</span>
+Fixed 1 problem(s) and changed 1 file(s).
+<span class="ok strong">All checks passed.</span></pre>
+				</div>
+			</section>
+
+			<section class="closing">
+				<div class="wrap">
+					<h2>Make clean SQL the default</h2>
+					<p>The docs cover every command, every Rule, configuration and custom Rules.</p>
+					<div class="actions">
+						<a class="button primary" href="/docs/">Read the docs</a>
+						<a class="button" href="/docs/quickstart/">Quickstart</a>
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<footer>
+			<div class="wrap">
+				<span>SQLClean · Apache-2.0</span>
+				<span>
+					<a href="/docs/">Docs</a> ·
+					<a href="https://github.com/sqlstack-io/sqlclean">GitHub</a> ·
+					<a href="https://pypi.org/project/sqlclean/">PyPI</a>
+				</span>
+			</div>
+		</footer>
+
+		<script>
+			document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
+				var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+				document.documentElement.dataset.theme = next;
+				localStorage.setItem('sqlclean-theme', next);
+			});
+			document.querySelectorAll('[data-copy]').forEach(function (button) {
+				button.addEventListener('click', function () {
+					navigator.clipboard.writeText(button.dataset.copy).then(function () {
+						button.textContent = 'Copied';
+						setTimeout(function () {
+							button.textContent = 'Copy';
+						}, 1500);
+					});
+				});
+			});
+		</script>
+	</body>
+</html>

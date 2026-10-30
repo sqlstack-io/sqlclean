@@ -20,7 +20,7 @@ The README uses `check-fix`, copied into `.github/demos/`.
 ## Record
 
 ```bash
-cd docs/recordings
+cd website/recordings
 ./record.sh check-fix     # out/check-fix.gif, out/check-fix.mp4 and out/check-fix.png
 cp out/check-fix.gif ../../.github/demos/
 ```
