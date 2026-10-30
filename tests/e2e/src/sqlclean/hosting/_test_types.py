@@ -69,3 +69,13 @@ class SarifTestCase:
     config: str
     source: str
     expected_message: str
+
+
+@dataclass(frozen=True)
+class ManyFilesTestCase:
+    """Enough files for custom Rules to run on several hosts, every flagged_every-th one flagged."""
+
+    description: str
+    file_count: int
+    flagged_every: int
+    expected_finding_count: int
