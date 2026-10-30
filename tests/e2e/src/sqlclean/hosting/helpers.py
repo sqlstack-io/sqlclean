@@ -20,13 +20,13 @@ def executable() -> str:
 
 
 def write_project(root: Path, *, config: str, files: dict[str, str]) -> None:
-    """Write sqlclean.toml and every file under root."""
+    """Write sqlclean.toml and every file under root with LF line endings on every platform."""
 
-    (root / "sqlclean.toml").write_text(config, encoding="utf-8")
+    (root / "sqlclean.toml").write_text(config, encoding="utf-8", newline="\n")
     for path, text in files.items():
         target: Path = root / path
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(text, encoding="utf-8")
+        target.write_text(text, encoding="utf-8", newline="\n")
 
 
 def run(
