@@ -49,3 +49,13 @@ class CacheTestCase:
     expected_exits: tuple[int, int, int]
     expected_cached_code: str
     expected_error: str
+
+
+@dataclass(frozen=True)
+class SummaryTestCase:
+    """SQL whose text report must end with one summary line."""
+
+    description: str
+    config: str
+    source: str
+    expected_summary: str

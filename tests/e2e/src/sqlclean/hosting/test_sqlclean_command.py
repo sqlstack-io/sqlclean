@@ -13,6 +13,7 @@ from tests.e2e.src.sqlclean.hosting._test_types import (
     CheckTestCase,
     IdempotencyTestCase,
     RewriteTestCase,
+    SummaryTestCase,
 )
 from tests.e2e.src.sqlclean.hosting.helpers import run, write_project
 from tests.integration.src.sqlclean.rule_testing.helpers import SAMPLE_RULES
@@ -180,6 +181,42 @@ def test_given_project_when_rewriting_then_files_and_exit_status_match(
 
     assert completed.returncode == test_case.expected_exit, completed.stdout + completed.stderr
     assert files == test_case.expected_files
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        SummaryTestCase(
+            description="a safe fix is fixable with plain fix",
+            config=DUCKDB + '[rules]\nselect = ["SQC002"]\n',
+            source="select a.id from a, b\n",
+            expected_summary="Found 1 problem (1 fixable with `sqlclean fix`).",
+        ),
+        SummaryTestCase(
+            description="an unsafe fix needs --unsafe-fixes",
+            config=DUCKDB + '[rules]\nselect = ["SQC001"]\n',
+            source="select a.id from a where a.x = null\n",
+            expected_summary="Found 1 problem (1 fixable with `sqlclean fix --unsafe-fixes`).",
+        ),
+        SummaryTestCase(
+            description="safe and unsafe fixes are counted apart",
+            config=DUCKDB + '[rules]\nselect = ["SQC001", "SQC002"]\n',
+            source=NULL_AND_COMMA,
+            expected_summary=(
+                "Found 2 problems (1 fixable with `sqlclean fix`, 1 more with `--unsafe-fixes`)."
+            ),
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_fixable_findings_when_checking_then_summary_counts_safe_and_unsafe_fixes(
+    tmp_path: Path, test_case: SummaryTestCase
+) -> None:
+    write_project(tmp_path, config=test_case.config, files={"q.sql": test_case.source})
+
+    completed: subprocess.CompletedProcess[str] = run(tmp_path, "check", environment={})
+
+    assert completed.stdout.rstrip().splitlines()[-1] == test_case.expected_summary
 
 
 @pytest.mark.parametrize(

@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 
-use crate::checking::models::CheckOutcome;
+use crate::checking::models::{CheckOutcome, FixSafety};
 use crate::config::constants::CONFIG_FILE_NAME;
 use crate::reporting::models::LocatedFinding;
 
@@ -28,22 +28,42 @@ pub(crate) fn render(
             stale.rule, stale.path
         );
     }
-    let fixable: usize = located
-        .iter()
-        .filter(|finding| finding.fix.is_some())
-        .count();
+    let safe: usize = fix_count(located, FixSafety::Safe);
+    let unsafe_only: usize = fix_count(located, FixSafety::Unsafe);
     let problems: usize = located.len() + outcome.stale_exceptions.len();
     if problems == 0 {
         report.push_str("All checks passed.\n");
     } else {
         let noun: &str = if problems == 1 { "problem" } else { "problems" };
         let _ = write!(report, "Found {problems} {noun}");
-        if fixable > 0 {
-            let _ = write!(report, " ({fixable} fixable with `sqlclean fix`)");
+        match (safe, unsafe_only) {
+            (0, 0) => {}
+            (safe, 0) => {
+                let _ = write!(report, " ({safe} fixable with `sqlclean fix`)");
+            }
+            (0, unsafe_only) => {
+                let _ = write!(
+                    report,
+                    " ({unsafe_only} fixable with `sqlclean fix --unsafe-fixes`)"
+                );
+            }
+            (safe, unsafe_only) => {
+                let _ = write!(
+                    report,
+                    " ({safe} fixable with `sqlclean fix`, {unsafe_only} more with `--unsafe-fixes`)"
+                );
+            }
         }
         report.push_str(".\n");
     }
     report
+}
+
+fn fix_count(located: &[LocatedFinding], safety: FixSafety) -> usize {
+    located
+        .iter()
+        .filter(|finding| finding.fix == Some(safety))
+        .count()
 }
 
 fn finding_text(finding: &LocatedFinding, text: Option<&String>) -> String {
