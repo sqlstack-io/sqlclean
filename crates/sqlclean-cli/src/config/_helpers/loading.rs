@@ -12,7 +12,7 @@ use crate::config::models::{Config, RulesConfig};
 
 pub(crate) fn load_config(explicit: Option<&Path>, start: &Path) -> Result<Config, String> {
     let located: Option<PathBuf> = match explicit {
-        Some(path) => Some(path.to_path_buf()),
+        Some(path) => Some(start.join(path)),
         None => find_config(start),
     };
     let (root, file): (PathBuf, ConfigFile) = match located {

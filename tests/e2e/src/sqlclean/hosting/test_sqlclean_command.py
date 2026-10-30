@@ -69,6 +69,17 @@ NULL_AND_COMMA: str = "select a.id from a, b where a.x = null\n"
             expected_stale=("z",),
         ),
         CheckTestCase(
+            description="a bare --config file name is read from the working directory",
+            config=DUCKDB,
+            files={
+                "strict.toml": CROSS_JOIN_ONLY,
+                "models/q.sql": "SELECT a.id FROM a CROSS JOIN b\n",
+            },
+            arguments=("--config", "strict.toml"),
+            expected_exit=1,
+            expected_codes=("SQC038",),
+        ),
+        CheckTestCase(
             description="unparseable SQL is reported as a finding",
             config=CROSS_JOIN_ONLY,
             files={"models/q.sql": "SELECT FROM WHERE (\n"},
