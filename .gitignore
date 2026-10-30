@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Rust
+target/
+**/*.rs.bk
+
+# Tool caches
+.fensu/cache/
+.sqlclean/
+
+# Editors and environments
+.env
+.envrc
+.idea/
+.vscode/

@@ -1,0 +1,93 @@
+---
+title: "Introduction"
+description: "Clean SQL, every time. Fast linting, safe fixes and one canonical format."
+---
+
+import Card from '../../../components/docs/Card.astro';
+import CardGroup from '../../../components/docs/CardGroup.astro';
+
+SQLClean is a free, open-source SQL linter and formatter. It checks `.sql` files against built-in
+Rules, applies their fixes, and formats every file in one canonical layout. The engine and the
+`sqlclean` command are written in Rust. Custom Rules are plain Python functions that read
+structural facts about each statement.
+
+```bash
+sqlclean check
+```
+
+```text
+error[SQC001]: Comparison with NULL is never true
+  --> models/open_orders.sql:1:77
+   |
+ 1 | with open_orders as (select order_id, amount from orders where cancelled_at = null),
+   |                                                                             ^
+  = help: Use IS NULL or IS NOT NULL when testing for NULL.
+  = fix: available with `sqlclean fix --unsafe-fixes`
+
+error[SQC005]: CTE is unreachable from the final query
+  --> models/open_orders.sql:2:1
+   |
+ 2 | refunds as (select order_id from payments where amount < 0)
+   | ^^^^^^^
+  = help: Reference the CTE from the final query or another reachable CTE, or remove it.
+  = fix: available with `sqlclean fix`
+
+Found 2 problems (1 fixable with `sqlclean fix`, 1 more with `--unsafe-fixes`).
+```
+
+`sqlclean fix` removes the unused CTE, then formats the file. The `= NULL` comparison has a fix
+too, but it changes which rows match, so it waits for `--unsafe-fixes`.
+
+## Check
+
+[`sqlclean check`](/docs/cli/check/) reports findings with the source line, the problem and what to
+do about it. Output is text for people, or [JSON and SARIF](/docs/integrations/) for CI and code
+scanning. The [built-in Rules](/docs/rules/reference/) cover SQL that runs but returns the wrong
+rows: `NULL` comparisons, implicit cartesian joins, `LIMIT` without `ORDER BY`, unused CTEs and
+mismatched set operations. Opt-in Rules enforce a consistent query structure.
+
+## Fix
+
+[`sqlclean fix`](/docs/cli/fix/) applies every safe fix until the files stop changing, then formats
+them. A fix that can change query results is marked unsafe and runs only with `--unsafe-fixes`.
+See [Safe and unsafe fixes](/docs/rules/overview/#safe-and-unsafe-fixes).
+
+## Format
+
+[`sqlclean format`](/docs/cli/format/) rewrites every file in one canonical layout. Keywords are
+upper case, each clause starts a line, and statements are separated by one blank line. Formatting
+is idempotent: a formatted file formats to itself. See [Formatting](/docs/formatting/).
+
+## Extend
+
+[Custom Rules](/docs/custom-rules/overview/) are Python functions decorated with `@rule`. They read
+the tables, joins, CTEs, columns and literals of each statement, can carry fixes and typed options,
+and run with the same selection, exceptions and cache as the built-in Rules. Tools that compile or
+template SQL can [embed the engine](/docs/embedding/) from Rust.
+
+## Commands
+
+| Command | What it does |
+|---------|--------------|
+| [`sqlclean check`](/docs/cli/check/) | Reports Rule findings without changing any file |
+| [`sqlclean fix`](/docs/cli/fix/) | Applies Rule fixes until stable, then formats |
+| [`sqlclean format`](/docs/cli/format/) | Rewrites SQL files in the canonical layout |
+| [`sqlclean rules`](/docs/cli/rules/) | Lists the available Rules, or shows one |
+| [`sqlclean facts`](/docs/cli/facts/) | Prints the statement facts custom Rules read, as JSON |
+
+## Where to start
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/docs/quickstart/">
+    Install SQLClean, then check, fix and format your first file.
+  </Card>
+  <Card title="Rules" icon="shield-check" href="/docs/rules/overview/">
+    Selection, defaults, exceptions and fixes.
+  </Card>
+  <Card title="Custom Rules" icon="code" href="/docs/custom-rules/overview/">
+    Encode your team's SQL conventions in Python.
+  </Card>
+  <Card title="CLI reference" icon="terminal" href="/docs/cli/check/">
+    Every command and flag.
+  </Card>
+</CardGroup>

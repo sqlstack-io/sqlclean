@@ -1,0 +1,61 @@
+<!-- generated-by: sqlclean skills -->
+
+# sqlclean skills
+
+> Install the SQLClean skill so AI coding agents know its commands, Rules and configuration.
+
+Online: https://sqlclean.io/docs/cli/skills/
+
+`sqlclean skills` writes the SQLClean skill into your project, so AI coding agents such as Claude
+Code, OpenCode and Cursor know how to check, fix and format SQL, configure `sqlclean.toml` and
+write custom Rules. The skill ships inside the `sqlclean` package with a copy of every page of
+these docs, so it always matches the installed version.
+
+## Usage
+
+```bash
+sqlclean skills [--target <TARGET>]... [--global] [--force]
+```
+
+```bash
+# Install the agents and claude targets (default)
+sqlclean skills
+
+# Install for Claude Code only
+sqlclean skills --target claude
+
+# Install under your home directory for every project
+sqlclean skills --global
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--target <TARGET>` | The agent to install for: `agents`, `claude` or `opencode`. Repeat it for several. |
+| `--global` | Install under the home directory instead of the configuration root |
+| `--force` | Overwrite skill files that SQLClean did not generate |
+
+## Targets
+
+| Target | Project path | Global path |
+|--------|--------------|-------------|
+| `agents` | `.agents/skills/sqlclean/` | `~/.agents/skills/sqlclean/` |
+| `claude` | `.claude/skills/sqlclean/` | `~/.claude/skills/sqlclean/` |
+| `opencode` | `.opencode/skills/sqlclean/` | `~/.config/opencode/skills/sqlclean/` |
+
+Without `--target`, SQLClean installs `agents` and `claude`. OpenCode and several other agents
+read the shared `.agents` directory; Claude Code needs its own `.claude` copy.
+
+The project path is relative to the directory of the nearest `sqlclean.toml`, or the working
+directory when there is none.
+
+## Updating
+
+Every file SQLClean writes carries a `generated-by: sqlclean skills` comment. Rerun
+`sqlclean skills` after upgrading SQLClean:
+
+- Generated files are rewritten with the new version's content.
+- Generated pages the new version no longer ships are removed.
+- A file without the comment, such as one you wrote yourself, is never overwritten. The command
+  stops with exit status 2 before writing anything, unless you pass `--force`.

@@ -1,0 +1,23 @@
+- id: sqlclean-check
+  name: sqlclean check
+  description: Report SQL lint findings without changing files.
+  entry: sqlclean check
+  language: python
+  types: [sql]
+  require_serial: true
+
+- id: sqlclean-fix
+  name: sqlclean fix
+  description: Apply safe SQL lint fixes, then format.
+  entry: sqlclean fix
+  language: python
+  types: [sql]
+  require_serial: true
+
+- id: sqlclean-format
+  name: sqlclean format
+  description: Rewrite SQL files in the canonical layout.
+  entry: sqlclean format
+  language: python
+  types: [sql]
+  require_serial: true

@@ -1,0 +1,160 @@
+<!-- generated-by: sqlclean skills -->
+
+# Fixes and options
+
+> Give custom Rules safe or unsafe fixes, and typed options configured in sqlclean.toml.
+
+Online: https://sqlclean.io/docs/custom-rules/fixes-and-options/
+
+## Contents
+
+- Fixes
+- Options
+
+A custom Rule can attach a fix to each finding, which [`sqlclean fix`](../cli/fix.md) applies,
+and can declare typed options that a project sets in `sqlclean.toml`.
+
+## Fixes
+
+A fix is a list of edits to the file. Declare `fixable` on the Rule, then pass the edits to
+`ctx.finding`:
+
+```python
+from sqlclean import FixSafety, Finding, RuleContext, Statement, rule
+
+@rule(
+    code="XSQCSTYLE001",
+    message="COUNT(1) should be COUNT(*)",
+    remediation="Write COUNT(*).",
+    fixable=FixSafety.SAFE,
+    enabled_by_default=True,
+)
+def count_one(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
+    counts = {f.end + 1 for f in statement.functions if f.name.upper() == "COUNT"}
+    return [
+        ctx.finding(subject=statement, node=literal, fix=[ctx.replace(node=literal, text="*")])
+        for literal in statement.literals
+        if literal.text == "1" and literal.start in counts
+    ]
+```
+
+A function call is located at its name, so `f.end + 1` is the first character inside its
+parentheses.
+
+```bash
+sqlclean fix --diff --select XSQCSTYLE
+```
+
+```diff
+--- a/models/orders.sql
++++ b/models/orders.sql
+@@ -1,3 +1,6 @@
+-SELECT customer_id, COUNT(1) AS orders
++SELECT
++    customer_id,
++    COUNT(*) AS orders
+ FROM customer_orders
+-GROUP BY customer_id
++GROUP BY
++    customer_id
+Would fix 1 problem(s) and change 1 file(s).
+```
+
+### Making edits
+
+| Method | Edit |
+|--------|------|
+| `ctx.replace(node=..., text=...)` | Replace the node's text |
+| `ctx.insert_before(node=..., text=...)` | Insert text just before the node |
+| `ctx.insert_after(node=..., text=...)` | Insert text just after the node |
+| `ctx.delete(node=...)` | Remove the node's text |
+
+`node` is any node or statement, or anything with `start` and `end` character offsets in the file.
+An `Edit(start=..., end=..., text=...)` from `sqlclean` builds an edit from offsets directly. Every
+edit must lie inside the finding's file.
+
+### Safe and unsafe
+
+`fixable=FixSafety.SAFE` declares fixes that keep the query's results; `sqlclean fix` applies them.
+`fixable=FixSafety.UNSAFE` declares fixes that can change results; they apply only with
+`--unsafe-fixes`. The safety belongs to the Rule, so every fix of one Rule has the same safety.
+See [Safe and unsafe fixes](../rules/overview.md#safe-and-unsafe-fixes).
+
+A finding without `fix` has no fix, even in a fixable Rule. A Rule that returns a fix without
+declaring `fixable` fails with `Rule XSQCSTYLE001 returned a fix but does not declare fixable`.
+
+### How fixes combine
+
+`sqlclean fix` applies custom fixes exactly as it applies built-in ones:
+
+- A fix whose edits overlap another fix's edits waits for the next pass, where the Rule runs again
+  on the changed file.
+- A pass that would leave a file that no longer parses is not applied to that file.
+- After at most 10 passes, the files are formatted, so a fix need not produce formatted SQL.
+
+Keep each edit as small as the change: replace the literal, not the statement.
+
+## Options
+
+An option is a typed value a project sets per Rule. Declare it with `RuleOption`, list it in
+`options`, and read it with `ctx.option`:
+
+```python
+from sqlclean import Finding, RuleContext, RuleOption, Statement, rule
+
+PREFIXES = RuleOption.string_list(
+    name="prefixes", default=("tmp_",), description="Table prefixes that must not be read."
+)
+
+@rule(
+    code="XSQCNAME001",
+    message="Query reads a temporary table",
+    remediation="Read from the published table instead.",
+    options=(PREFIXES,),
+    enabled_by_default=True,
+)
+def temporary_table(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
+    prefixes = ctx.option(PREFIXES)
+    return [
+        ctx.finding(subject=statement, node=table)
+        for table in statement.tables
+        if table.name.startswith(prefixes)
+    ]
+```
+
+```toml
+[rules.rule_options.XSQCNAME001]
+prefixes = ["tmp_", "scratch_"]
+```
+
+`ctx.option` returns the configured value, or the default when `sqlclean.toml` does not set it.
+List options arrive as tuples.
+
+| Constructor | TOML value | Extra arguments |
+|-------------|------------|-----------------|
+| `RuleOption.boolean(name=, default=, description=)` | `true` or `false` | |
+| `RuleOption.integer(name=, default=, description=)` | An integer | `minimum`, `maximum` |
+| `RuleOption.string(name=, default=, description=)` | A string | `choices` |
+| `RuleOption.string_list(name=, default=, description=)` | A list of strings | |
+| `RuleOption.integer_list(name=, default=, description=)` | A list of integers | |
+
+`name` must be a Python identifier, and the default must be valid for the option.
+
+### Validation
+
+Configured values are checked against the declarations, and a bad value stops the command with
+exit code `2`:
+
+| Problem | Error |
+|---------|-------|
+| A value of the wrong type | `[rules.rule_options.XSQCNAME001] option prefixes expects a list, got 'tmp_'` |
+| An integer out of bounds | `[rules.rule_options.XSQCFILE002] option max_statements must be at least 1` |
+| A string outside `choices` | `[rules.rule_options.XSQCFILE002] option style must be one of ['strict', 'loose']` |
+| A name the Rule does not declare | `Rule XSQCNAME001 has no option prefix` |
+| A code no custom Rule has | `[rules.rule_options.XSQCNOPE001]: no custom Rule has this code` |
+| A Rule that reads an option it did not declare | `Rule XSQCFILE002 reads undeclared option verbose` |
+
+Built-in Rules take no options. Their two limits are set in
+[`[rules.thresholds]`](../rules/overview.md#thresholds).
+
+Changing an option evaluates that Rule again on every file; cached results for other Rules stay.

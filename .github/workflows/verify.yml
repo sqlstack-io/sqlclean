@@ -1,0 +1,190 @@
+name: Verify
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    outputs:
+      full: ${{ steps.classify.outputs.full }}
+      skills: ${{ steps.classify.outputs.skills }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: classify
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Without an exact pull request diff, such as a manual or release dispatch, run everything.
+          if [[ -n "${BASE_SHA}" && -n "${HEAD_SHA}" ]] \
+            && changed="$(git diff --name-only "${BASE_SHA}...${HEAD_SHA}")"; then
+            printf '%s\n' "${changed}"
+          else
+            changed=""
+          fi
+          printf '%s\n' "${changed}" | python3 -I .github/scripts/classify_changes.py | tee -a "${GITHUB_OUTPUT}"
+
+  light:
+    name: Docs skill and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: python3 -m scripts.check_docs_skill
+      - run: uvx ruff@0.17.3 format --check .
+      - run: uvx ruff@0.17.3 check .
+
+  skills:
+    name: Skills command
+    needs: [changes]
+    if: needs.changes.outputs.skills == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --locked --all-groups
+      - run: uv run pytest tests/e2e -q -n auto -k skills
+
+  checks:
+    name: Checks and tests
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.95.0
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --locked --all-groups
+      - run: make verify
+
+  minimum-rust:
+    name: Minimum supported Rust (1.88)
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.88.0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo +1.88.0 check --workspace --all-targets --locked
+
+  windows:
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --locked --all-groups
+      - run: cargo test --workspace --locked
+      - run: uv run pytest tests -q -n auto
+
+  native-package-smoke:
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v6
+      - run: uv python install 3.12
+      - run: uv sync --locked --all-groups
+      - run: uv run sqlclean --version
+      - run: uv run pytest tests/e2e -q
+
+  source-build:
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v6
+      - run: uv python install 3.12
+      - run: uv build --sdist --out-dir dist
+      - run: uvx maturin sdist --out ../../dist
+        working-directory: packages/sqlclean-cli
+      - run: uv venv .source-venv --python 3.12
+      - run: uv pip install --python .source-venv/bin/python --no-deps dist/*.tar.gz
+      - run: .source-venv/bin/sqlclean --version
+      - name: The source build embeds the skill
+        run: |
+          cd "$(mktemp -d)"
+          "${GITHUB_WORKSPACE}/.source-venv/bin/sqlclean" skills --target agents
+          test -s .agents/skills/sqlclean/references/docs/CONTENTS.md
+
+  verify:
+    # The single check to require: it passes when every suite the change selected passed.
+    name: Verify
+    if: always()
+    needs: [changes, light, skills, checks, minimum-rust, windows, native-package-smoke, source-build]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CHANGES: ${{ needs.changes.result }}
+          LIGHT: ${{ needs.light.result }}
+          FULL: ${{ needs.changes.outputs.full }}
+          CHECKS: ${{ needs.checks.result }}
+          SUITES: >-
+            ${{ needs.skills.result }} ${{ needs.minimum-rust.result }} ${{ needs.windows.result }}
+            ${{ needs.native-package-smoke.result }} ${{ needs.source-build.result }}
+        run: |
+          if [[ "${CHANGES}" != success || "${LIGHT}" != success ]]; then
+            echo "Change classification or the light checks did not pass" >&2
+            exit 1
+          fi
+          if [[ "${FULL}" == true && "${CHECKS}" != success ]]; then
+            echo "The full suite was selected but did not pass: ${CHECKS}" >&2
+            exit 1
+          fi
+          for result in ${CHECKS} ${SUITES}; do
+            if [[ "${result}" != success && "${result}" != skipped ]]; then
+              echo "A selected suite did not pass: ${result}" >&2
+              exit 1
+            fi
+          done
+          echo "Every selected suite passed (full=${FULL})"

@@ -1,0 +1,183 @@
+<!-- generated-by: sqlclean skills -->
+
+# Testing
+
+> Test custom Rules with the sqlclean.testing harness, and keep them deterministic.
+
+Online: https://sqlclean.io/docs/custom-rules/testing/
+
+## Contents
+
+- Running the tests
+- RuleCase
+- RuleResult
+- Failures
+- Determinism
+
+`sqlclean.testing` runs one Rule over SQL you give it, with the same native engine as
+`sqlclean check`. It fails when the Rule reports a different number of findings than you expect,
+or when its findings depend on the order of the files.
+
+```python
+# sql_rules/test_naming.py
+from sqlclean.testing import RuleCase, evaluate_rule
+
+from sql_rules.naming import count_one, temporary_table
+
+def test_scratch_tables_are_reported() -> None:
+    result = evaluate_rule(
+        rule=temporary_table,
+        test_case=RuleCase(
+            description="reads scratch_orders",
+            source="SELECT order_id FROM scratch_orders",
+            dialect="duckdb",
+            options={"prefixes": ["tmp_", "scratch_"]},
+            expected_finding_count=1,
+        ),
+    )
+    finding = result.findings[0]
+    assert (finding.start, finding.end) == (21, 35)
+
+def test_published_tables_pass() -> None:
+    evaluate_rule(
+        rule=temporary_table,
+        test_case=RuleCase(
+            description="reads orders",
+            source="SELECT order_id FROM orders",
+            expected_finding_count=0,
+        ),
+    )
+
+def test_count_one_is_fixed() -> None:
+    result = evaluate_rule(
+        rule=count_one,
+        test_case=RuleCase(
+            description="COUNT(1)",
+            source="SELECT COUNT(1) FROM orders",
+            expected_finding_count=1,
+        ),
+    )
+    assert result.fixed_source == "SELECT COUNT(*) FROM orders"
+```
+
+Test failing cases, passing cases and near misses, and assert exact positions where they matter.
+
+## Running the tests
+
+Files named `test_*.py` and `conftest.py` under `[rules] custom` are not loaded as Rules, so tests
+can live next to the Rules they test. They import Rules by module path from the configuration
+root, so put the root on the import path: run `python -m pytest` from the root, add a
+`conftest.py` there, or set `pythonpath`:
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+pythonpath = ["."]
+```
+
+The harness runs the `sqlclean` executable installed in the same environment, or the one on the
+`PATH`, to parse the case SQL.
+
+## RuleCase
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `description` | required | Names the case in failure messages |
+| `source` | required | The SQL of the file under test |
+| `expected_finding_count` | required | How many findings the Rule must report over every file of the case |
+| `path` | `"query.sql"` | The path of `source` |
+| `dialect` | `"generic"` | The dialect every file of the case is parsed with |
+| `files` | `()` | More files, as `RuleFile(path=..., source=...)` |
+| `options` | `{}` | Option values, as in `[rules.rule_options.<CODE>]` |
+
+`options` are validated as in `sqlclean.toml`, so a test with a bad value fails with the same
+error as `sqlclean check`. See [Validation](fixes-and-options.md#validation).
+
+`files` matter for file and repository Rules. A repository Rule sees every file of the case:
+
+```python
+from sqlclean.testing import RuleCase, RuleFile, evaluate_rule
+
+from sql_rules.layout import duplicate_cte_names
+
+def test_cte_names_repeated_across_files() -> None:
+    result = evaluate_rule(
+        rule=duplicate_cte_names,
+        test_case=RuleCase(
+            description="paid is defined in two files",
+            source="WITH paid AS (SELECT order_id FROM payments) SELECT order_id FROM paid",
+            path="models/paid_orders.sql",
+            files=(
+                RuleFile(
+                    path="models/refunds.sql",
+                    source="WITH paid AS (SELECT order_id FROM refunds) SELECT order_id FROM paid",
+                ),
+            ),
+            expected_finding_count=2,
+        ),
+    )
+    assert [finding.path for finding in result.findings] == [
+        "models/paid_orders.sql",
+        "models/refunds.sql",
+    ]
+```
+
+## RuleResult
+
+| Member | Description |
+|--------|-------------|
+| `findings` | The findings, sorted by path and position |
+| `finding_count` | `len(findings)` |
+| `fixed_source` | `source` with the fixes of its findings applied; `source` itself when there are none |
+
+Each `Finding` has `code`, `path`, `start`, `end`, `message`, `remediation` and `edits`. Offsets
+count characters in the file, as in [Statement facts](statement-facts.md#positions).
+
+`fixed_source` applies every finding's edits once, skipping an edit that overlaps an earlier one,
+and does not format the result. It shows exactly what the Rule's fix changes.
+
+## Failures
+
+`evaluate_rule` raises `RuleCaseError`, which fails the test:
+
+| Problem | Message |
+|---------|---------|
+| A different number of findings | `reads orders: expected 1 findings, got 0` |
+| Findings that depend on file order | `custom Rule XSQCND001 is not deterministic` |
+| Case SQL that does not parse | `sqlclean could not parse the case SQL: sqlclean: error: Parse error at line 1, column 18: ...` |
+| A function without `@rule` | `evaluate_rule needs a function decorated with @rule` |
+| No `sqlclean` executable | `the sqlclean executable is not installed; install sqlclean` |
+
+Errors in the Rule itself, such as an exception or a fix without `fixable`, raise the same errors
+as in [`sqlclean check`](overview.md#errors).
+
+## Determinism
+
+`sqlclean check` caches each Rule's findings per file and reuses them while the inputs are
+unchanged, so a Rule must report the same findings for the same input every time. The harness
+checks this: it evaluates the Rule over the case's files, then again in reverse file order, and
+fails when the two sets of findings differ.
+
+The usual cause is state kept between calls, such as a module-level set of names already seen:
+
+```python
+SEEN: set[str] = set()
+
+@rule(code="XSQCND001", message="Table read in an earlier file", remediation="...")
+def seen_before(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
+    found = [ctx.finding(subject=statement, node=t) for t in statement.tables if t.name in SEEN]
+    SEEN.update(t.name for t in statement.tables)
+    return found
+```
+
+```text
+RuleCaseError: custom Rule XSQCND001 is not deterministic
+```
+
+Compute findings from the subject and `ctx` alone. When a Rule needs to compare files, give it a
+[repository subject](overview.md#choosing-a-subject), which sees every file at
+once.
+
+Avoid other inputs SQLClean does not track, such as the clock, environment variables, network
+calls and files read directly from disk. A changed input of that kind does not invalidate cached
+results; run with `--no-cache` when it changes.

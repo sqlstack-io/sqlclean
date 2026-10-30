@@ -1,0 +1,170 @@
+<!-- generated-by: sqlclean skills -->
+
+# sqlclean check
+
+> Report Rule findings without changing any file.
+
+Online: https://sqlclean.io/docs/cli/check/
+
+## Contents
+
+- Usage
+- Flags
+- Text output
+- JSON output
+- SARIF output
+- Exit codes
+
+`sqlclean check` runs the selected Rules over SQL files and reports every finding. It never changes
+a file.
+
+`sqlclean lint` is the same command, for anyone used to SQLFluff or sqruff.
+
+## Usage
+
+```bash
+sqlclean check [OPTIONS] [PATHS]...
+```
+
+```bash
+sqlclean check                              # every matching file under the configuration root
+sqlclean check models/orders.sql reports/   # only these files and directories
+sqlclean check --select SQC001,SQC004       # only these Rules
+sqlclean check --output-format sarif > sqlclean.sarif
+```
+
+With no paths, `check` reads every file under the configuration root that matches `include` and
+not `exclude`. A directory is walked the same way. A file named on the command line is read even
+when `include` does not match it, unless `exclude` does. See
+[Choosing files](../configuration.md#choosing-files).
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `PATHS...` | Files or directories to read; the configuration root when omitted |
+| `--select <CODES>` | Rule codes or prefixes to run instead of `[rules] select` |
+| `--ignore <CODES>` | Rule codes or prefixes to skip, in addition to `[rules] ignore` |
+| `--no-cache` | Evaluate every file instead of reusing results for unchanged inputs |
+| `--output-format <FORMAT>` | `text` (default), `json` or `sarif` |
+| `--config <PATH>` | Use this configuration file instead of the nearest `sqlclean.toml` |
+
+`--select` and `--ignore` take a comma-separated list, or the flag repeated. A value is an exact
+code such as `SQC001` or a prefix such as `SQC` or `XSQCNAME`. A value that matches no Rule is an
+error. See [Selecting Rules](../rules/overview.md#selecting-rules).
+
+## Text output
+
+```text
+error[SQC004]: Row selection is nondeterministic
+  --> models/customers.sql:6:1
+   |
+ 6 | LIMIT 10;
+   | ^^^^^
+  = help: Add ORDER BY with a deterministic tie-breaker before LIMIT or OFFSET.
+
+error[SQC001]: Comparison with NULL is never true
+  --> models/orders.sql:8:22
+   |
+ 8 | WHERE o.cancelled_at = NULL
+   |                      ^
+  = help: Use IS NULL or IS NOT NULL when testing for NULL.
+  = fix: available with `sqlclean fix --unsafe-fixes`
+
+error: stale rule exception: SQC004 in models/orders.sql matches no finding; remove it from sqlclean.toml
+
+Found 3 problems (1 fixable with `sqlclean fix --unsafe-fixes`).
+```
+
+Findings are sorted by path, then position. Each one shows the Rule code and message, the
+location as `path:line:column`, the source line, the remediation, and the command that applies its
+fix when it has one. [Stale exceptions](../rules/overview.md#stale-exceptions) follow the
+findings. A clean run prints `All checks passed.`
+
+Paths are relative to the configuration root, with `/` separators. Lines and columns start at 1
+and count characters, not bytes.
+
+## JSON output
+
+`--output-format json` prints one document:
+
+```json
+{
+  "findings": [
+    {
+      "code": "SQC004",
+      "path": "models/customers.sql",
+      "line": 6,
+      "column": 1,
+      "end_line": 6,
+      "end_column": 6,
+      "message": "Row selection is nondeterministic",
+      "remediation": "Add ORDER BY with a deterministic tie-breaker before LIMIT or OFFSET.",
+      "fix": null
+    },
+    {
+      "code": "SQC001",
+      "path": "models/orders.sql",
+      "line": 8,
+      "column": 22,
+      "end_line": 8,
+      "end_column": 23,
+      "message": "Comparison with NULL is never true",
+      "remediation": "Use IS NULL or IS NOT NULL when testing for NULL.",
+      "fix": "unsafe"
+    }
+  ],
+  "stale_exceptions": [
+    {
+      "rule": "SQC004",
+      "path": "models/orders.sql",
+      "relation": null
+    }
+  ],
+  "summary": {
+    "findings": 2,
+    "fixable": 1,
+    "stale_exceptions": 1
+  }
+}
+```
+
+`fix` is `"safe"`, `"unsafe"` or `null` when the finding has no fix. `summary.fixable` counts
+findings with a fix of either kind.
+
+## SARIF output
+
+`--output-format sarif` prints a SARIF 2.1.0 log for code-scanning tools. Every finding is a result
+with `level` `error`, its Rule code as `ruleId`, and its message and remediation as the result
+text:
+
+```json
+{
+  "ruleId": "SQC001",
+  "level": "error",
+  "message": {
+    "text": "Comparison with NULL is never true. Use IS NULL or IS NOT NULL when testing for NULL."
+  },
+  "locations": [
+    {
+      "physicalLocation": {
+        "artifactLocation": { "uri": "models/orders.sql" },
+        "region": { "startLine": 8, "startColumn": 22, "endLine": 8, "endColumn": 23 }
+      }
+    }
+  ]
+}
+```
+
+The SARIF log lists findings only. Stale exceptions still make the command exit `1`; read them
+from the text or JSON output. See [CI](../integrations.md#ci) for an upload example.
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | No findings and no stale exceptions |
+| `1` | At least one finding or stale exception |
+| `2` | The command could not run: invalid arguments, configuration or input, or a custom Rule that failed |
+
+Errors are printed on stderr as `sqlclean: error: <message>`.

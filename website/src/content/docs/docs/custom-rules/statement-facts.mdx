@@ -1,0 +1,169 @@
+---
+title: "Statement facts"
+description: "Every node type and field a custom Rule can read from a statement, a file and the repository."
+---
+
+A custom Rule reads structural facts that the native engine extracts when it parses each file: the
+CTEs, tables, joins, stars, function calls, columns and literals of every statement. Every node
+carries its position, so a finding can point at it and a fix can replace it.
+
+```python
+from sqlclean import Finding, RuleContext, Statement, rule
+
+
+@rule(
+    code="XSQCJOIN001",
+    message="Join to customers has no condition",
+    remediation="Join customers on customer_id.",
+)
+def unkeyed_customer_join(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
+    return [
+        ctx.finding(subject=statement, node=join)
+        for join in statement.joins
+        if join.relation == "customers" and not join.has_condition
+    ]
+```
+
+To see the facts of any SQL, pipe it to [`sqlclean facts`](/docs/cli/facts/).
+
+## Positions
+
+Every node, and every statement, has these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `start` | `int` | Offset of the first character in the file |
+| `end` | `int` | Offset just past the last character |
+| `line` | `int` | Line of `start`, from 1 |
+| `column` | `int` | Column of `start`, from 1 |
+| `text` | `str` | The source text from `start` to `end` |
+
+Offsets count Unicode characters from the start of the file, not bytes, so
+`file.source[node.start:node.end] == node.text` in Python. Offsets are in the file, not the
+statement: the second statement of a file starts after the first.
+
+## Statement
+
+One statement of a file, without its terminating semicolon.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | `str` | The file's path relative to the configuration root |
+| `index` | `int` | The statement's position in the file, from 0 |
+| `kind` | `str` | The statement kind in lower case, such as `select`, `union`, `insert`, `update`, `delete` or `create_table` |
+| `dialect` | `str` | The dialect the file was parsed with |
+| `ctes` | `tuple[Cte, ...]` | Common table expressions |
+| `tables` | `tuple[Table, ...]` | Relations read in `FROM` and `JOIN` |
+| `joins` | `tuple[Join, ...]` | Joins |
+| `stars` | `tuple[Star, ...]` | `*` and `qualifier.*` projections |
+| `functions` | `tuple[FunctionCall, ...]` | Calls of named functions |
+| `columns` | `tuple[ColumnReference, ...]` | Column references |
+| `literals` | `tuple[Literal, ...]` | String and numeric literals |
+
+Each tuple is in source order and includes nodes inside CTEs and subqueries.
+
+`statement.polyglot_ast()` returns the full Polyglot syntax tree of the statement, parsed on first
+use. It needs the `ast` extra: `pip install "sqlclean[ast]"`. Without it, the call fails with
+`polyglot_ast() needs the Polyglot SQL package: install the ast extra: pip install 'sqlclean[ast]'`.
+
+## Cte
+
+A common table expression, located at its name.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | The CTE name |
+
+## Table
+
+A relation read in `FROM` or `JOIN`, located at its name. A CTE that the query reads appears here
+too. The target of `INSERT INTO`, `UPDATE` and `DELETE FROM` does not.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | The relation name without its schema, such as `payments` |
+| `qualified_name` | `str` | The name as qualified in the SQL, such as `shop.payments` |
+| `alias` | `str \| None` | The alias, or `None` |
+
+## Join
+
+One join, from its join keyword to the end of its condition, such as
+`LEFT JOIN paid ON o.order_id = paid.order_id`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `kind` | `str` | The join kind in upper case: `INNER` for a bare `JOIN`, `LEFT`, `FULL`, `CROSS`, `NATURAL` and so on |
+| `relation` | `str \| None` | The joined relation's name, or `None` when the join reads a subquery |
+| `has_condition` | `bool` | Whether the join has `ON` or `USING` |
+
+A join that holds no table or column reference, such as `CROSS JOIN UNNEST([1, 2])`, is not
+listed.
+
+## Star
+
+A `*` or `qualifier.*` projection.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `qualifier` | `str \| None` | The qualifier of `o.*`, or `None` for a bare `*` |
+
+## FunctionCall
+
+A call of a named function, located at its name. The arguments follow at `end + 1`, after the
+opening parenthesis.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | The name as written: `count` and `COUNT` differ |
+
+## ColumnReference
+
+A column reference, including its qualifier: the text of `o.order_id` is `o.order_id`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | The column name, without quotes |
+| `qualifier` | `str \| None` | The relation or alias that qualifies it, or `None` |
+
+## Literal
+
+A string or numeric literal as written. `TRUE`, `FALSE` and `NULL` are not literals here.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `kind` | `str` | `string` or `number` |
+
+`text` holds the literal with its quotes: `'paid'`, `1.5`.
+
+## SqlFile
+
+The subject of a file Rule, and the parent of every statement.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | `str` | The path relative to the configuration root |
+| `source` | `str` | The file's full text |
+| `dialect` | `str` | The dialect the file was parsed with |
+| `statements` | `tuple[Statement, ...]` | The statements, in order |
+
+## Repository
+
+The subject of a repository Rule.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `files` | `tuple[SqlFile, ...]` | Every checked file that parses, sorted by path |
+
+## RuleContext
+
+The second parameter of every Rule.
+
+| Member | Description |
+|--------|-------------|
+| `ctx.file` | The `SqlFile` being checked, or `None` in a repository Rule |
+| `ctx.dialect` | The dialect of that file, or `None` in a repository Rule |
+| `ctx.option(OPTION)` | The configured value of a declared option; see [Options](/docs/custom-rules/fixes-and-options/#options) |
+| `ctx.finding(...)` | A finding; see [Reporting findings](/docs/custom-rules/overview/#reporting-findings) |
+| `ctx.replace`, `ctx.insert_before`, `ctx.insert_after`, `ctx.delete` | Fix edits; see [Fixes](/docs/custom-rules/fixes-and-options/#fixes) |
+
+All facts are read-only. A Rule cannot change the SQL except through the edits of a fix.

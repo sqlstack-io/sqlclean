@@ -1,0 +1,263 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create delivery token
+        id: delivery-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-actions: write
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ steps.delivery-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Publish created release
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          gh workflow run publish.yml --repo "${GITHUB_REPOSITORY}" --ref main \
+            -f "tag=${RELEASE_TAG}"
+
+      - name: Resolve release pull request
+        id: release_pr
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: |
+          number="$(jq -r '.[0].number // empty' <<< "${RELEASE_PRS}")"
+          branch="$(jq -r '.[0].headBranchName // empty' <<< "${RELEASE_PRS}")"
+          if [[ -z "${number}" || -z "${branch}" ]]; then
+            echo "Release Please did not return a pull request number and branch" >&2
+            exit 1
+          fi
+          pr_json="$(gh pr view "${number}" --repo "${GITHUB_REPOSITORY}" \
+            --json baseRefName,baseRefOid,headRefName)"
+          if [[ "$(jq -r .baseRefName <<< "${pr_json}")" != "main" \
+            || "$(jq -r .headRefName <<< "${pr_json}")" != "${branch}" ]]; then
+            echo "Release pull request branches do not match Release Please output" >&2
+            exit 1
+          fi
+          head_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${branch}" \
+            --jq .object.sha)"
+          echo "number=${number}" >> "${GITHUB_OUTPUT}"
+          echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
+          echo "base_sha=$(jq -r .baseRefOid <<< "${pr_json}")" >> "${GITHUB_OUTPUT}"
+          echo "head_sha=${head_sha}" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/checkout@v5
+        if: steps.release.outputs.prs_created == 'true'
+        with:
+          ref: ${{ steps.release_pr.outputs.base_sha }}
+          path: trusted-base
+          persist-credentials: false
+
+      - uses: actions/checkout@v5
+        if: steps.release.outputs.prs_created == 'true'
+        with:
+          ref: ${{ steps.release_pr.outputs.head_sha }}
+          path: release-head
+          fetch-depth: 0
+          token: ${{ steps.delivery-token.outputs.token }}
+
+      - name: Validate release metadata and source provenance
+        if: steps.release.outputs.prs_created == 'true'
+        working-directory: trusted-base
+        env:
+          BASE_SHA: ${{ steps.release_pr.outputs.base_sha }}
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ steps.release_pr.outputs.head_sha }}
+        run: |
+          python .github/scripts/release_metadata_check.py \
+            --repo ../release-head --base "${BASE_SHA}" --head "${HEAD_SHA}" \
+            --allow-stale-lockfiles
+
+          source_pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${BASE_SHA}/pulls" \
+            --jq '[.[] | select(.merged_at != null and .base.ref == "main")] | sort_by(.merged_at) | last')"
+          source_pr="$(jq -r '.number // empty' <<< "${source_pr_json}")"
+          source_head="$(jq -r '.head.sha // empty' <<< "${source_pr_json}")"
+          if [[ -z "${source_pr}" || -z "${source_head}" ]]; then
+            echo "Release base ${BASE_SHA} is not associated with a pull request merged to main" >&2
+            exit 1
+          fi
+          base_tree="$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/${BASE_SHA}" --jq .tree.sha)"
+          verified_tree="$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/${source_head}" --jq .tree.sha)"
+          if [[ "${base_tree}" != "${verified_tree}" ]]; then
+            echo "Release base tree was not verified on source pull request ${source_pr}" >&2
+            exit 1
+          fi
+          successful_runs="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/verify.yml/runs?head_sha=${source_head}&event=pull_request&status=completed&per_page=100" \
+            | jq --arg source_head "${source_head}" \
+              '[.workflow_runs[] | select(.conclusion == "success" and .head_sha == $source_head)] | length')"
+          if [[ "${successful_runs}" -lt 1 ]]; then
+            echo "No successful Verify run belongs to source pull request ${source_pr}" >&2
+            exit 1
+          fi
+
+      - uses: astral-sh/setup-uv@v6
+        if: steps.release.outputs.prs_created == 'true'
+
+      - uses: dtolnay/rust-toolchain@master
+        if: steps.release.outputs.prs_created == 'true'
+        with:
+          toolchain: 1.95.0
+
+      - name: Refresh release lockfiles
+        if: steps.release.outputs.prs_created == 'true'
+        working-directory: release-head
+        env:
+          RELEASE_BRANCH: ${{ steps.release_pr.outputs.branch }}
+        run: |
+          uv lock
+          cargo check --workspace
+          if git diff --quiet -- uv.lock Cargo.lock; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add uv.lock Cargo.lock
+          git commit -m "chore: refresh release lockfiles"
+          git push origin "HEAD:${RELEASE_BRANCH}"
+
+      - name: Validate refreshed release metadata
+        if: steps.release.outputs.prs_created == 'true'
+        working-directory: trusted-base
+        env:
+          BASE_SHA: ${{ steps.release_pr.outputs.base_sha }}
+        run: |
+          python .github/scripts/release_metadata_check.py \
+            --repo ../release-head --base "${BASE_SHA}" --head HEAD
+
+      - name: Run required release checks
+        if: steps.release.outputs.prs_created == 'true'
+        working-directory: release-head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_BRANCH: ${{ steps.release_pr.outputs.branch }}
+          RELEASE_PR: ${{ steps.release_pr.outputs.number }}
+        run: |
+          head_sha="$(git rev-parse HEAD)"
+          remote_head="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/git/ref/heads/${RELEASE_BRANCH}" \
+            --jq .object.sha)"
+          if [[ "${remote_head}" != "${head_sha}" ]]; then
+            echo "Release pull request moved from ${head_sha} to ${remote_head}" >&2
+            exit 1
+          fi
+          echo "head_sha=${head_sha}" >> "${GITHUB_OUTPUT}"
+          workflows=(pull-request-metadata.yml version-guard.yml verify.yml)
+          metadata_contexts=("Pull Request Metadata")
+          version_contexts=("Block automatic 1.0 releases")
+          verify_contexts=("Verify")
+          required_contexts=(
+            "${metadata_contexts[@]}"
+            "${version_contexts[@]}"
+            "${verify_contexts[@]}"
+          )
+          fail_required_contexts() {
+            status=$?
+            set +e
+            run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            for context in "${required_contexts[@]}"; do
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${head_sha}" \
+                -f state=failure -f "context=${context}" -f "target_url=${run_url}" \
+                -f description="Trusted release orchestration failed" >/dev/null
+            done
+            exit "${status}"
+          }
+          trap fail_required_contexts EXIT
+
+          declare -A previous_run_ids
+          for workflow in "${workflows[@]}"; do
+            previous_run_ids["${workflow}"]="$(gh api --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs" \
+              -f "branch=${RELEASE_BRANCH}" -f event=workflow_dispatch -f per_page=100 \
+              --jq '[.workflow_runs[].id] | max // 0')"
+          done
+          for context in "${required_contexts[@]}"; do
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${head_sha}" \
+              -f state=pending -f "context=${context}" \
+              -f description="Trusted release check is running" >/dev/null
+          done
+
+          gh workflow run pull-request-metadata.yml --repo "${GITHUB_REPOSITORY}" \
+            --ref "${RELEASE_BRANCH}" -f "pr_number=${RELEASE_PR}"
+          gh workflow run version-guard.yml --repo "${GITHUB_REPOSITORY}" \
+            --ref "${RELEASE_BRANCH}"
+          gh workflow run verify.yml --repo "${GITHUB_REPOSITORY}" \
+            --ref "${RELEASE_BRANCH}"
+
+          for workflow in "${workflows[@]}"; do
+            run_id=""
+            for _ in {1..30}; do
+              runs_json="$(gh api --method GET \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs" \
+                -f "branch=${RELEASE_BRANCH}" -f event=workflow_dispatch -f per_page=100)"
+              run_id="$(jq -r --arg sha "${head_sha}" \
+                --argjson previous "${previous_run_ids[${workflow}]}" \
+                '[.workflow_runs[] | select(
+                  .id > $previous
+                  and .head_sha == $sha
+                  and .actor.login == "github-actions[bot]"
+                )] | sort_by(.id) | first | .id // empty' <<< "${runs_json}")"
+              [[ -n "${run_id}" ]] && break
+              sleep 2
+            done
+            if [[ -z "${run_id}" ]]; then
+              echo "Required workflow ${workflow} did not start for ${head_sha}" >&2
+              exit 1
+            fi
+            run_url="$(gh run view "${run_id}" --repo "${GITHUB_REPOSITORY}" \
+              --json url --jq .url)"
+            if gh run watch "${run_id}" --repo "${GITHUB_REPOSITORY}" --exit-status; then
+              state=success
+              description="Trusted release check passed"
+            else
+              state=failure
+              description="Trusted release check failed"
+            fi
+            case "${workflow}" in
+              pull-request-metadata.yml) contexts=("${metadata_contexts[@]}") ;;
+              version-guard.yml) contexts=("${version_contexts[@]}") ;;
+              verify.yml) contexts=("${verify_contexts[@]}") ;;
+            esac
+            for context in "${contexts[@]}"; do
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${head_sha}" \
+                -f "state=${state}" -f "context=${context}" -f "target_url=${run_url}" \
+                -f "description=${description}" >/dev/null
+            done
+            [[ "${state}" == "success" ]] || exit 1
+          done
+          trap - EXIT
