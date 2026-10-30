@@ -180,16 +180,7 @@ jobs:
           workflows=(pull-request-metadata.yml version-guard.yml verify.yml)
           metadata_contexts=("Pull Request Metadata")
           version_contexts=("Block automatic 1.0 releases")
-          verify_contexts=(
-            "verify"
-            "rust"
-            "Minimum supported Rust (1.88)"
-            "windows"
-            "native-package-smoke (ubuntu-latest)"
-            "native-package-smoke (macos-latest)"
-            "native-package-smoke (windows-latest)"
-            "source-build"
-          )
+          verify_contexts=("Verify")
           required_contexts=(
             "${metadata_contexts[@]}"
             "${version_contexts[@]}"

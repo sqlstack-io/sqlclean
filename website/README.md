@@ -15,6 +15,12 @@ The SQLClean website: the homepage at `/` and the documentation at `/docs/`, bui
 
 Search uses Pagefind, and `llms.txt`, `llms-small.txt` and `llms-full.txt` are generated at build
 time. The Website workflow builds the site and checks its links on every change; it does not deploy.
+Cloudflare Pages deploys it: every push to `main` publishes https://sqlclean.io, and every other
+branch gets a preview at `<branch>.sqlclean.pages.dev`. See [Releasing](../.github/RELEASING.md).
+
+The pages under `src/content/docs/docs/` are also bundled into the `sqlclean skills` agent skill.
+After editing them, run `make skills` from the repository root and commit the regenerated
+`crates/sqlclean-cli/skill/references/docs/`; CI fails while the two differ.
 
 Requires Node 22.12 or newer.
 
