@@ -2,6 +2,8 @@
 
 use std::io::Write;
 
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+
 use crate::command::_helpers::diffs::{print_diff, write_file};
 use crate::command::constants::{EXIT_FINDINGS, EXIT_SUCCESS};
 use crate::command::models::FormatArgs;
@@ -13,8 +15,12 @@ pub(crate) fn run(config: &Config, arguments: &FormatArgs) -> Result<u8, String>
     let files = discover_files(config, &arguments.paths)?;
     let mut stderr = std::io::stderr();
     let (mut changed, mut refused): (usize, usize) = (0, 0);
-    for file in &files {
-        let formatted: String = match format_source(&file.text, &file.dialect, config.line_width) {
+    let results: Vec<Result<String, String>> = files
+        .par_iter()
+        .map(|file| format_source(&file.text, &file.dialect, config.line_width))
+        .collect();
+    for (file, result) in files.iter().zip(results) {
+        let formatted: String = match result {
             Ok(formatted) => formatted,
             Err(reason) => {
                 refused += 1;
