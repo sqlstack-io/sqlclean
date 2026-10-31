@@ -197,4 +197,4 @@ j.sql: could not format: Parse error at line 1, column 16: Expected Colon, got R
 other file as usual. Fix the SQL, set the file's dialect with
 [`[[dialects]]`](configuration.md#dialects), or
 [`exclude`](configuration.md#choosing-files) the file. `sqlclean check` reports the same file as
-[`SQC999`](rules/overview.md#parse-errors-sqc999).
+[`SQLCLEAN999`](rules/overview.md#parse-errors-sqlclean999).

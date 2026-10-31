@@ -2,26 +2,26 @@ use std::collections::HashSet;
 
 use polyglot_sql::tokens::{Span, Token, TokenType};
 
-use crate::constants::SQL_MACRO_PARAMETER_SENTINEL_PREFIX;
 use crate::constants::{CLOSE_PAREN, OPEN_PAREN, SQL_WILDCARD};
 use crate::constants::{EMPTY_FIXTURE_QUERY_TOKEN_COUNT, ENCLOSING_CTE_TOKEN_COUNT};
+use crate::constants::{
+    GENERATED_PLACEHOLDER_PREFIXES, MACRO_PARAMETER_PLACEHOLDER_PREFIX,
+    RELATION_PARAMETER_PLACEHOLDER_PREFIX,
+};
 use crate::sql_lint::_helpers::engine::{
     direct_indices, is_comment, is_layout, is_query_from, query_end, significant_after,
     significant_before, token_depths,
 };
 use crate::sql_lint::constants::RELATION_MODIFIER_KEYWORDS;
-use crate::sql_lint::models::{AdditionalFactOptions, AdditionalQueryFacts, SqlMacroOutput};
+use crate::sql_lint::models::{
+    AdditionalFactOptions, AdditionalQueryFacts, FixtureHarness, SqlMacroOutput,
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 const COUNT_ONE_LITERAL: &str = "1";
 const QUALIFIED_REFERENCE_LENGTH: usize = 3;
 const QUALIFIER_PAIR_LENGTH: usize = 2;
 const IMPLICIT_ALIAS_MINIMUM_LENGTH: usize = 2;
-const GENERATED_IDENTIFIER_PREFIXES: [&str; 3] = [
-    "__sqb_lint_",
-    "__sqlbuild_audit_parameter_",
-    "__sqlbuild_context_parameter_",
-];
 
 struct QuerySlice<'a> {
     tokens: &'a [Token],
@@ -56,7 +56,7 @@ struct SelectFactContext<'a> {
     dependency_identifiers: &'a HashSet<String>,
     allows_ceremonial_select: bool,
     allows_dynamic_output_star: bool,
-    allows_empty_fixture_star: bool,
+    fixture_harness: Option<&'a FixtureHarness>,
 }
 
 struct ProjectedStarContext<'a> {
@@ -178,7 +178,7 @@ pub(super) fn collect_additional_facts(
         dependency_identifiers: options.dependency_identifiers,
         allows_ceremonial_select: options.allows_ceremonial_select,
         allows_dynamic_output_star: options.allows_dynamic_output_star,
-        allows_empty_fixture_star: options.allows_empty_fixture_star,
+        fixture_harness: options.fixture_harness,
     });
     facts.duplicate_output_aliases = select_facts.duplicate_output_aliases;
     facts.unaliased_calculations = select_facts.unaliased_calculations;
@@ -375,9 +375,12 @@ fn is_canonical_empty_input_fixture(
     select_index: usize,
     query_end: usize,
 ) -> bool {
-    if !context.allows_empty_fixture_star {
+    let Some(harness) = context.fixture_harness else {
         return false;
-    }
+    };
+    let Some(empty_relation) = harness.empty_relation.as_deref() else {
+        return false;
+    };
     let significant_query: Vec<&str> = context.tokens[select_index..query_end]
         .iter()
         .filter(|token| !is_layout(token) && !is_comment(token))
@@ -387,7 +390,7 @@ fn is_canonical_empty_input_fixture(
         || !significant_query[0].eq_ignore_ascii_case("select")
         || significant_query[1] != SQL_WILDCARD
         || !significant_query[2].eq_ignore_ascii_case("from")
-        || !significant_query[3].eq_ignore_ascii_case("__empty_fixture")
+        || !significant_query[3].eq_ignore_ascii_case(empty_relation)
         || significant_query[4] != OPEN_PAREN
         || significant_query[5] != CLOSE_PAREN
     {
@@ -406,9 +409,10 @@ fn is_canonical_empty_input_fixture(
         return false;
     }
     let cte_name = previous[2].text.trim_matches(['"', '`']);
-    ["__ref__", "__source__", "__seed__"]
+    harness
+        .input_cte_prefixes
         .iter()
-        .any(|prefix| cte_name.starts_with(prefix))
+        .any(|prefix| cte_name.starts_with(prefix.as_str()))
 }
 
 fn is_compiler_proven_dynamic_output_select(
@@ -485,7 +489,7 @@ fn is_lone_audit_parameter_relation(tokens: &[Token], relation: &[usize]) -> boo
     };
     let normalized = tokens[relation_index].text.to_ascii_lowercase();
     let Some(index) = normalized
-        .strip_prefix("__sqlbuild_audit_parameter_")
+        .strip_prefix(RELATION_PARAMETER_PLACEHOLDER_PREFIX)
         .and_then(|value| value.strip_suffix("__"))
     else {
         return false;
@@ -694,7 +698,7 @@ fn collect_reference_facts(context: &ReferenceFactContext<'_>) -> AdditionalQuer
     facts
 }
 
-/// The unqualified references of a single-relation scope that also qualifies some, each judged as it was written. In a macro file a plain slot read such as `@orders.amount` lints as a parameter sentinel pair and counts as unqualified. In a call's output, a read qualified by a relation the call passes takes neither style: the slot decides how it expands, not the caller or the macro author. A scope whose every reference a macro call generated is judged once, in the macro file.
+/// The unqualified references of a single-relation scope that also qualifies some, each judged as it was written. In a macro body a plain slot read lints as a pair of macro parameter placeholders and counts as unqualified. In a call's output, a read qualified by a relation the call passes takes neither style: the slot decides how it expands, not the caller or the macro author. A scope whose every reference a macro call generated is judged once, in the macro file.
 fn inconsistent_qualification(
     tokens: &[Token],
     (qualified, unqualified): (&[usize], &[usize]),
@@ -751,7 +755,7 @@ fn is_plain_slot_read(tokens: &[Token], index: usize) -> bool {
         token
             .text
             .to_ascii_lowercase()
-            .starts_with(SQL_MACRO_PARAMETER_SENTINEL_PREFIX)
+            .starts_with(MACRO_PARAMETER_PLACEHOLDER_PREFIX)
     };
     is_parameter(&tokens[index]) && tokens.get(index + 2).is_some_and(is_parameter)
 }
@@ -1068,7 +1072,7 @@ fn is_values_relation(tokens: &[Token], relation_clause: &[usize]) -> bool {
 
 fn is_generated_identifier(token: &Token) -> bool {
     let normalized = token.text.to_ascii_lowercase();
-    GENERATED_IDENTIFIER_PREFIXES
+    GENERATED_PLACEHOLDER_PREFIXES
         .iter()
         .any(|prefix| normalized.starts_with(prefix))
 }

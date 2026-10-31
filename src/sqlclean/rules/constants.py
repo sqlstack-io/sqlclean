@@ -1,7 +1,7 @@
 """Constants of the custom Rule authoring API."""
 
 RULE_ATTRIBUTE: str = "__sqlclean_rule__"
-CUSTOM_CODE_PREFIX: str = "XSQC"
+CUSTOM_CODE_PREFIX: str = "XSQLCLEAN"
 RULE_CODE_DIGIT_COUNT: int = 3
 RULE_PARAMETER_COUNT: int = 2
 SIGNATURE_REQUIREMENT: str = (

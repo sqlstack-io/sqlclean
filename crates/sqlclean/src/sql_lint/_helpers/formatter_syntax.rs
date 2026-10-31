@@ -1,4 +1,4 @@
-use crate::constants::LINT_SENTINEL_PREFIX;
+use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 use crate::sql_lint::_helpers::engine::token_depths;
 use crate::sql_lint::constants::{
     CTE_MACRO_PLACEHOLDER_LITERAL, POSITION_ARGUMENT_SEPARATOR, POSTFIX_CAST_PREFIX_TOKEN_COUNT,
@@ -116,7 +116,7 @@ pub(super) fn protect_syntax(
     cast_types: &[(usize, usize)],
     expressions: bool,
 ) -> Result<ProtectedSql, String> {
-    let mut prefix = "__sqlbuild_format_".to_string();
+    let mut prefix = "__sqlclean_format_".to_string();
     let lowercase: String = sql.to_ascii_lowercase();
     while lowercase.contains(&prefix) {
         prefix.push('_');
@@ -292,7 +292,7 @@ pub(super) fn cte_macro_indices(tokens: &[Token]) -> HashSet<usize> {
             scopes.insert(depths[index]);
         } else if token.token_type == TokenType::Select {
             scopes.remove(&depths[index]);
-        } else if token.text.starts_with(LINT_SENTINEL_PREFIX)
+        } else if token.text.starts_with(INTERPOLATION_PLACEHOLDER_PREFIX)
             && scopes.contains(&depths[index])
             && index > 0
             && (matches!(
@@ -315,7 +315,7 @@ fn starts_cte(tokens: &[Token], index: usize) -> bool {
     let Some(token) = tokens.get(index) else {
         return false;
     };
-    if token.text.starts_with(LINT_SENTINEL_PREFIX) {
+    if token.text.starts_with(INTERPOLATION_PLACEHOLDER_PREFIX) {
         return true;
     }
     let named: bool = matches!(

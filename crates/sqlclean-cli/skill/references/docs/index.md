@@ -16,7 +16,7 @@ sqlclean check
 ```
 
 ```text
-error[SQC001]: Comparison with NULL is never true
+error[SQLCLEAN001]: Comparison with NULL is never true
   --> models/open_orders.sql:1:77
    |
  1 | with open_orders as (select order_id, amount from orders where cancelled_at = null),
@@ -24,7 +24,7 @@ error[SQC001]: Comparison with NULL is never true
   = help: Use IS NULL or IS NOT NULL when testing for NULL.
   = fix: available with `sqlclean fix --unsafe-fixes`
 
-error[SQC005]: CTE is unreachable from the final query
+error[SQLCLEAN005]: CTE is unreachable from the final query
   --> models/open_orders.sql:2:1
    |
  2 | refunds as (select order_id from payments where amount < 0)

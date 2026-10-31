@@ -1,4 +1,4 @@
-//! SQC042: output columns of non-final CTEs that no later step reads.
+//! SQLCLEAN042: output columns of non-final CTEs that no later step reads.
 
 use std::borrow::Cow;
 
@@ -9,7 +9,7 @@ use polyglot_sql::{Expression, ExpressionWalk};
 use crate::sql_lint::models::{LintDiagnostic, LintEdit};
 use crate::sql_quality::constants::{
     DISTINCT_UNUSED_REMEDIATION, GROUP_BY_ALL_UNUSED_REMEDIATION, GROUP_KEY_UNUSED_REMEDIATION,
-    INTERPOLATION_SENTINEL_PREFIXES, UNUSED_CTE_OUTPUT,
+    UNUSED_CTE_OUTPUT,
 };
 use crate::sql_quality::models::QualityRequest;
 use crate::sql_quality::removal_safety::{expression_refusal, reads_whole_rows, select_refusal};
@@ -448,10 +448,10 @@ fn unused_outputs(
     found
 }
 
-/// Neutralized `@macro` / `@variable` interpolations can stand for any columns.
+/// Placeholders for template expressions can stand for any columns.
 fn is_interpolation(name: &str) -> bool {
     let name: String = lower(name);
-    INTERPOLATION_SENTINEL_PREFIXES
+    crate::constants::GENERATED_PLACEHOLDER_PREFIXES
         .iter()
         .any(|prefix| name.starts_with(prefix))
 }

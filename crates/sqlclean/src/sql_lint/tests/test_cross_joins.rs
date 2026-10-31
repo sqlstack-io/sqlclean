@@ -22,14 +22,14 @@ fn given_cross_joins_when_one_side_is_provably_one_row_then_only_multiplying_joi
         },
         CrossJoinTestCase {
             description: "a one-row seed on the right",
-            sql: "SELECT o.order_id FROM orders AS o CROSS JOIN __sqb_lint_7__ AS p",
+            sql: "SELECT o.order_id FROM orders AS o CROSS JOIN __sqlclean_interpolation_7__ AS p",
             dialect: "duckdb",
             one_row_relations: &[POLICY_SENTINEL],
             expected_messages: &[],
         },
         CrossJoinTestCase {
             description: "a seed with several rows names its relation",
-            sql: "SELECT o.order_id FROM orders AS o CROSS JOIN __sqb_lint_7__ AS p",
+            sql: "SELECT o.order_id FROM orders AS o CROSS JOIN __sqlclean_interpolation_7__ AS p",
             dialect: "duckdb",
             one_row_relations: &[],
             expected_messages: &[
@@ -38,7 +38,7 @@ fn given_cross_joins_when_one_side_is_provably_one_row_then_only_multiplying_joi
         },
         CrossJoinTestCase {
             description: "a one-row seed on the left of the first join",
-            sql: "SELECT o.order_id FROM __sqb_lint_7__ AS p CROSS JOIN orders AS o",
+            sql: "SELECT o.order_id FROM __sqlclean_interpolation_7__ AS p CROSS JOIN orders AS o",
             dialect: "duckdb",
             one_row_relations: &[POLICY_SENTINEL],
             expected_messages: &[],
@@ -160,7 +160,7 @@ fn given_cross_joins_when_one_side_is_provably_one_row_then_only_multiplying_joi
         },
         CrossJoinTestCase {
             description: "a later join still multiplies the rows before it",
-            sql: "SELECT o.order_id FROM __sqb_lint_7__ AS p CROSS JOIN orders AS o CROSS JOIN customers AS c",
+            sql: "SELECT o.order_id FROM __sqlclean_interpolation_7__ AS p CROSS JOIN orders AS o CROSS JOIN customers AS c",
             dialect: "duckdb",
             one_row_relations: &[POLICY_SENTINEL],
             expected_messages: &[
@@ -234,7 +234,7 @@ fn given_unnamed_cross_join_when_linting_then_help_prints_a_file_wide_exception(
         dialect: "duckdb",
         one_row_relations: &[],
         expected_messages: &[
-            "[[rules.rule_exceptions]]\n            rule = \"SQC038\"\n            path = \"<path of this file>\"\n            reason = \"<why this deviation is intentional>\"",
+            "[[rules.rule_exceptions]]\n            rule = \"SQLCLEAN038\"\n            path = \"<path of this file>\"\n            reason = \"<why this deviation is intentional>\"",
         ],
     }];
 

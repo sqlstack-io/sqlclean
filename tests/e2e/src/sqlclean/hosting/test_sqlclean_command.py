@@ -22,16 +22,20 @@ from tests.e2e.src.sqlclean.hosting.helpers import run, write_project
 from tests.integration.src.sqlclean.rule_testing.helpers import SAMPLE_RULES
 
 DUCKDB: str = 'dialect = "duckdb"\n'
-CROSS_JOIN_ONLY: str = DUCKDB + '[rules]\nselect = ["SQC038"]\n'
-CUSTOM: str = DUCKDB + '[rules]\nselect = ["XSQCNAME", "XSQCSTYLE"]\ncustom = ["sql_rules"]\n'
+CROSS_JOIN_ONLY: str = DUCKDB + '[rules]\nselect = ["SQLCLEAN038"]\n'
+CUSTOM: str = (
+    DUCKDB + '[rules]\nselect = ["XSQLCLEANNAME", "XSQLCLEANSTYLE"]\ncustom = ["sql_rules"]\n'
+)
 CROSS_JOIN_EXCEPTIONS: str = (
     CROSS_JOIN_ONLY
-    + '[[rules.rule_exceptions]]\nrule = "SQC038"\npath = "models/q.sql"\nrelation = "b"\n'
+    + '[[rules.rule_exceptions]]\nrule = "SQLCLEAN038"\npath = "models/q.sql"\nrelation = "b"\n'
     + 'reason = "Every pair is needed."\n'
-    + '[[rules.rule_exceptions]]\nrule = "SQC038"\npath = "models/q.sql"\nrelation = "z"\n'
+    + '[[rules.rule_exceptions]]\nrule = "SQLCLEAN038"\npath = "models/q.sql"\nrelation = "z"\n'
     + 'reason = "Removed join."\n'
 )
 NULL_AND_COMMA: str = "select a.id from a, b where a.x = null\n"
+# SQLCLEAN001 is a default Rule; SQLCLEAN034 and SQLCLEAN050 are opt-in.
+DEFAULT_AND_OPT_IN: str = "insert into orders select a.id from a where a.x = null\n"
 
 
 @pytest.mark.parametrize(
@@ -49,17 +53,41 @@ NULL_AND_COMMA: str = "select a.id from a, b where a.x = null\n"
             description="selected Rules report in file order",
             config=DUCKDB,
             files={"models/q.sql": NULL_AND_COMMA},
-            arguments=("--select", "SQC001,SQC002"),
+            arguments=("--select", "SQLCLEAN001,SQLCLEAN002"),
             expected_exit=1,
-            expected_codes=("SQC002", "SQC001"),
+            expected_codes=("SQLCLEAN002", "SQLCLEAN001"),
+        ),
+        CheckTestCase(
+            description="without a selection only the default Rules run",
+            config=DUCKDB,
+            files={"models/q.sql": DEFAULT_AND_OPT_IN},
+            arguments=(),
+            expected_exit=1,
+            expected_codes=("SQLCLEAN001",),
+        ),
+        CheckTestCase(
+            description="the SQLCLEAN family selects every built-in Rule, opt-in ones too",
+            config=DUCKDB,
+            files={"models/q.sql": DEFAULT_AND_OPT_IN},
+            arguments=("--select", "SQLCLEAN"),
+            expected_exit=1,
+            expected_codes=("SQLCLEAN050", "SQLCLEAN034", "SQLCLEAN001"),
+        ),
+        CheckTestCase(
+            description="an exact code selects only that Rule",
+            config=DUCKDB,
+            files={"models/q.sql": DEFAULT_AND_OPT_IN},
+            arguments=("--select", "SQLCLEAN050"),
+            expected_exit=1,
+            expected_codes=("SQLCLEAN050",),
         ),
         CheckTestCase(
             description="an ignored Rule is skipped",
             config=DUCKDB,
             files={"models/q.sql": NULL_AND_COMMA},
-            arguments=("--select", "SQC001,SQC002", "--ignore", "SQC002"),
+            arguments=("--select", "SQLCLEAN001,SQLCLEAN002", "--ignore", "SQLCLEAN002"),
             expected_exit=1,
-            expected_codes=("SQC001",),
+            expected_codes=("SQLCLEAN001",),
         ),
         CheckTestCase(
             description="an exception hides its finding and an unmatched one is stale",
@@ -79,7 +107,7 @@ NULL_AND_COMMA: str = "select a.id from a, b where a.x = null\n"
             },
             arguments=("--config", "strict.toml"),
             expected_exit=1,
-            expected_codes=("SQC038",),
+            expected_codes=("SQLCLEAN038",),
         ),
         CheckTestCase(
             description="lint is check by another name",
@@ -88,7 +116,7 @@ NULL_AND_COMMA: str = "select a.id from a, b where a.x = null\n"
             arguments=(),
             command="lint",
             expected_exit=1,
-            expected_codes=("SQC038",),
+            expected_codes=("SQLCLEAN038",),
         ),
         CheckTestCase(
             description="unparseable SQL is reported as a finding",
@@ -96,18 +124,18 @@ NULL_AND_COMMA: str = "select a.id from a, b where a.x = null\n"
             files={"models/q.sql": "SELECT FROM WHERE (\n"},
             arguments=(),
             expected_exit=1,
-            expected_codes=("SQC999",),
+            expected_codes=("SQLCLEAN999",),
         ),
         CheckTestCase(
             description="custom Rules run with their configured options",
-            config=CUSTOM + '[rules.rule_options.XSQCNAME001]\nprefixes = ["stg_"]\n',
+            config=CUSTOM + '[rules.rule_options.XSQLCLEANNAME001]\nprefixes = ["stg_"]\n',
             files={
                 "sql_rules/naming.py": SAMPLE_RULES,
                 "models/q.sql": "SELECT COUNT(1) AS n FROM stg_orders JOIN tmp_x ON TRUE\n",
             },
             arguments=(),
             expected_exit=1,
-            expected_codes=("XSQCSTYLE001", "XSQCNAME001"),
+            expected_codes=("XSQLCLEANSTYLE001", "XSQLCLEANNAME001"),
         ),
     ],
     ids=lambda case: case.description,
@@ -134,7 +162,7 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
     [
         RewriteTestCase(
             description="fix applies safe fixes, leaves unsafe ones and formats",
-            config=DUCKDB + '[rules]\nselect = ["SQC001", "SQC002"]\n',
+            config=DUCKDB + '[rules]\nselect = ["SQLCLEAN001", "SQLCLEAN002"]\n',
             files={"models/q.sql": NULL_AND_COMMA},
             arguments=("fix",),
             expected_exit=1,
@@ -144,7 +172,7 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
         ),
         RewriteTestCase(
             description="fix with unsafe fixes applies them too and then passes",
-            config=DUCKDB + '[rules]\nselect = ["SQC001", "SQC002"]\n',
+            config=DUCKDB + '[rules]\nselect = ["SQLCLEAN001", "SQLCLEAN002"]\n',
             files={"models/q.sql": NULL_AND_COMMA},
             arguments=("fix", "--unsafe-fixes"),
             expected_exit=0,
@@ -165,7 +193,7 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
         ),
         RewriteTestCase(
             description="fix --diff writes nothing",
-            config=DUCKDB + '[rules]\nselect = ["SQC002"]\n',
+            config=DUCKDB + '[rules]\nselect = ["SQLCLEAN002"]\n',
             files={"models/q.sql": "select a.id from a, b\n"},
             arguments=("fix", "--diff"),
             expected_exit=1,
@@ -239,19 +267,19 @@ def test_given_project_when_rewriting_then_files_and_exit_status_match(
     [
         SummaryTestCase(
             description="a safe fix is fixable with plain fix",
-            config=DUCKDB + '[rules]\nselect = ["SQC002"]\n',
+            config=DUCKDB + '[rules]\nselect = ["SQLCLEAN002"]\n',
             source="select a.id from a, b\n",
             expected_summary="Found 1 problem (1 fixable with `sqlclean fix`).",
         ),
         SummaryTestCase(
             description="an unsafe fix needs --unsafe-fixes",
-            config=DUCKDB + '[rules]\nselect = ["SQC001"]\n',
+            config=DUCKDB + '[rules]\nselect = ["SQLCLEAN001"]\n',
             source="select a.id from a where a.x = null\n",
             expected_summary="Found 1 problem (1 fixable with `sqlclean fix --unsafe-fixes`).",
         ),
         SummaryTestCase(
             description="safe and unsafe fixes are counted apart",
-            config=DUCKDB + '[rules]\nselect = ["SQC001", "SQC002"]\n',
+            config=DUCKDB + '[rules]\nselect = ["SQLCLEAN001", "SQLCLEAN002"]\n',
             source=NULL_AND_COMMA,
             expected_summary=(
                 "Found 2 problems (1 fixable with `sqlclean fix`, 1 more with `--unsafe-fixes`)."
@@ -275,7 +303,7 @@ def test_given_fixable_findings_when_checking_then_summary_counts_safe_and_unsaf
     [
         SarifTestCase(
             description="the message and remediation read as two sentences",
-            config=DUCKDB + '[rules]\nselect = ["SQC025"]\n',
+            config=DUCKDB + '[rules]\nselect = ["SQLCLEAN025"]\n',
             source="select a.id from a join b on a.id = b.id\n",
             expected_message="JOIN type is implicit. Write INNER JOIN explicitly.",
         ),
@@ -330,7 +358,7 @@ def test_given_formatted_file_when_formatting_again_then_nothing_changes(
             },
             edited={"models/q.sql": "SELECT * FROM tmp_customers\n"},
             expected_exits=(1, 1, 2),
-            expected_cached_code="XSQCNAME001",
+            expected_cached_code="XSQLCLEANNAME001",
             expected_error="missing-python",
         ),
     ],
@@ -375,7 +403,7 @@ def test_given_many_files_when_checking_custom_rules_then_every_host_share_repor
     write_project(tmp_path, config=CUSTOM, files={"sql_rules/naming.py": SAMPLE_RULES, **files})
 
     completed: subprocess.CompletedProcess[str] = run(
-        tmp_path, "check", "--output-format", "json", "--select", "XSQCNAME001", environment={}
+        tmp_path, "check", "--output-format", "json", "--select", "XSQLCLEANNAME001", environment={}
     )
     report: dict[str, list[dict[str, object]]] = json.loads(completed.stdout)
 

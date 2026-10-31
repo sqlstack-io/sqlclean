@@ -19,7 +19,7 @@ sqlclean check [OPTIONS] [PATHS]...
 ```bash
 sqlclean check                              # every matching file under the configuration root
 sqlclean check models/orders.sql reports/   # only these files and directories
-sqlclean check --select SQC001,SQC004       # only these Rules
+sqlclean check --select SQLCLEAN001,SQLCLEAN004       # only these Rules
 sqlclean check --output-format sarif > sqlclean.sarif
 ```
 
@@ -40,20 +40,20 @@ when `include` does not match it, unless `exclude` does. See
 | `--config <PATH>` | Use this configuration file instead of the nearest `sqlclean.toml` |
 
 `--select` and `--ignore` take a comma-separated list, or the flag repeated. A value is an exact
-code such as `SQC001` or a prefix such as `SQC` or `XSQCNAME`. A value that matches no Rule is an
+code such as `SQLCLEAN001` or a prefix such as `SQLCLEAN` or `XSQLCLEANNAME`. A value that matches no Rule is an
 error. See [Selecting Rules](/docs/rules/overview/#selecting-rules).
 
 ## Text output
 
 ```text
-error[SQC004]: Row selection is nondeterministic
+error[SQLCLEAN004]: Row selection is nondeterministic
   --> models/customers.sql:6:1
    |
  6 | LIMIT 10;
    | ^^^^^
   = help: Add ORDER BY with a deterministic tie-breaker before LIMIT or OFFSET.
 
-error[SQC001]: Comparison with NULL is never true
+error[SQLCLEAN001]: Comparison with NULL is never true
   --> models/orders.sql:8:22
    |
  8 | WHERE o.cancelled_at = NULL
@@ -61,7 +61,7 @@ error[SQC001]: Comparison with NULL is never true
   = help: Use IS NULL or IS NOT NULL when testing for NULL.
   = fix: available with `sqlclean fix --unsafe-fixes`
 
-error: stale rule exception: SQC004 in models/orders.sql matches no finding; remove it from sqlclean.toml
+error: stale rule exception: SQLCLEAN004 in models/orders.sql matches no finding; remove it from sqlclean.toml
 
 Found 3 problems (1 fixable with `sqlclean fix --unsafe-fixes`).
 ```
@@ -82,7 +82,7 @@ and count characters, not bytes.
 {
   "findings": [
     {
-      "code": "SQC004",
+      "code": "SQLCLEAN004",
       "path": "models/customers.sql",
       "line": 6,
       "column": 1,
@@ -93,7 +93,7 @@ and count characters, not bytes.
       "fix": null
     },
     {
-      "code": "SQC001",
+      "code": "SQLCLEAN001",
       "path": "models/orders.sql",
       "line": 8,
       "column": 22,
@@ -106,7 +106,7 @@ and count characters, not bytes.
   ],
   "stale_exceptions": [
     {
-      "rule": "SQC004",
+      "rule": "SQLCLEAN004",
       "path": "models/orders.sql",
       "relation": null
     }
@@ -130,7 +130,7 @@ text:
 
 ```json
 {
-  "ruleId": "SQC001",
+  "ruleId": "SQLCLEAN001",
   "level": "error",
   "message": {
     "text": "Comparison with NULL is never true. Use IS NULL or IS NOT NULL when testing for NULL."

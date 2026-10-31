@@ -26,9 +26,9 @@ sqlclean rules [OPTIONS] [CODE]
 
 ```bash
 sqlclean rules                 # list every Rule
-sqlclean rules SQC001          # show one Rule
+sqlclean rules SQLCLEAN001          # show one Rule
 sqlclean rules --json          # every Rule as JSON
-sqlclean rules --json SQC001   # one Rule as JSON
+sqlclean rules --json SQLCLEAN001   # one Rule as JSON
 ```
 
 ## Flags
@@ -42,14 +42,14 @@ sqlclean rules --json SQC001   # one Rule as JSON
 ## Listing Rules
 
 ```text
-SQC001       default  Comparison with NULL is never true
-SQC002       default  Comma-separated sources create an implicit cartesian join
-SQC003       default  Non-cross join has no meaningful condition
-SQC004       default  Row selection is nondeterministic
+SQLCLEAN001       default  Comparison with NULL is never true
+SQLCLEAN002       default  Comma-separated sources create an implicit cartesian join
+SQLCLEAN003       default  Non-cross join has no meaningful condition
+SQLCLEAN004       default  Row selection is nondeterministic
 ...
-SQC045                JSON payload is parsed more than once in one SELECT
-XSQCNAME001  default  Query reads a temporary table
-XSQCSTYLE001 default  COUNT(1) should be COUNT(*)
+SQLCLEAN045                JSON payload is parsed more than once in one SELECT
+XSQLCLEANNAME001  default  Query reads a temporary table
+XSQLCLEANSTYLE001 default  COUNT(1) should be COUNT(*)
 ```
 
 `default` marks the Rules that run when `[rules] select` is not set. See
@@ -59,11 +59,11 @@ XSQCSTYLE001 default  COUNT(1) should be COUNT(*)
 ## Showing one Rule
 
 ```bash
-sqlclean rules SQC001
+sqlclean rules SQLCLEAN001
 ```
 
 ```text
-SQC001: Comparison with NULL is never true
+SQLCLEAN001: Comparison with NULL is never true
 Subject: statement
 Enabled by default: yes
 Fixable: unsafe
@@ -73,7 +73,7 @@ Remediation: Use IS NULL or IS NOT NULL when testing for NULL.
 A custom Rule also shows the Python module that defines it:
 
 ```text
-XSQCSTYLE001: COUNT(1) should be COUNT(*)
+XSQLCLEANSTYLE001: COUNT(1) should be COUNT(*)
 Subject: statement
 Enabled by default: yes
 Defined in: sql_rules.naming
@@ -86,13 +86,13 @@ Remediation: Write COUNT(*).
 ## JSON output
 
 ```bash
-sqlclean rules --json XSQCNAME001
+sqlclean rules --json XSQLCLEANNAME001
 ```
 
 ```json
 [
   {
-    "code": "XSQCNAME001",
+    "code": "XSQLCLEANNAME001",
     "message": "Query reads a temporary table",
     "remediation": "Read from the published table instead.",
     "enabled_by_default": true,

@@ -36,14 +36,14 @@ Files are chosen as for [`sqlclean check`](check.md).
 | `--no-cache` | Evaluate every file instead of reusing results for unchanged inputs |
 | `--config <PATH>` | Use this configuration file instead of the nearest `sqlclean.toml` |
 
-Only fixes of selected Rules apply. `sqlclean fix --select SQC005` removes unused CTEs and
+Only fixes of selected Rules apply. `sqlclean fix --select SQLCLEAN005` removes unused CTEs and
 formats the files, and leaves every other finding alone.
 
 ## Output
 
 ```text
 Fixed 1 problem(s) and changed 1 file(s).
-error[SQC001]: Comparison with NULL is never true
+error[SQLCLEAN001]: Comparison with NULL is never true
   --> models/open_orders.sql:7:24
    |
  7 |     WHERE cancelled_at = NULL
@@ -88,7 +88,7 @@ findings:
   formatter cannot format is reported as `<path>: could not format: <reason>` and keeps its fixes.
 
 A file that does not parse gets no fixes and is reported as
-[`SQC999`](../rules/overview.md#parse-errors-sqc999).
+[`SQLCLEAN999`](../rules/overview.md#parse-errors-sqlclean999).
 
 ## Exit codes
 

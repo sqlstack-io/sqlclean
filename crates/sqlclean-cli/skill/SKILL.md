@@ -1,6 +1,6 @@
 ---
 name: sqlclean
-description: ALWAYS load this skill when linting, fixing or formatting SQL with SQLClean, editing sqlclean.toml, writing or testing custom Rules (Python @rule functions with XSQC codes), recording Rule exceptions, or reading SQLClean findings (SQC codes, SQC999 parse errors) in CI, JSON or SARIF output.
+description: ALWAYS load this skill when linting, fixing or formatting SQL with SQLClean, editing sqlclean.toml, writing or testing custom Rules (Python @rule functions with XSQLCLEAN codes), recording Rule exceptions, or reading SQLClean findings (SQLCLEAN codes, SQLCLEAN999 parse errors) in CI, JSON or SARIF output.
 ---
 <!-- generated-by: sqlclean skills -->
 
@@ -17,7 +17,7 @@ engine extracts from each statement.
    `[rules]`). Paths in it are relative to its directory.
 2. **Check.** `sqlclean check [PATHS]` exits 0 when clean, 1 with findings, 2 on errors. Use
    `--output-format json` when you need to read findings programmatically.
-3. **Explain.** `sqlclean rules SQC001` shows a Rule's message, fix safety and remediation.
+3. **Explain.** `sqlclean rules SQLCLEAN001` shows a Rule's message, fix safety and remediation.
 4. **Fix.** `sqlclean fix --diff` previews safe fixes plus formatting; `sqlclean fix` writes them.
    Fixes marked unsafe can change query results, such as `= NULL` becoming `IS NULL`. Never pass
    `--unsafe-fixes` without the user's say-so.
@@ -31,16 +31,16 @@ engine extracts from each statement.
   `[[rules.rule_exceptions]]` entry with the Rule, path and a `reason`. Use
   `[[rules.rule_ignores]]` only for whole paths a Rule does not apply to.
 - An exception that no longer matches a finding is reported as stale; remove it.
-- `SQC999` is a parse error. It cannot be ignored: fix the SQL or set the right `dialect`,
+- `SQLCLEAN999` is a parse error. It cannot be ignored: fix the SQL or set the right `dialect`,
   globally or per path under `[[dialects]]`.
-- `--select` and `--ignore` take codes or prefixes such as `SQC001` or `SQC`.
+- `--select` and `--ignore` take codes or prefixes such as `SQLCLEAN001` or `SQLCLEAN`.
 - Results are cached in `.sqlclean/cache/`. Use `--no-cache` only when debugging a custom Rule
   that imports helpers from outside its `[rules] custom` paths.
 
 ## Custom Rules
 
 - A custom Rule is a function decorated with `@rule` from `sqlclean`, in a file under a path
-  listed in `[rules] custom`. Its code is `XSQC`, optional capital letters, then three digits.
+  listed in `[rules] custom`. Its code is `XSQLCLEAN`, optional capital letters, then three digits.
 - The first keyword parameter names the subject: `statement: Statement`, `file: SqlFile` or
   `repository: Repository`. The second is `ctx: RuleContext`.
 - Return `ctx.finding(...)` values. Fixes are lists of `ctx.replace`, `ctx.insert_before`,

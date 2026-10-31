@@ -1,4 +1,4 @@
-//! SQC046 to SQC053: report-only safety Rules for queries that cannot do what they appear to.
+//! SQLCLEAN046 to SQLCLEAN053: report-only safety Rules for queries that cannot do what they appear to.
 
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -237,7 +237,7 @@ fn cte_key(identifier: &Identifier, dialect: DialectType) -> String {
     }
 }
 
-/// `CASE x WHEN NULL` and a singleton positive `IN (NULL)`; SQC019 owns `NOT IN`.
+/// `CASE x WHEN NULL` and a singleton positive `IN (NULL)`; SQLCLEAN019 owns `NOT IN`.
 fn null_match_spans(significant: &Significant<'_>) -> Vec<CharSpan> {
     let mut spans: Vec<CharSpan> = Vec::new();
     for index in 0..significant.tokens.len() {

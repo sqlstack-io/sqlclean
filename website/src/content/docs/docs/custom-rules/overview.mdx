@@ -16,7 +16,7 @@ from sqlclean import Finding, RuleContext, Statement, rule
 
 
 @rule(
-    code="XSQCNAME001",
+    code="XSQLCLEANNAME001",
     message="Query reads a temporary table",
     remediation="Read from the published table instead.",
     enabled_by_default=True,
@@ -37,7 +37,7 @@ custom = ["sql_rules"]
 ```
 
 ```text
-error[XSQCNAME001]: Query reads a temporary table
+error[XSQLCLEANNAME001]: Query reads a temporary table
   --> models/orders.sql:2:6
    |
  2 | FROM tmp_orders
@@ -56,13 +56,13 @@ functions, constants and classes stay ordinary Python.
 - Modules are imported by their path from the configuration root: `sql_rules/naming.py` is
   `sql_rules.naming`. A Rule module can import a helper the same way, for example
   `from sql_rules.helpers import table_prefixes`.
-- Two Rules with the same code are an error: `custom Rule code XSQCNAME001 is defined twice`.
+- Two Rules with the same code are an error: `custom Rule code XSQLCLEANNAME001 is defined twice`.
 
 ## Declaring a Rule
 
 | `@rule` argument | Default | Description |
 |------------------|---------|-------------|
-| `code` | required | `XSQC`, optional capital letters, and three digits, such as `XSQCNAME001` |
+| `code` | required | `XSQLCLEAN`, optional capital letters, and three digits, such as `XSQLCLEANNAME001` |
 | `message` | required | The finding message |
 | `remediation` | required | What to do about a finding |
 | `enabled_by_default` | `False` | Run the Rule when `[rules] select` is not set |
@@ -71,7 +71,7 @@ functions, constants and classes stay ordinary Python.
 | `slug` | the code in lower case | A short name for the Rule |
 
 A Rule that is not enabled by default runs when `select` names it, by code or by a prefix such as
-`XSQC` or `XSQCNAME`. See [Selecting Rules](/docs/rules/overview/#selecting-rules). Fixes and
+`XSQLCLEAN` or `XSQLCLEANNAME`. See [Selecting Rules](/docs/rules/overview/#selecting-rules). Fixes and
 options are covered in [Fixes and options](/docs/custom-rules/fixes-and-options/).
 
 ## Choosing a subject
@@ -92,7 +92,7 @@ from sqlclean import Finding, Repository, RuleContext, SqlFile, rule
 
 
 @rule(
-    code="XSQCFILE001",
+    code="XSQLCLEANFILE001",
     message="File holds more than one statement",
     remediation="Split the file so each holds one statement.",
 )
@@ -101,7 +101,7 @@ def one_statement(*, file: SqlFile, ctx: RuleContext) -> list[Finding]:
 
 
 @rule(
-    code="XSQCREPO001",
+    code="XSQLCLEANREPO001",
     message="Two files define a CTE with the same name",
     remediation="Give each CTE a name that is unique across files.",
 )
@@ -138,7 +138,7 @@ A Repository Rule passes the statement or file each finding belongs to as `subje
 ## How Rules run
 
 - Custom Rules run after the built-in Rules, on files that parse. A file with a
-  [parse error](/docs/rules/overview/#parse-errors-sqc999) gets no custom Rule findings.
+  [parse error](/docs/rules/overview/#parse-errors-sqlclean999) gets no custom Rule findings.
 - From 500 files, Statement and File Rules split the files across one Python process per CPU. A
   Rule can't share state between files, so anything that spans files belongs in a Repository Rule,
   which always runs in one process with every file.
@@ -171,12 +171,12 @@ A Rule that cannot load or run stops the command with exit code `2`:
 
 | Problem | Error |
 |---------|-------|
-| An invalid code | `custom Rule code must be XSQC, optional capital letters and 3 digits, such as XSQCNAME001: XSQC01` |
-| A wrong signature | `custom Rule XSQCBAD001 must accept exactly one typed Statement, SqlFile or Repository subject and one typed RuleContext, both keyword-only` |
+| An invalid code | `custom Rule code must be XSQLCLEAN, optional capital letters and 3 digits, such as XSQLCLEANNAME001: XSQLCLEAN01` |
+| A wrong signature | `custom Rule XSQLCLEANBAD001 must accept exactly one typed Statement, SqlFile or Repository subject and one typed RuleContext, both keyword-only` |
 | A module that fails to import | `could not import custom Rule module sql_rules.bad: <error>` |
-| An exception in the Rule | `custom Rule XSQCBAD001 failed on models/a.sql: IndexError: tuple index out of range`, then the traceback |
-| A return value that is not a list of findings | `custom Rule XSQCRET001 must return a list of findings from ctx.finding(...)` |
-| A fix from a Rule without `fixable` | `Rule XSQCBAD001 returned a fix but does not declare fixable` |
+| An exception in the Rule | `custom Rule XSQLCLEANBAD001 failed on models/a.sql: IndexError: tuple index out of range`, then the traceback |
+| A return value that is not a list of findings | `custom Rule XSQLCLEANRET001 must return a list of findings from ctx.finding(...)` |
+| A fix from a Rule without `fixable` | `Rule XSQLCLEANBAD001 returned a fix but does not declare fixable` |
 
 ## Continue
 

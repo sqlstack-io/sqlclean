@@ -35,11 +35,6 @@ reason = "Integration surface: SQLBuild's Python bindings format through `format
 
 [[targets.rust.rule_exceptions]]
 rule = "FPRSL105"
-path = "crates/sqlclean/src/sql_quality/main/declared_relation_keys.rs"
-reason = "Integration surface: SQLBuild's compiled views derive the relation keys its models declare through this entry."
-
-[[targets.rust.rule_exceptions]]
-rule = "FPRSL105"
 path = "crates/sqlclean/src/sql_tokens/main/builtin_function_names.rs"
 reason = "This entry exists for the sql_lint tests, which the analyzer does not count as importers."
 

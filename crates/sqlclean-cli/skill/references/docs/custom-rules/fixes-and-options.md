@@ -23,7 +23,7 @@ A fix is a list of edits to the file. Declare `fixable` on the Rule, then pass t
 from sqlclean import FixSafety, Finding, RuleContext, Statement, rule
 
 @rule(
-    code="XSQCSTYLE001",
+    code="XSQLCLEANSTYLE001",
     message="COUNT(1) should be COUNT(*)",
     remediation="Write COUNT(*).",
     fixable=FixSafety.SAFE,
@@ -42,7 +42,7 @@ A function call is located at its name, so `f.end + 1` is the first character in
 parentheses.
 
 ```bash
-sqlclean fix --diff --select XSQCSTYLE
+sqlclean fix --diff --select XSQLCLEANSTYLE
 ```
 
 ```diff
@@ -81,7 +81,7 @@ edit must lie inside the finding's file.
 See [Safe and unsafe fixes](../rules/overview.md#safe-and-unsafe-fixes).
 
 A finding without `fix` has no fix, even in a fixable Rule. A Rule that returns a fix without
-declaring `fixable` fails with `Rule XSQCSTYLE001 returned a fix but does not declare fixable`.
+declaring `fixable` fails with `Rule XSQLCLEANSTYLE001 returned a fix but does not declare fixable`.
 
 ### How fixes combine
 
@@ -107,7 +107,7 @@ PREFIXES = RuleOption.string_list(
 )
 
 @rule(
-    code="XSQCNAME001",
+    code="XSQLCLEANNAME001",
     message="Query reads a temporary table",
     remediation="Read from the published table instead.",
     options=(PREFIXES,),
@@ -123,7 +123,7 @@ def temporary_table(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
 ```
 
 ```toml
-[rules.rule_options.XSQCNAME001]
+[rules.rule_options.XSQLCLEANNAME001]
 prefixes = ["tmp_", "scratch_"]
 ```
 
@@ -147,12 +147,12 @@ exit code `2`:
 
 | Problem | Error |
 |---------|-------|
-| A value of the wrong type | `[rules.rule_options.XSQCNAME001] option prefixes expects a list, got 'tmp_'` |
-| An integer out of bounds | `[rules.rule_options.XSQCFILE002] option max_statements must be at least 1` |
-| A string outside `choices` | `[rules.rule_options.XSQCFILE002] option style must be one of ['strict', 'loose']` |
-| A name the Rule does not declare | `Rule XSQCNAME001 has no option prefix` |
-| A code no custom Rule has | `[rules.rule_options.XSQCNOPE001]: no custom Rule has this code` |
-| A Rule that reads an option it did not declare | `Rule XSQCFILE002 reads undeclared option verbose` |
+| A value of the wrong type | `[rules.rule_options.XSQLCLEANNAME001] option prefixes expects a list, got 'tmp_'` |
+| An integer out of bounds | `[rules.rule_options.XSQLCLEANFILE002] option max_statements must be at least 1` |
+| A string outside `choices` | `[rules.rule_options.XSQLCLEANFILE002] option style must be one of ['strict', 'loose']` |
+| A name the Rule does not declare | `Rule XSQLCLEANNAME001 has no option prefix` |
+| A code no custom Rule has | `[rules.rule_options.XSQLCLEANNOPE001]: no custom Rule has this code` |
+| A Rule that reads an option it did not declare | `Rule XSQLCLEANFILE002 reads undeclared option verbose` |
 
 Built-in Rules take no options. Their two limits are set in
 [`[rules.thresholds]`](../rules/overview.md#thresholds).

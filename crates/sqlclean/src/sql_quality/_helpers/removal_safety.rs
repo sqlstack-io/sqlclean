@@ -1,4 +1,4 @@
-//! SQC042 allow-list: when removing an unused CTE output provably keeps every row.
+//! SQLCLEAN042 allow-list: when removing an unused CTE output provably keeps every row.
 
 use polyglot_sql::expressions::Select;
 use polyglot_sql::traversal::contains_aggregate;

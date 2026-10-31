@@ -49,7 +49,7 @@ sqlclean check
 ```
 
 ```text
-error[SQC001]: Comparison with NULL is never true
+error[SQLCLEAN001]: Comparison with NULL is never true
   --> models/open_orders.sql:1:90
    |
  1 | with open_orders as (select order_id, customer_id, amount from orders where cancelled_at = null),
@@ -57,7 +57,7 @@ error[SQC001]: Comparison with NULL is never true
   = help: Use IS NULL or IS NOT NULL when testing for NULL.
   = fix: available with `sqlclean fix --unsafe-fixes`
 
-error[SQC005]: CTE is unreachable from the final query
+error[SQLCLEAN005]: CTE is unreachable from the final query
   --> models/open_orders.sql:2:1
    |
  2 | refunds as (select order_id from payments where amount < 0)
@@ -65,7 +65,7 @@ error[SQC005]: CTE is unreachable from the final query
   = help: Reference the CTE from the final query or another reachable CTE, or remove it.
   = fix: available with `sqlclean fix`
 
-error[SQC004]: Row selection is nondeterministic
+error[SQLCLEAN004]: Row selection is nondeterministic
   --> models/open_orders.sql:3:55
    |
  3 | select order_id, customer_id, amount from open_orders limit 100
@@ -89,7 +89,7 @@ sqlclean fix
 
 ```text
 Fixed 1 problem(s) and changed 1 file(s).
-error[SQC001]: Comparison with NULL is never true
+error[SQLCLEAN001]: Comparison with NULL is never true
   --> models/open_orders.sql:7:24
    |
  7 |     WHERE cancelled_at = NULL
@@ -97,7 +97,7 @@ error[SQC001]: Comparison with NULL is never true
   = help: Use IS NULL or IS NOT NULL when testing for NULL.
   = fix: available with `sqlclean fix --unsafe-fixes`
 
-error[SQC004]: Row selection is nondeterministic
+error[SQLCLEAN004]: Row selection is nondeterministic
   --> models/open_orders.sql:15:1
     |
  15 | LIMIT 100
@@ -115,7 +115,7 @@ it:
 sqlclean fix --unsafe-fixes
 ```
 
-`SQC004` has no fix: only you know which column makes the order deterministic. Add
+`SQLCLEAN004` has no fix: only you know which column makes the order deterministic. Add
 `ORDER BY order_id` before `LIMIT 100`, then run `sqlclean fix` once more to format the new
 clause. The file is now:
 
@@ -169,28 +169,28 @@ every built-in Rule:
 dialect = "duckdb"
 
 [rules]
-select = ["SQC"]
+select = ["SQLCLEAN"]
 ```
 
-`SQC` is a prefix, so it selects all 53 built-in Rules. Three of the opt-in structure Rules now
+`SQLCLEAN` is a prefix, so it selects all 53 built-in Rules. Three of the opt-in structure Rules now
 report the file:
 
 ```text
-error[SQC041]: Only the last top-level CTE may be named final, and it must use that name
+error[SQLCLEAN041]: Only the last top-level CTE may be named final, and it must use that name
   --> models/open_orders.sql:1:6
    |
  1 | WITH open_orders AS (
    |      ^^^^^^^^^^^
-  = help: Name the last top-level CTE final and rename any other final CTE; SQC035 checks the terminal SELECT.
+  = help: Name the last top-level CTE final and rename any other final CTE; SQLCLEAN035 checks the terminal SELECT.
 
-error[SQC034]: Query keeps transformation logic outside top-level CTEs
+error[SQLCLEAN034]: Query keeps transformation logic outside top-level CTEs
   --> models/open_orders.sql:10:1
     |
  10 | SELECT
     | ^^^^^^
   = help: Move transformation logic into named top-level CTEs before the terminal SELECT.
 
-error[SQC035]: Terminal SELECT does not read plainly from the final top-level CTE
+error[SQLCLEAN035]: Terminal SELECT does not read plainly from the final top-level CTE
   --> models/open_orders.sql:10:1
     |
  10 | SELECT
@@ -206,8 +206,8 @@ Follow them, or skip the ones your team does not want:
 dialect = "duckdb"
 
 [rules]
-select = ["SQC"]
-ignore = ["SQC034", "SQC035", "SQC041"]
+select = ["SQLCLEAN"]
+ignore = ["SQLCLEAN034", "SQLCLEAN035", "SQLCLEAN041"]
 ```
 
 ```text

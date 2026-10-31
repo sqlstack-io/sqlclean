@@ -136,7 +136,7 @@ and does not format the result. It shows exactly what the Rule's fix changes.
 | Problem | Message |
 |---------|---------|
 | A different number of findings | `reads orders: expected 1 findings, got 0` |
-| Findings that depend on file order | `custom Rule XSQCND001 is not deterministic` |
+| Findings that depend on file order | `custom Rule XSQLCLEANND001 is not deterministic` |
 | Case SQL that does not parse | `sqlclean could not parse the case SQL: sqlclean: error: Parse error at line 1, column 18: ...` |
 | A function without `@rule` | `evaluate_rule needs a function decorated with @rule` |
 | No `sqlclean` executable | `the sqlclean executable is not installed; install sqlclean` |
@@ -157,7 +157,7 @@ The usual cause is state kept between calls, such as a module-level set of names
 SEEN: set[str] = set()
 
 
-@rule(code="XSQCND001", message="Table read in an earlier file", remediation="...")
+@rule(code="XSQLCLEANND001", message="Table read in an earlier file", remediation="...")
 def seen_before(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
     found = [ctx.finding(subject=statement, node=t) for t in statement.tables if t.name in SEEN]
     SEEN.update(t.name for t in statement.tables)
@@ -165,7 +165,7 @@ def seen_before(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
 ```
 
 ```text
-RuleCaseError: custom Rule XSQCND001 is not deterministic
+RuleCaseError: custom Rule XSQLCLEANND001 is not deterministic
 ```
 
 Compute findings from the subject and `ctx` alone. When a Rule needs to compare files, give it a

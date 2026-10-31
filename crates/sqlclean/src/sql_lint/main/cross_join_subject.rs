@@ -1,4 +1,4 @@
-//! The relation and CTE a `SQC038` finding names, for relation-level Rule exceptions.
+//! The relation and CTE a `SQLCLEAN038` finding names, for relation-level Rule exceptions.
 
 use crate::sql_lint::constants::{CROSS_JOIN_CTE_MARKER, CROSS_JOIN_PREFIX, CROSS_JOIN_SUFFIX};
 
