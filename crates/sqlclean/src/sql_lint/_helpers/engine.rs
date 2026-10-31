@@ -238,7 +238,7 @@ const FINAL_CTE_NAME: LintRuleMetadata = LintRuleMetadata {
     remediation: "Name the last top-level CTE final and rename any other final CTE; SQC035 checks the terminal SELECT.",
 };
 
-pub(crate) const DEFAULT_RULES: [&str; 13] = [
+pub(crate) const DEFAULT_RULES: [&str; 19] = [
     NULL_COMPARISON.code,
     IMPLICIT_CARTESIAN_JOIN.code,
     JOIN_WITHOUT_CONDITION.code,
@@ -252,9 +252,15 @@ pub(crate) const DEFAULT_RULES: [&str; 13] = [
     NULL_NOT_IN.code,
     SET_ARITY_MISMATCH.code,
     INLINE_QUERY_RELATION.code,
+    crate::sql_quality::constants::DUPLICATE_CTE_NAME.code,
+    crate::sql_quality::constants::NULL_MATCH.code,
+    crate::sql_quality::constants::LITERAL_ZERO_DIVISION.code,
+    crate::sql_quality::constants::NATURAL_JOIN.code,
+    crate::sql_quality::constants::REVERSED_BETWEEN.code,
+    crate::sql_quality::constants::MISPLACED_AGGREGATE.code,
 ];
 
-const ALL_RULE_METADATA: [&LintRuleMetadata; 45] = [
+const ALL_RULE_METADATA: [&LintRuleMetadata; 53] = [
     &NULL_COMPARISON,
     &IMPLICIT_CARTESIAN_JOIN,
     &JOIN_WITHOUT_CONDITION,
@@ -300,6 +306,14 @@ const ALL_RULE_METADATA: [&LintRuleMetadata; 45] = [
     &crate::sql_quality::constants::RANKING_SORT_CAP,
     &crate::sql_quality::constants::LONG_LITERAL,
     &crate::sql_quality::constants::REPEATED_JSON_PARSE,
+    &crate::sql_quality::constants::DUPLICATE_CTE_NAME,
+    &crate::sql_quality::constants::NULL_MATCH,
+    &crate::sql_quality::constants::LITERAL_ZERO_DIVISION,
+    &crate::sql_quality::constants::UNFILTERED_WRITE,
+    &crate::sql_quality::constants::INSERT_WITHOUT_COLUMNS,
+    &crate::sql_quality::constants::NATURAL_JOIN,
+    &crate::sql_quality::constants::REVERSED_BETWEEN,
+    &crate::sql_quality::constants::MISPLACED_AGGREGATE,
 ];
 
 fn is_ceremonial_cte_name(name: &str) -> bool {

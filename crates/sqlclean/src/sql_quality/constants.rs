@@ -20,6 +20,46 @@ pub(crate) const REPEATED_JSON_PARSE: LintRuleMetadata = LintRuleMetadata {
     message: "JSON payload is parsed more than once in one SELECT",
     remediation: "Parse the payload once in the CTE that reads it, for example `TRY_PARSE_JSON(value) AS payload`, and read every field from that column in a later step.",
 };
+pub(crate) const DUPLICATE_CTE_NAME: LintRuleMetadata = LintRuleMetadata {
+    code: "SQC046",
+    message: "WITH defines the same CTE name more than once",
+    remediation: "Give each CTE in one WITH clause its own name; engines reject the duplicate or silently read only one definition.",
+};
+pub(crate) const NULL_MATCH: LintRuleMetadata = LintRuleMetadata {
+    code: "SQC047",
+    message: "CASE WHEN NULL or IN (NULL) never matches",
+    remediation: "A simple CASE compares with =, and x IN (NULL) means x = NULL, so neither is ever true. Test the value with IS NULL, for example CASE WHEN x IS NULL THEN ... END.",
+};
+pub(crate) const LITERAL_ZERO_DIVISION: LintRuleMetadata = LintRuleMetadata {
+    code: "SQC048",
+    message: "Expression divides by a literal zero",
+    remediation: "Depending on the dialect this raises an error or returns NULL. Remove the division, or divide by NULLIF(divisor, 0) when the divisor can legitimately be zero.",
+};
+pub(crate) const UNFILTERED_WRITE: LintRuleMetadata = LintRuleMetadata {
+    code: "SQC049",
+    message: "UPDATE or DELETE has no limiting predicate and changes every row",
+    remediation: "Add a WHERE condition that reads the target rows; a constant such as WHERE TRUE does not limit them. Use TRUNCATE, or an exception for this file, when changing every row is intended.",
+};
+pub(crate) const INSERT_WITHOUT_COLUMNS: LintRuleMetadata = LintRuleMetadata {
+    code: "SQC050",
+    message: "INSERT does not list its target columns",
+    remediation: "List the target columns, for example INSERT INTO orders (order_id, status) SELECT ..., so values cannot shift into the wrong column when the table changes.",
+};
+pub(crate) const NATURAL_JOIN: LintRuleMetadata = LintRuleMetadata {
+    code: "SQC051",
+    message: "NATURAL JOIN matches on every column the relations share",
+    remediation: "Join with an explicit ON or USING condition; adding a column with a shared name to either relation silently changes a NATURAL JOIN.",
+};
+pub(crate) const REVERSED_BETWEEN: LintRuleMetadata = LintRuleMetadata {
+    code: "SQC052",
+    message: "BETWEEN lower bound is greater than its upper bound",
+    remediation: "BETWEEN low AND high is empty when low > high, so it never matches, and NOT BETWEEN matches every non-NULL value. Swap the bounds, or write BETWEEN SYMMETRIC where the dialect supports it.",
+};
+pub(crate) const MISPLACED_AGGREGATE: LintRuleMetadata = LintRuleMetadata {
+    code: "SQC053",
+    message: "Aggregate or window function is used in WHERE, ON or GROUP BY",
+    remediation: "Rows are filtered and grouped before aggregates and windows are computed. Filter an aggregate in HAVING, filter a window result in QUALIFY or an outer query, and group by the underlying columns.",
+};
 pub(crate) const UNSTABLE_ROW_NUMBER_CODE: &str = "SQC018";
 pub(crate) const UNPROVEN_RANKING_MESSAGE: &str =
     "Ranking window order is not proven unique within its partition";
