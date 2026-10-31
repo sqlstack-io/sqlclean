@@ -1,6 +1,7 @@
 //! Print authored SQL tokens with whitespace taken from a parse-tree layout oracle.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::ops::Range;
 
 use polyglot_sql::Dialect;
 use polyglot_sql::tokens::{Token, TokenType};
@@ -65,6 +66,15 @@ impl Lexeme {
                 LexemeKey::Raw => self.raw == other.raw,
             }
     }
+}
+
+/// Authored tokens printed against an oracle, with what the token check needs about them.
+pub(crate) struct AuthoredPrint {
+    pub(crate) sql: String,
+    /// The byte range and type of each printed token; comments and whitespace lie between them.
+    pub(crate) tokens: Vec<(Range<usize>, TokenType)>,
+    pub(crate) recases: BTreeMap<usize, KeywordRecase>,
+    pub(crate) texts: TokenTexts,
 }
 
 /// The source text and case-fold flag of every token, read once for the token check.
@@ -227,7 +237,7 @@ pub(crate) fn print_authored_tokens(
     source: &AuthoredSql<'_>,
     oracle: &OracleLayout,
     dialect: &Dialect,
-) -> Result<(String, BTreeMap<usize, KeywordRecase>, TokenTexts), String> {
+) -> Result<AuthoredPrint, String> {
     let AuthoredSql {
         sql,
         tokens,
@@ -241,6 +251,7 @@ pub(crate) fn print_authored_tokens(
     let mut output = String::with_capacity(sql.len() + sql.len() / 4);
     let string_breaks = string_breaks(sql, tokens);
     let mut recases: BTreeMap<usize, KeywordRecase> = BTreeMap::new();
+    let mut printed_tokens: Vec<(Range<usize>, TokenType)> = Vec::with_capacity(tokens.len());
     for (index, lexeme) in authored.iter().enumerate() {
         let forced_break = string_breaks.contains(&index) && !separators[index].contains('\n');
         let forced: String;
@@ -281,7 +292,9 @@ pub(crate) fn print_authored_tokens(
                 },
             );
         }
+        let start = output.len();
         output.push_str(&printed_text(lexeme, guide));
+        printed_tokens.push((start..output.len(), tokens[index].token_type));
         let trailing = &attached[index].trailing;
         for (position, comment) in trailing.iter().enumerate() {
             output.push(' ');
@@ -312,7 +325,12 @@ pub(crate) fn print_authored_tokens(
         texts.texts.push(lexeme.raw);
         texts.foldable.push(lexeme.foldable);
     }
-    Ok((output, recases, texts))
+    Ok(AuthoredPrint {
+        sql: output,
+        tokens: printed_tokens,
+        recases,
+        texts,
+    })
 }
 
 /// Refuse output that changes anything but layout, fold-set case, and recorded keyword recases.

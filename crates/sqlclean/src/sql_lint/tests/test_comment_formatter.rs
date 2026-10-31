@@ -74,6 +74,12 @@ fn given_trailing_comments_after_the_last_token_when_formatting_then_no_newline_
             expected_sql: "SELECT 1 AS order_id\nFROM orders /* latest orders */",
             expected_changed: false,
         },
+        test_types::FormatTestCase {
+            description: "multibyte comments and literals keep every later token in place",
+            sql: "select 'café' as naïve, -- prix en €\n ü.x from t as ü /* 日本 */ where ü.y = 'ß'",
+            expected_sql: "SELECT\n  'café' AS naïve, -- prix en €\n  ü.x\nFROM t AS ü /* 日本 */\nWHERE ü.y = 'ß'",
+            expected_changed: true,
+        },
     ];
     for test_case in &test_cases {
         let response = format_json(

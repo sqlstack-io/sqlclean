@@ -1,7 +1,10 @@
 use crate::sql_facts::main::file_facts::file_facts;
+use crate::sql_facts::main::statement_ends::statement_ends;
 use crate::sql_facts::models::{FileFacts, StatementFacts};
 use crate::sql_facts::tests::helpers::text;
-use crate::sql_facts::tests::test_types::{ParseOutcomeTestCase, StatementFactsTestCase};
+use crate::sql_facts::tests::test_types::{
+    ParseOutcomeTestCase, StatementEndsTestCase, StatementFactsTestCase,
+};
 
 const TWO_STATEMENTS: &str = "WITH recent AS (SELECT o.order_id, o.* FROM shop.orders AS o WHERE o.total > 10)\n\
 SELECT r.order_id, UPPER(c.name) AS name, 'é' AS mark\n\
@@ -224,6 +227,53 @@ fn given_sql_text_when_collecting_facts_then_only_unparseable_sql_is_an_error() 
             .ok();
         assert_eq!(
             statements, test_case.expected_statements,
+            "{}",
+            test_case.description
+        );
+    }
+}
+
+#[test]
+fn given_sql_text_when_finding_statement_ends_then_each_ends_after_its_terminator() {
+    let test_cases = [
+        StatementEndsTestCase {
+            description: "a comment after a terminator starts the next statement's text",
+            sql: "SELECT 'é;' AS a; -- next; note\nSELECT 2 /* end; */",
+            expected_statements: Some(&["SELECT 'é;' AS a;", " -- next; note\nSELECT 2"]),
+        },
+        StatementEndsTestCase {
+            description: "empty statements between semicolons are skipped",
+            sql: ";; SELECT 1;;SELECT 2;",
+            expected_statements: Some(&[";; SELECT 1;", ";SELECT 2;"]),
+        },
+        StatementEndsTestCase {
+            description: "a file of only comments has no statements",
+            sql: "-- only a note; nothing else\n/* still; nothing */\n",
+            expected_statements: Some(&[]),
+        },
+        StatementEndsTestCase {
+            description: "an unparseable statement is an error, not a split",
+            sql: "SELECT 1; SELECT FROM WHERE (",
+            expected_statements: None,
+        },
+    ];
+    for test_case in &test_cases {
+        let characters: Vec<char> = test_case.sql.chars().collect();
+        let statements: Option<Vec<String>> = statement_ends(test_case.sql, "duckdb")
+            .map(|ends| {
+                let starts = std::iter::once(0).chain(ends.iter().copied());
+                starts
+                    .zip(ends.iter().copied())
+                    .map(|(start, end)| characters[start..end].iter().collect())
+                    .collect()
+            })
+            .ok();
+        let texts: Option<Vec<&str>> = statements
+            .as_ref()
+            .map(|statements| statements.iter().map(String::as_str).collect());
+        assert_eq!(
+            texts.as_deref(),
+            test_case.expected_statements,
             "{}",
             test_case.description
         );

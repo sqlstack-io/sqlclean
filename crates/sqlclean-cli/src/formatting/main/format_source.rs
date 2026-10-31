@@ -1,6 +1,6 @@
 //! Format one SQL file: each statement in canonical layout, separated by one blank line.
 
-use sqlclean::sql_facts::main::file_facts::file_facts;
+use sqlclean::sql_facts::main::statement_ends::statement_ends;
 use sqlclean::sql_lint::constants::LINT_API_VERSION;
 use sqlclean::sql_lint::main::format_requests::format_requests;
 use sqlclean::sql_lint::models::{FormatRequest, FormatResponse};
@@ -14,13 +14,8 @@ pub fn format_source(
     line_width: usize,
     indent: usize,
 ) -> Result<String, String> {
-    let facts = file_facts(text, dialect)?;
     let characters: Vec<char> = text.chars().collect();
-    let mut boundaries: Vec<usize> = facts
-        .statements
-        .iter()
-        .map(|statement| statement.terminated_end)
-        .collect();
+    let mut boundaries: Vec<usize> = statement_ends(text, dialect)?;
     if let Some(last) = boundaries.last_mut() {
         *last = characters.len();
     }

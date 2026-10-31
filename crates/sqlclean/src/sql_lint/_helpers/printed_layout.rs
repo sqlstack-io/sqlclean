@@ -1,8 +1,8 @@
 //! Printed SQL as tokens and gaps, with clause layout rules and line-width wrapping.
 
 use std::collections::HashMap;
+use std::ops::Range;
 
-use polyglot_sql::Dialect;
 use polyglot_sql::tokens::TokenType;
 
 use crate::sql_lint::constants::OPEN_PARENTHESIS;
@@ -87,35 +87,28 @@ struct Line {
 }
 
 impl<'a> PrintedSql<'a> {
-    pub(crate) fn parse(
+    /// Split printed `sql` at its token byte ranges; `None` when it has no tokens.
+    pub(crate) fn new(
         sql: &str,
-        dialect: &Dialect,
+        printed_tokens: &[(Range<usize>, TokenType)],
         token_widths: &'a HashMap<String, usize>,
-    ) -> Result<Option<Self>, String> {
-        let tokens = dialect
-            .tokenize(sql)
-            .map_err(|error| format!("native formatter tokenization failed: {error}"))?;
-        if tokens.is_empty() {
-            return Ok(None);
+    ) -> Option<Self> {
+        if printed_tokens.is_empty() {
+            return None;
         }
-        let characters: Vec<char> = sql.chars().collect();
-        let mut texts: Vec<String> = Vec::with_capacity(tokens.len());
-        let mut gaps: Vec<String> = Vec::with_capacity(tokens.len() + 1);
+        let mut texts: Vec<String> = Vec::with_capacity(printed_tokens.len());
+        let mut gaps: Vec<String> = Vec::with_capacity(printed_tokens.len() + 1);
         let mut previous_end = 0_usize;
-        for token in &tokens {
-            gaps.push(characters[previous_end..token.span.start].iter().collect());
-            texts.push(
-                characters[token.span.start..token.span.end]
-                    .iter()
-                    .collect(),
-            );
-            previous_end = token.span.end;
+        for (range, _) in printed_tokens {
+            gaps.push(sql[previous_end..range.start].to_owned());
+            texts.push(sql[range.clone()].to_owned());
+            previous_end = range.end;
         }
-        gaps.push(characters[previous_end..].iter().collect());
+        gaps.push(sql[previous_end..].to_owned());
         let (depths, partners) = bracket_structure(&texts);
         let locked = vec![false; texts.len() + 1];
-        Ok(Some(Self {
-            kinds: tokens.iter().map(|token| token.token_type).collect(),
+        Some(Self {
+            kinds: printed_tokens.iter().map(|(_, kind)| *kind).collect(),
             tokens: texts,
             gaps,
             depths,
@@ -123,7 +116,7 @@ impl<'a> PrintedSql<'a> {
             locked,
             token_widths,
             indent: PARSED_INDENT,
-        }))
+        })
     }
 
     fn len(&self) -> usize {
