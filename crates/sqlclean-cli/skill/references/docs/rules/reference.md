@@ -38,10 +38,10 @@ Run `sqlclean rules <CODE>` for a Rule's remediation.
 | `SQLCLEAN009` | Table alias is duplicated in the same query scope | Yes | — |
 | `SQLCLEAN010` | Output alias is duplicated in the same select list | Yes | — |
 | `SQLCLEAN011` | Clause mixes positional and named references | No | — |
-| `SQLCLEAN012` | ELSE NULL is redundant | No | — |
+| `SQLCLEAN012` | ELSE NULL is redundant | No | Safe |
 | `SQLCLEAN013` | DISTINCT is written as though it were a function | No | Safe |
 | `SQLCLEAN014` | Predicate compares identical constant values | No | — |
-| `SQLCLEAN015` | Empty statement follows another terminator | No | — |
+| `SQLCLEAN015` | Empty statement follows another terminator | No | Safe |
 | `SQLCLEAN016` | Expression is aliased to its existing name | No | — |
 | `SQLCLEAN017` | Row count uses a constant expression | No | Safe |
 | `SQLCLEAN018` | ROW_NUMBER has no deterministic ordering | Yes | — |
@@ -49,7 +49,7 @@ Run `sqlclean rules <CODE>` for a Rule's remediation.
 | `SQLCLEAN020` | Set-operation branches project different column counts | Yes | — |
 | `SQLCLEAN021` | Query output has an uncontrolled column shape | No | — |
 | `SQLCLEAN022` | Calculated projection has no stable output name | No | — |
-| `SQLCLEAN023` | Table alias is never referenced | No | — |
+| `SQLCLEAN023` | Table alias is never referenced | No | Safe |
 | `SQLCLEAN024` | WHERE predicate rejects NULL rows from a LEFT JOIN | No | — |
 | `SQLCLEAN025` | JOIN type is implicit | No | Safe |
 | `SQLCLEAN026` | ORDER BY mixes explicit and implicit directions | No | — |
@@ -68,7 +68,7 @@ Run `sqlclean rules <CODE>` for a Rule's remediation.
 | `SQLCLEAN039` | Inline query relation obscures data flow | Yes | — |
 | `SQLCLEAN040` | JOIN ON contains a computed expression | No | — |
 | `SQLCLEAN041` | Only the last top-level CTE may be named final, and it must use that name | No | — |
-| `SQLCLEAN042` | CTE output column is never read later in the query | No | — |
+| `SQLCLEAN042` | CTE output column is never read later in the query | No | Safe |
 | `SQLCLEAN043` | Ranking window sorts by more expressions than max_ranking_order_by | No | — |
 | `SQLCLEAN044` | String literal is longer than max_literal_length | No | — |
 | `SQLCLEAN045` | JSON payload is parsed more than once in one SELECT | No | — |

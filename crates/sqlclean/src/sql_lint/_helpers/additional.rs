@@ -1706,16 +1706,25 @@ fn simple_boolean_case_span(
     let when_position = body
         .iter()
         .position(|&index| tokens[index].token_type == TokenType::When)?;
-    let then_position = body
-        .iter()
-        .position(|&index| tokens[index].token_type == TokenType::Then)?;
     let else_position = body
         .iter()
         .position(|&index| tokens[index].token_type == TokenType::Else)?;
-    let then_value = *body.get(then_position + 1)?;
     let else_value = *body.get(else_position + 1)?;
+    let mut thens = body
+        .iter()
+        .enumerate()
+        .filter(|&(_, &index)| tokens[index].token_type == TokenType::Then)
+        .peekable();
+    thens.peek()?;
+    let every_branch_returns_true = thens.all(|(offset, _)| {
+        body.get(offset + 1)
+            .is_some_and(|&value| tokens[value].token_type == TokenType::True)
+            && body.get(offset + 2).is_some_and(|&next| {
+                matches!(tokens[next].token_type, TokenType::When | TokenType::Else)
+            })
+    });
     if when_position != 0
-        || tokens[then_value].token_type != TokenType::True
+        || !every_branch_returns_true
         || tokens[else_value].token_type != TokenType::False
         || else_position + 2 != body.len() - 1
     {

@@ -1,3 +1,5 @@
+use polyglot_sql::tokens::TokenType;
+
 pub(crate) const CAST_TYPE_SEPARATOR_KEYWORD: &str = "AS";
 pub(crate) const CLOSE_PARENTHESIS: &str = ")";
 pub const LINT_API_VERSION: u32 = 1;
@@ -59,3 +61,14 @@ pub(crate) const CROSS_JOIN_UNNAMED_MESSAGE: &str = "CROSS JOIN creates an expli
 /// Stands for the finding's project-relative path until the caller that knows it fills it in.
 pub(crate) const CROSS_JOIN_PATH_PLACEHOLDER: &str = "<path of this file>";
 pub(crate) const CROSS_JOIN_REASON_PLACEHOLDER: &str = "<why this deviation is intentional>";
+/// Tokens that end a select item, so parentheses closed just before one cannot be regrouping an operator.
+pub(crate) const SELECT_ITEM_END_TOKENS: [TokenType; 8] = [
+    TokenType::Comma,
+    TokenType::From,
+    TokenType::As,
+    TokenType::Semicolon,
+    TokenType::RParen,
+    TokenType::Var,
+    TokenType::Identifier,
+    TokenType::QuotedIdentifier,
+];
