@@ -670,8 +670,8 @@ fn is_aggregate_call(
 ) -> bool {
     let normalized: String = normalized_name(&significant.tokens[name].text);
     aggregates.contains(&normalized)
-        && !(SINGLE_ARGUMENT_AGGREGATES.contains(&normalized.as_str())
-            && !significant.arguments_commas(name + 1, close).is_empty())
+        && (!SINGLE_ARGUMENT_AGGREGATES.contains(&normalized.as_str())
+            || significant.arguments_commas(name + 1, close).is_empty())
 }
 
 /// Whether `index` ends the clause; only an ON condition ends at a comma, before the next relation.
