@@ -96,6 +96,9 @@ pub struct LintRequest {
     /// The configuration file remediation text names; SQLClean's own when absent.
     #[serde(default)]
     pub config_file: Option<String>,
+    /// The advice `SQLCLEAN044` gives before its limit setting; SQLClean's own when absent.
+    #[serde(default)]
+    pub long_literal_guidance: Option<String>,
 }
 
 /// The generated wrapper around a test or macro body: its terminal SELECT is ceremonial, and these names are generated.

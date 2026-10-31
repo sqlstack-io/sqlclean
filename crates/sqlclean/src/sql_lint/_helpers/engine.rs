@@ -450,6 +450,10 @@ pub(crate) fn lint(request: LintRequest) -> Result<LintResponse, String> {
                 .config_file
                 .as_deref()
                 .unwrap_or(crate::constants::DEFAULT_CONFIG_FILE),
+            long_literal_guidance: request
+                .long_literal_guidance
+                .as_deref()
+                .unwrap_or(crate::sql_quality::constants::LONG_LITERAL_GUIDANCE),
         },
     )?);
     diagnostics.sort_by_key(|diagnostic| (diagnostic.start, diagnostic.end, diagnostic.code));

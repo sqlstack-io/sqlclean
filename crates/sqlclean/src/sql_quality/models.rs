@@ -17,4 +17,6 @@ pub(crate) struct QualityRequest<'a> {
     pub(crate) fixture_body: bool,
     /// The configuration file remediation text tells the user to edit.
     pub(crate) config_file: &'a str,
+    /// The advice a long literal finding gives before its limit setting.
+    pub(crate) long_literal_guidance: &'a str,
 }

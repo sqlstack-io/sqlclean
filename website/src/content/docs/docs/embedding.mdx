@@ -77,6 +77,7 @@ the dialect. Offsets in requests, findings, edits and facts count Unicode charac
 | `max_literal_length` | `100` | The `SQLCLEAN044` limit |
 | `max_ranking_order_by` | `5` | The `SQLCLEAN043` limit |
 | `config_file` | `sqlclean.toml` | The configuration file name that remediation text refers to |
+| `long_literal_guidance` | SQLClean's advice | The advice `SQLCLEAN044` gives before its `max_literal_length` setting, so a host can point at its own way to share a value |
 | `externally_referenced_ctes` | `[]` | CTE names that something outside the SQL reads, so `SQLCLEAN005` does not report them |
 | `relation_keys` | `{}` | Unique keys by table name as the SQL writes it, compared without case; an empty key means the relation holds at most one row, so `SQLCLEAN038` does not report a cross join with it and `SQLCLEAN018` can prove a ranking order |
 | `relation_names` | `{}` | The relation each placeholder table name stands for, so `SQLCLEAN038` messages and exceptions name it |
