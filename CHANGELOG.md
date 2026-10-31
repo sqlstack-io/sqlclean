@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/sqlstack-io/sqlclean/compare/v0.3.0...v0.4.0) (2026-10-31)
+
+
+### Features
+
+* **rules:** let a host supply the SQLCLEAN044 guidance ([#20](https://github.com/sqlstack-io/sqlclean/issues/20)) ([ae670ed](https://github.com/sqlstack-io/sqlclean/commit/ae670ed5a781a47e225122f60d4623f75915a3e2))
+
 ## [0.3.0](https://github.com/sqlstack-io/sqlclean/compare/v0.2.0...v0.3.0) (2026-10-31)
 
 

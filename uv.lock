@@ -615,7 +615,7 @@ wheels = [
 
 [[package]]
 name = "sqlclean"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "sqlclean-cli" },
@@ -659,7 +659,7 @@ dev = [
 
 [[package]]
 name = "sqlclean-cli"
-version = "0.3.0"
+version = "0.4.0"
 source = { directory = "packages/sqlclean-cli" }
 
 [[package]]
