@@ -52,6 +52,17 @@ JOINED: str = "SELECT a.id FROM a JOIN b ON a.id = b.id JOIN c ON b.id = c.id"
             expected_fixed_source="SELECT 'é' AS mark, COUNT(*) AS n FROM t",
         ),
         HarnessTestCase(
+            description="a finding after line breaks keeps its offset on every platform",
+            rule_name="forbidden_prefix",
+            rule_case=RuleCase(
+                description="multi-line read",
+                source="-- note\nSELECT id\nFROM tmp_orders",
+                expected_finding_count=1,
+            ),
+            expected_texts=("tmp_orders",),
+            expected_fixed_source="-- note\nSELECT id\nFROM tmp_orders",
+        ),
+        HarnessTestCase(
             description="a file Rule sees every statement of the file",
             rule_name="one_statement",
             rule_case=RuleCase(

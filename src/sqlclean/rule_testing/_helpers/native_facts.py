@@ -11,19 +11,18 @@ from sqlclean.rule_testing.exceptions import RuleCaseError
 
 
 def native_facts(*, source: str, dialect: str) -> dict[str, object]:
-    """Return the native statement facts of source, or raise RuleCaseError if it fails."""
+    """Return the native facts of source, sent as bytes so newlines stay LF on every platform."""
 
-    completed: subprocess.CompletedProcess[str] = subprocess.run(
+    completed: subprocess.CompletedProcess[bytes] = subprocess.run(
         [_executable(), FACTS_COMMAND, "--dialect", dialect],
-        input=source,
+        input=source.encode("utf-8"),
         capture_output=True,
-        text=True,
-        encoding="utf-8",
         check=False,
     )
     if completed.returncode:
-        raise RuleCaseError(f"sqlclean could not parse the case SQL: {completed.stderr.strip()}")
-    facts: dict[str, object] = json.loads(completed.stdout)
+        stderr: str = completed.stderr.decode("utf-8", errors="replace").strip()
+        raise RuleCaseError(f"sqlclean could not parse the case SQL: {stderr}")
+    facts: dict[str, object] = json.loads(completed.stdout.decode("utf-8"))
     return facts
 
 

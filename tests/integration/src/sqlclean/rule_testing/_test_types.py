@@ -26,3 +26,12 @@ class HarnessFailureTestCase:
     rule_name: str
     rule_case: RuleCase
     expected_error: str
+
+
+@dataclass(frozen=True)
+class ReadmeRuleTestCase:
+    """SQL for the README custom Rule and the text of every column it must report."""
+
+    description: str
+    source: str
+    expected_texts: tuple[str, ...]
