@@ -16,8 +16,10 @@ export default defineConfig({
 				dark: './src/assets/logo-dark.png',
 				replacesTitle: true,
 			},
-			favicon: '/favicon.png',
+			favicon: '/favicon.svg',
 			head: [
+				// PNG fallback for browsers without SVG favicons; the SVG favicon uses dark ink on light tabs and white on dark.
+				{ tag: 'link', attrs: { rel: 'icon', type: 'image/png', sizes: '128x128', href: '/favicon.png' } },
 				{ tag: 'meta', attrs: { property: 'og:image', content: 'https://sqlclean.io/assets/og-sqlclean-docs.png' } },
 				{ tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
 				{ tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
