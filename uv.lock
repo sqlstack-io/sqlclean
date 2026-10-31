@@ -630,6 +630,7 @@ ast = [
 dev = [
     { name = "commitizen" },
     { name = "fensu" },
+    { name = "polyglot-sql-chio" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-xdist" },
@@ -648,6 +649,7 @@ provides-extras = ["ast"]
 dev = [
     { name = "commitizen", specifier = ">=4.9.1" },
     { name = "fensu", specifier = ">=0.28.0" },
+    { name = "polyglot-sql-chio", specifier = "==0.13.10" },
     { name = "pre-commit", specifier = ">=4.3.0" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
