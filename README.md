@@ -1,228 +1,108 @@
 <p align="center">
-  <img src=".github/sqlclean-logo.png" alt="SQLClean" width="100%">
+  <img src="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/sqlclean-logo.png" alt="SQLClean" width="100%">
 </p>
 
 <p align="center">
   <strong>Clean SQL, every time.</strong> Fast linting, safe fixes and one canonical format.
 </p>
 
-SQLClean checks `.sql` files against built-in Rules, applies their fixes and formats every file in
-one canonical layout. The engine and the `sqlclean` command are written in Rust. Custom Rules
-are plain Python functions that read structural facts about each statement.
+<p align="center">
+  <a href="https://sqlclean.io">Website</a> ·
+  <a href="https://sqlclean.io/docs/">Docs</a> ·
+  <a href="https://sqlclean.io/docs/quickstart/">Quickstart</a> ·
+  <a href="https://sqlclean.io/docs/benchmarks/">Benchmarks</a>
+</p>
+
+SQLClean is a SQL linter and formatter. It flags SQL that runs but rarely does what you meant,
+applies the fixes that are safe, and formats every file one way. The engine and the `sqlclean`
+command are written in Rust. Custom Rules are plain Python functions, backed by a Rust API that
+parses the SQL for them. It is free and open source under Apache-2.0.
 
 <p align="center">
-  <img src=".github/demos/check-fix.gif" alt="sqlclean check reports three findings, then sqlclean fix applies two fixes and formats the file" width="100%">
+  <img src="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/demos/check-fix.gif" alt="sqlclean check reports three findings, then sqlclean fix applies two fixes and formats the file" width="100%">
 </p>
 
 `sqlclean check` reports a bare `JOIN`, a `COUNT(1)` and a temporary table from a custom Rule.
 `sqlclean fix` applies the two fixes and formats the file; the custom Rule's finding has no fix,
 so it stays.
 
-## Install
+## Quick start
 
 ```bash
 uv tool install sqlclean        # or: pip install sqlclean
-sqlclean --version
+sqlclean check                  # report findings in every .sql file under the directory
+sqlclean fix                    # apply safe fixes, then format
+sqlclean format                 # rewrite files in the canonical layout
 ```
 
-The `sqlclean` package installs the native `sqlclean` executable. Custom Rules run in the same
-Python environment as that executable.
+Add a `sqlclean.toml` when you want to choose a dialect, files or Rules. See the
+[quickstart](https://sqlclean.io/docs/quickstart/) and
+[configuration](https://sqlclean.io/docs/configuration/).
 
-## Commands
+## What it does
 
-```bash
-sqlclean check [PATHS]...    # report findings; exit 1 when there are any
-sqlclean fix [PATHS]...      # apply safe fixes until stable, then format
-sqlclean format [PATHS]...   # rewrite files in the canonical layout
-sqlclean rules [CODE]        # list the Rules, or explain one
-sqlclean skills              # install the skill for AI coding agents
-```
+### Catch SQL that is easy to get wrong
 
-- With no paths, a command reads every matching file under the configuration root.
-- `check` and `fix` accept `--select` and `--ignore`, which take codes or prefixes such as
-  `SQC001` or `SQC`, and `--no-cache`.
-- `check --output-format` takes `text`, `json` or `sarif`. Use SARIF for code-scanning uploads.
-- `fix --unsafe-fixes` also applies fixes that can change query results. `fix --diff` and
-  `format --diff` print a unified diff instead of writing.
-- `format --check` fails when a file needs formatting, without writing it.
-- Exit status is 0 when clean, 1 when there are findings or files to change, and 2 on errors.
+- **Built-in Rules.** Default Rules flag comparisons with `NULL`, `NOT IN` lists that contain
+  `NULL`, `ROW_NUMBER` with no deterministic order and more. Each finding points at the exact
+  characters and says what to write instead. See [Rules](https://sqlclean.io/docs/rules/overview/)
+  and the [Rule reference](https://sqlclean.io/docs/rules/reference/).
+- **Reviewed exceptions.** An exception allows one Rule in one file, with a reason. When the SQL
+  changes and it no longer matches, `sqlclean check` fails until it is removed. See
+  [exceptions](https://sqlclean.io/docs/rules/overview/#exceptions).
 
-Each statement is formatted on its own. Statements are separated by one blank line, and every
-file ends with a newline. Formatting is idempotent: a formatted file formats to itself.
+### Fix and format safely
 
-## Configuration
+- **Safe fixes by default.** `sqlclean fix` applies safe fixes until the file is stable, then
+  formats it. A fix that can change which rows match, such as `= NULL` to `IS NULL`, waits for
+  `--unsafe-fixes`, and a fix that would break parsing is thrown away. See
+  [`sqlclean fix`](https://sqlclean.io/docs/cli/fix/).
+- **One canonical format.** Every statement gets the same layout, and formatting a formatted file
+  changes nothing. See [formatting](https://sqlclean.io/docs/formatting/).
 
-SQLClean reads the nearest `sqlclean.toml` at or above the working directory, or the file passed
-with `--config`. Paths in it are relative to the file's directory.
+### Make your conventions Rules
 
-```toml
-dialect = "duckdb"            # default "generic"
-include = ["**/*.sql"]
-exclude = ["vendor/**"]       # files ignored by .gitignore are skipped too
+- **Custom Rules in plain Python.** A Rule is a function over the tables, joins, columns and
+  literals of each statement, already parsed and located by the Rust engine. No regular
+  expressions and no parser to learn. See [custom Rules](https://sqlclean.io/docs/custom-rules/overview/).
+- **Tested like any other code.** `sqlclean.testing` runs a Rule with the same engine as
+  `sqlclean check`. See [testing custom Rules](https://sqlclean.io/docs/custom-rules/testing/).
 
-[[dialects]]                  # a different dialect for some paths
-paths = ["warehouse/**"]
-dialect = "snowflake"
+### Run it everywhere
 
-[format]
-line_width = 100
-indent = 4
+- **CI and pre-commit.** `sqlclean check` exits non-zero on findings and writes SARIF for
+  code-scanning annotations, or JSON for anything else. See
+  [integrations](https://sqlclean.io/docs/integrations/).
+- **Agent skills.** `sqlclean skills` installs a skill that teaches AI coding agents the commands,
+  Rules and configuration of the installed version. See
+  [`sqlclean skills`](https://sqlclean.io/docs/cli/skills/).
+- **An embeddable engine.** Tools that template or compile SQL can call the Rust crate directly.
+  See [embedding](https://sqlclean.io/docs/embedding/).
 
-[rules]
-select = ["SQC"]              # omit to run the Rules enabled by default
-ignore = ["SQC027"]
-custom = ["sql_rules"]        # Python files or directories that define custom Rules
+## Speed
 
-[rules.thresholds]
-max_literal_length = 100      # SQC044
-max_ranking_order_by = 5      # SQC043
+On 10,282 Snowflake SQL files, on a Linux machine with 4 CPUs and no cache, `sqlclean check` with
+its 13 default Rules took 0.81 s, against 41 s for `sqruff lint` and 919 s for
+`sqlfluff lint --processes 4`. All 45 built-in Rules took 1.33 s, and the default Rules plus three
+custom Python Rules took 2.27 s. A rerun with nothing changed reads the result cache and takes
+0.23 s. These are SQLClean 0.0.1 measurements, each tool with its default rules; the tools don't
+check the same things. See the [benchmarks](https://sqlclean.io/docs/benchmarks/) for the method,
+the corpus and how to run it yourself.
 
-[rules.rule_options.XSQCNAME001]
-prefixes = ["tmp_", "scratch_"]
-
-[[rules.rule_exceptions]]     # one reviewed finding that is allowed
-rule = "SQC038"
-path = "models/calendar.sql"
-relation = "dates"            # optional: the joined relation the CROSS JOIN reads
-reason = "Every pair of dates is needed."
-
-[[rules.rule_ignores]]        # Rules that do not apply to some paths
-rules = ["SQC034"]
-paths = ["scratch/**"]
-reason = "Exploratory queries."
-```
-
-An exception that no longer matches a finding is reported as stale, so exceptions are removed
-when the SQL they cover changes. A parse error is reported as `SQC999` and cannot be ignored.
-
-Results are cached in `.sqlclean/cache/`, keyed by file content, dialect, selection, options and
-the custom Rule sources. The directory has its own `.gitignore`.
-
-## Rules
-
-Built-in Rules have `SQC###` codes. Run `sqlclean rules` for the full list, or
-`sqlclean rules SQC001` for one Rule. A finding's fix is applied by `sqlclean fix`. `SQC001` turns
-`= NULL` into `IS NULL`, which changes which rows match, so it needs `--unsafe-fixes`.
-
-## Custom Rules
-
-A custom Rule is a function decorated with `@rule`. Its first keyword parameter names its
-subject:
-
-- `statement: Statement` runs once per statement.
-- `file: SqlFile` runs once per file.
-- `repository: Repository` runs once over every checked file.
-
-Its second parameter receives a `RuleContext`. Codes are `XSQC`, optional capital letters, and
-three digits, such as `XSQCNAME001`.
-
-```python
-from sqlclean import FixSafety, RuleContext, RuleOption, Statement, rule
-
-PREFIXES = RuleOption.string_list(
-    name="prefixes", default=("tmp_",), description="Table prefixes that must not be read."
-)
-
-
-@rule(
-    code="XSQCNAME001",
-    message="Query reads a temporary table",
-    remediation="Read from the published table instead.",
-    options=(PREFIXES,),
-    enabled_by_default=True,
-)
-def temporary_table(*, statement: Statement, ctx: RuleContext) -> list:
-    prefixes = ctx.option(PREFIXES)
-    return [
-        ctx.finding(subject=statement, node=table)
-        for table in statement.tables
-        if table.name.startswith(prefixes)
-    ]
-
-
-@rule(
-    code="XSQCSTYLE001",
-    message="COUNT(1) should be COUNT(*)",
-    remediation="Write COUNT(*).",
-    fixable=FixSafety.SAFE,
-    enabled_by_default=True,
-)
-def count_one(*, statement: Statement, ctx: RuleContext) -> list:
-    counts = {f.end + 1 for f in statement.functions if f.name.upper() == "COUNT"}
-    return [
-        ctx.finding(subject=statement, node=literal, fix=[ctx.replace(node=literal, text="*")])
-        for literal in statement.literals
-        if literal.text == "1" and literal.start in counts
-    ]
-```
-
-- A `Statement` exposes `kind` and `text`, plus located `ctes`, `tables`, `joins`, `stars`,
-  `functions`, `columns` and `literals`. Each node has `start` and `end` character offsets in
-  the file, `line`, `column` and its `text`.
-- `statement.polyglot_ast()` returns the full Polyglot syntax tree. It needs
-  `pip install "sqlclean[ast]"`.
-- Fixes are lists of edits made with `ctx.replace`, `ctx.insert_before`, `ctx.insert_after` and
-  `ctx.delete`. A fixing Rule declares `fixable` as `FixSafety.SAFE`, or as `FixSafety.UNSAFE`
-  when the fix can change results.
-- Options are declared with `RuleOption.boolean`, `integer`, `string` or `string_list`, set under
-  `[rules.rule_options.<CODE>]`, and validated before any Rule runs.
-- Files named `test_*.py` and `conftest.py` under custom Rule paths are not loaded as Rules.
-
-### Testing custom Rules
-
-```python
-from sqlclean.testing import RuleCase, evaluate_rule
-
-from sql_rules.naming import temporary_table
-
-
-def test_temporary_tables_are_reported() -> None:
-    result = evaluate_rule(
-        rule=temporary_table,
-        test_case=RuleCase(
-            description="reads tmp_orders",
-            source="SELECT * FROM tmp_orders",
-            dialect="duckdb",
-            expected_finding_count=1,
-        ),
-    )
-    assert result.fixed_source == "SELECT * FROM tmp_orders"
-```
-
-`evaluate_rule` parses the SQL with the same native engine as `sqlclean check`. It fails when the
-finding count differs, and when the Rule's findings change with the order of `files`.
-
-## Editors, CI and pre-commit
-
-Run `sqlclean check` in CI. `--output-format sarif` produces a report for code-scanning tools,
-and `--output-format json` produces one for other integrations. Editors can run
-`sqlclean format` on save.
+## pre-commit
 
 ```yaml
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/sqlstack-io/sqlclean
-    rev: v0.0.1
+    rev: v0.1.0
     hooks:
       - id: sqlclean-fix
       - id: sqlclean-format
 ```
 
-`sqlclean-check` is also available for hooks that must not change files.
-
-## Using the engine from Rust
-
-`crates/sqlclean` is the engine without the command. Tools that template or compile SQL can call
-it directly and keep their own configuration and Rule codes:
-
-- `sql_lint::main::lint::lint` lints one SQL text. `sql_lint::main::engine::lint_json` and
-  `batch_engine::lint_batch_json` do the same through JSON requests.
-- `sql_lint::main::formatter::format_json` formats SQL.
-- `sql_lint::main::catalogue::catalogue` and `default_rules::default_rules` describe the Rules.
-- `sql_facts::main::file_facts::file_facts` returns the statement facts custom Rules read.
-
-Requests can carry external identifiers and declared relation keys, so a host tool can tell the
-Rules about names it resolves itself.
+Use `sqlclean-check` instead of `sqlclean-fix` where a hook must not change files. See
+[pre-commit](https://sqlclean.io/docs/integrations/#pre-commit).
 
 ## Development
 
@@ -234,4 +114,5 @@ make test              # Rust and Python tests
 
 ## License
 
-Apache-2.0
+SQLClean is licensed under the
+[Apache License 2.0](https://github.com/sqlstack-io/sqlclean/blob/main/LICENSE).
