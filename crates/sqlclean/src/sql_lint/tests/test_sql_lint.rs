@@ -877,6 +877,13 @@ fn given_additional_rule_cases_when_linting_then_findings_and_fixes_match() -> R
             expected_replacement: Some("DISTINCT a"),
         },
         test_types::AdditionalLintRuleTestCase {
+            description: "function-like distinct whose expression continues keeps its grouping",
+            sql: "SELECT DISTINCT(price + tax) * 2 AS total FROM orders",
+            rule: "SQLCLEAN013",
+            expected_anchor: Some("DISTINCT(price + tax)"),
+            expected_replacement: None,
+        },
+        test_types::AdditionalLintRuleTestCase {
             description: "constant scaffold predicate",
             sql: "SELECT a FROM items WHERE 1 = 1",
             rule: "SQLCLEAN014",
@@ -1373,6 +1380,13 @@ fn given_additional_rule_cases_when_linting_then_findings_and_fixes_match() -> R
             expected_anchor: Some(
                 "CASE WHEN status = 'open' THEN TRUE WHEN priority = 'high' THEN TRUE ELSE FALSE END",
             ),
+            expected_replacement: None,
+        },
+        test_types::AdditionalLintRuleTestCase {
+            description: "boolean case whose branch continues after TRUE is not a plain conversion",
+            sql: "SELECT CASE WHEN is_paid THEN TRUE AND is_shipped ELSE FALSE END AS done FROM orders",
+            rule: "SQLCLEAN030",
+            expected_anchor: None,
             expected_replacement: None,
         },
         test_types::AdditionalLintRuleTestCase {

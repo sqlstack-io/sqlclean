@@ -5,7 +5,7 @@ use polyglot_sql::expressions::With;
 use polyglot_sql::tokens::{Span, Token, TokenType};
 use polyglot_sql::{DialectType, Expression, ExpressionWalk};
 
-use crate::sql_lint::constants::LINT_API_VERSION;
+use crate::sql_lint::constants::{LINT_API_VERSION, SELECT_ITEM_END_TOKENS};
 use crate::sql_lint::models::{
     AdditionalFactOptions, CrossJoinRequest, FixtureHarness, LintDiagnostic, LintEdit, LintRequest,
     LintResponse, LintRuleMetadata, ParsedSql, QueryFacts, SqlMacroOutput,
@@ -1461,6 +1461,7 @@ fn additional_style_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiag
     let DiagnosticContext {
         sql,
         facts,
+        tokens,
         enabled,
         ..
     } = context;
@@ -1501,8 +1502,8 @@ fn additional_style_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiag
             diagnostic(
                 &PARENTHESIZED_DISTINCT,
                 Some(*span),
-                parenthesized_distinct_fix(sql, *span),
-                Some("comments or malformed parentheses prevent a lossless rewrite"),
+                parenthesized_distinct_fix(sql, tokens, *span),
+                Some("the parentheses group an expression that continues after them, or hold comments"),
             )
         }));
     }
@@ -1736,9 +1737,13 @@ fn deletion(span: Span) -> LintEdit {
     }
 }
 
-fn parenthesized_distinct_fix(sql: &str, span: Span) -> Option<LintEdit> {
+/// `DISTINCT <expression>`, only when the parentheses hold the whole select item, so removing them cannot regroup an operator.
+fn parenthesized_distinct_fix(sql: &str, tokens: &[Token], span: Span) -> Option<LintEdit> {
     let source = char_slice(sql, span.start, span.end)?;
-    if contains_comment(source) {
+    let close = tokens.iter().position(|token| token.span.end == span.end)?;
+    let item_ends = significant_after(tokens, close)
+        .is_none_or(|next| SELECT_ITEM_END_TOKENS.contains(&tokens[next].token_type));
+    if contains_comment(source) || !item_ends {
         return None;
     }
     let open = source.find('(')?;
