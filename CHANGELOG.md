@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/sqlstack-io/sqlclean/compare/v0.1.1...v0.2.0) (2026-10-31)
+
+
+### Features
+
+* **rules:** report queries that cannot do what they appear to ([#15](https://github.com/sqlstack-io/sqlclean/issues/15)) ([ec34b41](https://github.com/sqlstack-io/sqlclean/commit/ec34b41dc900a2244b63c403262db0dbb1269bf1))
+
 ## [0.1.1](https://github.com/sqlstack-io/sqlclean/compare/v0.1.0...v0.1.1) (2026-10-31)
 
 
