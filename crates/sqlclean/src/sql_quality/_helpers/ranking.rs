@@ -1,4 +1,4 @@
-//! SQC043 ranking sort caps and SQC018 ranking determinism proofs.
+//! SQLCLEAN043 ranking sort caps and SQLCLEAN018 ranking determinism proofs.
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};

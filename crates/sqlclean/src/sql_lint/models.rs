@@ -77,12 +77,11 @@ pub struct LintRequest {
     pub dependency_identifiers: Vec<String>,
     #[serde(default)]
     pub externally_referenced_ctes: Vec<String>,
+    /// The harness the host wraps this body in; absent for an ordinary query.
     #[serde(default)]
-    pub allows_ceremonial_select: bool,
+    pub fixture_harness: Option<FixtureHarness>,
     #[serde(default)]
     pub allows_dynamic_output_star: bool,
-    #[serde(default)]
-    pub allows_empty_fixture_star: bool,
     #[serde(default)]
     pub max_literal_length: Option<usize>,
     #[serde(default)]
@@ -91,7 +90,7 @@ pub struct LintRequest {
     pub relation_keys: HashMap<String, Vec<Vec<String>>>,
     #[serde(default)]
     pub relation_names: HashMap<String, String>,
-    /// The SQL each `@sql.` call in the query generated, so column qualification is judged as the macro wrote it.
+    /// The SQL each macro call in the query generated, so column qualification is judged as the macro wrote it.
     #[serde(default)]
     pub sql_macro_outputs: Vec<SqlMacroOutput>,
     /// The configuration file remediation text names; SQLClean's own when absent.
@@ -99,7 +98,22 @@ pub struct LintRequest {
     pub config_file: Option<String>,
 }
 
-/// The character range one `@sql.` call's output fills, and the names its arguments pass, which a plain slot read such as `@rel.amount` expands to qualify with.
+/// The generated wrapper around a test or macro body: its terminal SELECT is ceremonial, and these names are generated.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct FixtureHarness {
+    /// Prefixes of the CTE names the harness generates, which are reachable even when unread.
+    #[serde(default)]
+    pub cte_prefixes: Vec<String>,
+    /// Prefixes of the CTEs standing in for the body's inputs, which may read the empty relation with `SELECT *`.
+    #[serde(default)]
+    pub input_cte_prefixes: Vec<String>,
+    /// The table function an input CTE reads, as `SELECT * FROM <name>()`, when it has no rows.
+    #[serde(default)]
+    pub empty_relation: Option<String>,
+}
+
+/// The character range one macro call's output fills, and the relations its arguments pass, which a plain parameter slot read expands to qualify with.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
 pub struct SqlMacroOutput {
     pub start: usize,
@@ -115,7 +129,7 @@ pub(crate) struct AdditionalFactOptions<'a> {
     pub sql_macro_outputs: &'a [SqlMacroOutput],
     pub allows_ceremonial_select: bool,
     pub allows_dynamic_output_star: bool,
-    pub allows_empty_fixture_star: bool,
+    pub fixture_harness: Option<&'a FixtureHarness>,
 }
 
 #[derive(Debug, Serialize)]

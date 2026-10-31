@@ -5,7 +5,7 @@ use serde_json::Value;
 use crate::sql_quality::tests::helpers::{anchors, lint_dialect, wide_json_select};
 use crate::sql_quality::tests::test_types::{JsonParseScaleTestCase, JsonParseTestCase};
 
-const RULE: &str = "SQC045";
+const RULE: &str = "SQLCLEAN045";
 
 #[test]
 fn given_json_parse_calls_when_linting_then_repeats_in_one_select_are_reported()

@@ -49,7 +49,7 @@ def lowered(operand: ast.Expression) -> bool:
 
 
 @rule(
-    code="XSQCTEAM001",
+    code="XSQLCLEANTEAM001",
     message="Email comparisons must be case-insensitive",
     remediation="Compare LOWER(email) with LOWER(...) instead.",
     enabled_by_default=True,

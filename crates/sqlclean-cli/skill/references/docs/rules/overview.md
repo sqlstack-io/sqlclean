@@ -13,14 +13,14 @@ Online: https://sqlclean.io/docs/rules/overview/
 - Thresholds
 - Exceptions
 - Path ignores
-- Parse errors (SQC999)
+- Parse errors (SQLCLEAN999)
 - Safe and unsafe fixes
 - Caching
 - Continue
 
 A Rule is one check over SQL. It reports a finding at an exact position, with a message, a
-remediation, and sometimes a fix. SQLClean has 53 built-in Rules with `SQC###` codes, and runs
-[custom Rules](../custom-rules/overview.md) written in Python with `XSQC` codes.
+remediation, and sometimes a fix. SQLClean has 53 built-in Rules with `SQLCLEAN###` codes, and runs
+[custom Rules](../custom-rules/overview.md) written in Python with `XSQLCLEAN` codes.
 
 Consider a query that returns an arbitrary hundred rows:
 
@@ -35,7 +35,7 @@ sqlclean check
 ```
 
 ```text
-error[SQC004]: Row selection is nondeterministic
+error[SQLCLEAN004]: Row selection is nondeterministic
   --> models/recent_orders.sql:3:1
    |
  3 | LIMIT 100
@@ -62,26 +62,26 @@ Select Rules in `sqlclean.toml` by exact code or by prefix:
 
 ```toml
 [rules]
-select = ["SQC"]              # every built-in Rule
-ignore = ["SQC027", "SQC03"]  # except SQC027 and SQC030 to SQC039
+select = ["SQLCLEAN"]              # every built-in Rule
+ignore = ["SQLCLEAN027", "SQLCLEAN03"]  # except SQLCLEAN027 and SQLCLEAN030 to SQLCLEAN039
 ```
 
-- An exact code such as `SQC004` selects one Rule.
-- A prefix selects every Rule whose code starts with it: `SQC` selects all built-in Rules,
-  `SQC00` selects `SQC001` to `SQC009`, and `XSQCNAME` selects every custom Rule in the `NAME`
+- An exact code such as `SQLCLEAN004` selects one Rule.
+- A prefix selects every Rule whose code starts with it: `SQLCLEAN` selects all built-in Rules,
+  `SQLCLEAN00` selects `SQLCLEAN001` to `SQLCLEAN009`, and `XSQLCLEANNAME` selects every custom Rule in the `NAME`
   family.
 - `ignore` removes Rules from the selection, by code or prefix.
-- A selector that matches no Rule is an error: `Rule selector 'SQC9' matches no Rule`.
+- A selector that matches no Rule is an error: `Rule selector 'SQLCLEAN9' matches no Rule`.
 
 On the command line, `--select` replaces `[rules] select` for one run, and `--ignore` adds to
 `[rules] ignore`:
 
 ```bash
-sqlclean check --select SQC001,SQC004
-sqlclean check --ignore SQC039
+sqlclean check --select SQLCLEAN001,SQLCLEAN004
+sqlclean check --ignore SQLCLEAN039
 ```
 
-`select = []` runs no Rules. Files are still parsed, so [parse errors](#parse-errors-sqc999) are
+`select = []` runs no Rules. Files are still parsed, so [parse errors](#parse-errors-sqlclean999) are
 still reported.
 
 ## Default Rules
@@ -92,19 +92,19 @@ duplicate names and unused CTEs.
 
 | Code | Finding |
 |------|---------|
-| `SQC001` | Comparison with NULL is never true |
-| `SQC002` | Comma-separated sources create an implicit cartesian join |
-| `SQC003` | Non-cross join has no meaningful condition |
-| `SQC004` | Row selection is nondeterministic |
-| `SQC005` | CTE is unreachable from the final query |
-| `SQC006` | DISTINCT is redundant with the grouped output |
-| `SQC007` | Positional set operation is vulnerable to column-order drift |
-| `SQC009` | Table alias is duplicated in the same query scope |
-| `SQC010` | Output alias is duplicated in the same select list |
-| `SQC018` | ROW_NUMBER has no deterministic ordering |
-| `SQC019` | NOT IN list contains NULL and can reject every row |
-| `SQC020` | Set-operation branches project different column counts |
-| `SQC039` | Inline query relation obscures data flow |
+| `SQLCLEAN001` | Comparison with NULL is never true |
+| `SQLCLEAN002` | Comma-separated sources create an implicit cartesian join |
+| `SQLCLEAN003` | Non-cross join has no meaningful condition |
+| `SQLCLEAN004` | Row selection is nondeterministic |
+| `SQLCLEAN005` | CTE is unreachable from the final query |
+| `SQLCLEAN006` | DISTINCT is redundant with the grouped output |
+| `SQLCLEAN007` | Positional set operation is vulnerable to column-order drift |
+| `SQLCLEAN009` | Table alias is duplicated in the same query scope |
+| `SQLCLEAN010` | Output alias is duplicated in the same select list |
+| `SQLCLEAN018` | ROW_NUMBER has no deterministic ordering |
+| `SQLCLEAN019` | NOT IN list contains NULL and can reject every row |
+| `SQLCLEAN020` | Set-operation branches project different column counts |
+| `SQLCLEAN039` | Inline query relation obscures data flow |
 
 The other 32 Rules run only when `select` names them, by code or prefix. A prefix selects every
 matching Rule, whether it is enabled by default or not. A custom Rule is enabled by default when its
@@ -116,8 +116,8 @@ Two built-in Rules compare against a limit, set under `[rules.thresholds]`:
 
 ```toml
 [rules.thresholds]
-max_literal_length = 100      # SQC044: the longest string literal allowed
-max_ranking_order_by = 5      # SQC043: the most ORDER BY expressions in a ranking window
+max_literal_length = 100      # SQLCLEAN044: the longest string literal allowed
+max_ranking_order_by = 5      # SQLCLEAN043: the most ORDER BY expressions in a ranking window
 ```
 
 Both default to the values shown and must be positive. Built-in Rules take no other options.
@@ -129,7 +129,7 @@ so a reviewer sees it in the diff, and it needs a reason:
 
 ```toml
 [[rules.rule_exceptions]]
-rule = "SQC004"
+rule = "SQLCLEAN004"
 path = "models/order_preview.sql"
 reason = "A preview of any hundred orders is enough."
 ```
@@ -137,23 +137,23 @@ reason = "A preview of any hundred orders is enough."
 `rule` is an exact code, not a prefix. `path` is the file's path relative to the configuration
 root, as findings print it. The exception covers every finding of that Rule in that file.
 
-SQLClean has no inline suppression comments. A comment such as `-- noqa: SQC001` changes nothing;
+SQLClean has no inline suppression comments. A comment such as `-- noqa: SQLCLEAN001` changes nothing;
 record the exception in `sqlclean.toml` instead.
 
 ### Cross join exceptions
 
 A file-wide exception for a deliberate `CROSS JOIN` would also hide any accidental cross join added
-to the file later. `SQC038` findings name the joined relation and, inside a CTE, that CTE, so an
+to the file later. `SQLCLEAN038` findings name the joined relation and, inside a CTE, that CTE, so an
 exception can cover exactly one join:
 
 ```text
-error[SQC038]: CROSS JOIN with `regions` in CTE `pairs` creates an explicit cartesian product
+error[SQLCLEAN038]: CROSS JOIN with `regions` in CTE `pairs` creates an explicit cartesian product
   --> models/calendar.sql:11:3
 ```
 
 ```toml
 [[rules.rule_exceptions]]
-rule = "SQC038"
+rule = "SQLCLEAN038"
 path = "models/calendar.sql"
 relation = "regions"
 cte = "pairs"                 # optional: only the join inside this CTE
@@ -161,10 +161,10 @@ reason = "Every order date is reported for every region."
 ```
 
 `relation` and `cte` compare without case. Without `cte`, the exception covers joins with that
-relation anywhere in the file. `cte` needs `relation`, and `relation` matches only `SQC038`
+relation anywhere in the file. `cte` needs `relation`, and `relation` matches only `SQLCLEAN038`
 findings.
 
-`SQC038` does not report a cross join when one side is provably at most one row, such as a CTE
+`SQLCLEAN038` does not report a cross join when one side is provably at most one row, such as a CTE
 that aggregates without `GROUP BY`, `LIMIT 1` or a one-row `VALUES`, so many intentional cross
 joins need no exception:
 
@@ -186,11 +186,11 @@ CROSS JOIN latest AS l
 An exception that matches no finding is stale. `check` and `fix` report it and exit with `1`:
 
 ```text
-error: stale rule exception: SQC004 in models/orders.sql matches no finding; remove it from sqlclean.toml
+error: stale rule exception: SQLCLEAN004 in models/orders.sql matches no finding; remove it from sqlclean.toml
 ```
 
 Delete the entry. Exceptions are only judged stale when their file was checked and their Rule was
-selected, so `sqlclean check models/customers.sql` or `--select SQC001` never reports an exception
+selected, so `sqlclean check models/customers.sql` or `--select SQLCLEAN001` never reports an exception
 for another file or Rule.
 
 ## Path ignores
@@ -200,7 +200,7 @@ prefixes, glob patterns, and a reason:
 
 ```toml
 [[rules.rule_ignores]]
-rules = ["SQC034", "SQC035"]
+rules = ["SQLCLEAN034", "SQLCLEAN035"]
 paths = ["scratch/**"]
 reason = "Exploratory queries."
 ```
@@ -208,13 +208,13 @@ reason = "Exploratory queries."
 Patterns are relative to the configuration root, as in [`include`](../configuration.md#choosing-files).
 To turn a Rule off everywhere, add it to `[rules] ignore` instead.
 
-## Parse errors (SQC999)
+## Parse errors (SQLCLEAN999)
 
-A file that does not parse under its [dialect](../configuration.md#dialects) gets one `SQC999`
+A file that does not parse under its [dialect](../configuration.md#dialects) gets one `SQLCLEAN999`
 finding and no other:
 
 ```text
-error[SQC999]: SQL could not be parsed as duckdb: Parse error at line 1, column 18: Expected table name or subquery, got Where
+error[SQLCLEAN999]: SQL could not be parsed as duckdb: Parse error at line 1, column 18: Expected table name or subquery, got Where
   --> scratch/broken.sql:1:1
    |
  1 | SELECT FROM WHERE orders
@@ -223,7 +223,7 @@ error[SQC999]: SQL could not be parsed as duckdb: Parse error at line 1, column 
 ```
 
 The finding points at the start of the file; the message gives the line and column of the error.
-`SQC999` is not a selectable Rule: selection, `ignore`, path ignores and exceptions never hide it.
+`SQLCLEAN999` is not a selectable Rule: selection, `ignore`, path ignores and exceptions never hide it.
 Fix the SQL, set the right dialect for the file, or [`exclude`](../configuration.md#choosing-files)
 the file.
 
@@ -231,9 +231,9 @@ the file.
 
 Some Rules carry a fix. [`sqlclean fix`](../cli/fix.md) applies it.
 
-- A **safe** fix keeps the query's results. `SQC005` removes an unused CTE; `SQC002` turns
+- A **safe** fix keeps the query's results. `SQLCLEAN005` removes an unused CTE; `SQLCLEAN002` turns
   `FROM orders, customers` into `FROM orders CROSS JOIN customers`.
-- An **unsafe** fix can change results. `SQC001` turns `cancelled_at = NULL`, which matches no row,
+- An **unsafe** fix can change results. `SQLCLEAN001` turns `cancelled_at = NULL`, which matches no row,
   into `cancelled_at IS NULL`, which matches rows. That is almost always the intent, but it is a
   different query. Unsafe fixes apply only with `--unsafe-fixes`.
 

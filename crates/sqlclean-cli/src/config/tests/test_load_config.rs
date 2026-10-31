@@ -9,11 +9,11 @@ fn given_a_config_file_when_loading_from_below_then_the_nearest_one_applies() ->
     let test_cases = [
         LoadedConfigTestCase {
             description: "values set in a parent directory apply and unset thresholds keep defaults",
-            config_text: "dialect = \"duckdb\"\n[format]\nline_width = 80\n[rules]\nselect = [\"SQC004\"]\n[rules.thresholds]\nmax_literal_length = 40\n",
+            config_text: "dialect = \"duckdb\"\n[format]\nline_width = 80\n[rules]\nselect = [\"SQLCLEAN004\"]\n[rules.thresholds]\nmax_literal_length = 40\n",
             start: "models/orders",
             expected_dialect: "duckdb",
             expected_line_width: 80,
-            expected_select: Some(&["SQC004"]),
+            expected_select: Some(&["SQLCLEAN004"]),
             expected_max_literal_length: 40,
             expected_max_ranking_order_by: 5,
         },
@@ -89,7 +89,7 @@ fn given_invalid_values_when_loading_then_each_is_rejected_with_its_reason() -> 
         },
         RejectedConfigTestCase {
             description: "an exception with a blank reason",
-            config_text: "[[rules.rule_exceptions]]\nrule = \"SQC004\"\npath = \"a.sql\"\nreason = \" \"\n",
+            config_text: "[[rules.rule_exceptions]]\nrule = \"SQLCLEAN004\"\npath = \"a.sql\"\nreason = \" \"\n",
             expected_error: "needs a reason",
         },
         RejectedConfigTestCase {

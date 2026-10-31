@@ -1,4 +1,4 @@
-//! SQC045: the same JSON payload column parsed more than once in one SELECT scope.
+//! SQLCLEAN045: the same JSON payload column parsed more than once in one SELECT scope.
 
 use std::borrow::Cow;
 use std::collections::HashMap;

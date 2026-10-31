@@ -21,7 +21,7 @@ PREFIXES = RuleOption.string_list(
 
 
 @rule(
-    code="XSQCSHAPE001",
+    code="XSQLCLEANSHAPE001",
     message="Statement joins too many relations",
     remediation="Split the statement into CTEs.",
     options=(MAX_JOINS,),
@@ -32,7 +32,7 @@ def too_many_joins(*, statement: Statement, ctx: RuleContext) -> list:
 
 
 @rule(
-    code="XSQCNAME001",
+    code="XSQLCLEANNAME001",
     message="Table name uses a forbidden prefix",
     remediation="Read from the published table.",
     options=(PREFIXES,),
@@ -48,7 +48,7 @@ def forbidden_prefix(*, statement: Statement, ctx: RuleContext) -> list:
 
 
 @rule(
-    code="XSQCSTYLE001",
+    code="XSQLCLEANSTYLE001",
     message="COUNT(1) should be COUNT(*)",
     remediation="Write COUNT(*).",
     fixable=FixSafety.SAFE,
@@ -65,7 +65,7 @@ def count_one(*, statement: Statement, ctx: RuleContext) -> list:
 
 
 @rule(
-    code="XSQCFILE001",
+    code="XSQLCLEANFILE001",
     message="File holds more than one statement",
     remediation="Keep one statement per file.",
 )
@@ -74,7 +74,7 @@ def one_statement(*, file: SqlFile, ctx: RuleContext) -> list:
 
 
 @rule(
-    code="XSQCREPO001",
+    code="XSQLCLEANREPO001",
     message="Table is read by only one file",
     remediation="Inline the table or share it.",
 )

@@ -40,7 +40,7 @@ def count_findings(variant: str, out: str) -> tuple[int, int]:
     data = json.loads(out)
     if variant.startswith("sqlclean"):
         codes = [finding["code"] for finding in data["findings"]]
-        return len(codes), codes.count("SQC999")
+        return len(codes), codes.count("SQLCLEAN999")
     if variant == "sqruff":
         codes = [finding.get("code") for findings in data.values() for finding in findings]
         return len(codes), sum(1 for code in codes if code in (None, "PRS"))

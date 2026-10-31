@@ -17,7 +17,7 @@ fn main() -> Result<(), String> {
         version: LINT_API_VERSION,
         sql: "SELECT order_id FROM orders WHERE cancelled_at = NULL LIMIT 10".to_owned(),
         dialect: "duckdb".to_owned(),
-        enabled_rules: Some(vec!["SQC001".to_owned(), "SQC004".to_owned()]),
+        enabled_rules: Some(vec!["SQLCLEAN001".to_owned(), "SQLCLEAN004".to_owned()]),
         ..LintRequest::default()
     };
     let response: LintResponse = lint(request)?;
@@ -32,9 +32,9 @@ fn main() -> Result<(), String> {
 ```
 
 ```text
-SQC001 47..48 Comparison with NULL is never true
+SQLCLEAN001 47..48 Comparison with NULL is never true
   fix: replace 47..48 with "IS"
-SQC004 54..59 Row selection is nondeterministic
+SQLCLEAN004 54..59 Row selection is nondeterministic
 ```
 
 ## Adding the dependency
@@ -74,21 +74,49 @@ the dialect. Offsets in requests, findings, edits and facts count Unicode charac
 | `dialect` | required | A [dialect name](/docs/configuration/#dialects) |
 | `enabled_rules` | the default Rules | Rule codes or prefixes to run |
 | `ignored_rules` | `[]` | Rule codes or prefixes to skip |
-| `max_literal_length` | `100` | The `SQC044` limit |
-| `max_ranking_order_by` | `5` | The `SQC043` limit |
+| `max_literal_length` | `100` | The `SQLCLEAN044` limit |
+| `max_ranking_order_by` | `5` | The `SQLCLEAN043` limit |
 | `config_file` | `sqlclean.toml` | The configuration file name that remediation text refers to |
-| `externally_referenced_ctes` | `[]` | CTE names that something outside the SQL reads, so `SQC005` does not report them |
-| `relation_keys` | `{}` | Declared unique keys by relation name; an empty key means the relation holds at most one row, so `SQC038` does not report a cross join with it |
+| `externally_referenced_ctes` | `[]` | CTE names that something outside the SQL reads, so `SQLCLEAN005` does not report them |
+| `relation_keys` | `{}` | Unique keys by table name as the SQL writes it, compared without case; an empty key means the relation holds at most one row, so `SQLCLEAN038` does not report a cross join with it and `SQLCLEAN018` can prove a ranking order |
+| `relation_names` | `{}` | The relation each placeholder table name stands for, so `SQLCLEAN038` messages and exceptions name it |
+| `external_identifiers` | `[]` | Names the host defines outside the SQL, which are not unknown qualifiers |
+| `dependency_identifiers` | `[]` | Placeholder table names that stand for other relations |
+| `sql_macro_outputs` | `[]` | The character range each macro call's output fills and the relations it passes, so qualification is judged as the macro wrote it |
+| `allows_dynamic_output_star` | `false` | The host proved the output columns, so a top-level `SELECT *` passes `SQLCLEAN021` |
+| `fixture_harness` | absent | The generated wrapper around a test or macro body; see [Template code](#template-code) |
 
-Other fields describe template code the host has replaced before linting. See `LintRequest` in
-`sql_lint::models`.
+A selector that matches no Rule is an error: `unknown native lint rule 'SQLCLEAN9'`.
 
-A selector that matches no Rule is an error: `unknown native lint rule 'SQC9'`.
+## Template code
+
+A host that lints templated SQL replaces each template expression with a placeholder before
+linting, and maps offsets back afterwards. The crate exports the placeholder prefixes in
+`constants`:
+
+| Constant | Stands for |
+|----------|------------|
+| `INTERPOLATION_PLACEHOLDER_PREFIX` | An interpolated expression, relation or CTE list; the formatter keeps it in place |
+| `MACRO_PARAMETER_PLACEHOLDER_PREFIX` | A macro parameter; `SQLCLEAN028` treats `parameter.slot` reads as written by the macro |
+| `RELATION_PARAMETER_PLACEHOLDER_PREFIX` | A relation parameter, written `<prefix><index>__`; `SELECT *` from it alone passes `SQLCLEAN021` |
+| `VALUE_PARAMETER_PLACEHOLDER_PREFIX` | A value parameter |
+
+Rules never judge a placeholder as an authored name.
+
+`fixture_harness` describes the query a test runner or macro wraps around a body. When it is
+present, a terminal `SELECT 1` is ceremonial: it passes `SQLCLEAN022` and `SQLCLEAN035`, and `SQLCLEAN041` and
+`SQLCLEAN042` do not apply.
+
+| Field | Description |
+|-------|-------------|
+| `cte_prefixes` | Prefixes of the CTE names the harness generates, which `SQLCLEAN005` treats as reachable |
+| `input_cte_prefixes` | Prefixes of the CTEs standing in for the body's inputs |
+| `empty_relation` | The table function an input CTE reads with `SELECT * FROM <name>()` when it has no rows, which passes `SQLCLEAN021` |
 
 ## Fixes
 
 `LintDiagnostic.fix` holds at most one edit: `start`, `end` and `replacement`. The engine does not
-say whether a fix is safe. The `sqlclean` command treats the `SQC001` fix as unsafe, because
+say whether a fix is safe. The `sqlclean` command treats the `SQLCLEAN001` fix as unsafe, because
 turning `= NULL` into `IS NULL` changes which rows match, and every other built-in fix as safe. A
 host that applies fixes makes the same decision. See
 [Safe and unsafe fixes](/docs/rules/overview/#safe-and-unsafe-fixes).

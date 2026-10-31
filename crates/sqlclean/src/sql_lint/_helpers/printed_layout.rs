@@ -16,7 +16,6 @@ const BETWEEN_SEPARATOR: &str = "AND";
 const VALUES_KEYWORD: &str = "VALUES";
 const DECODE_FUNCTION: &str = "DECODE";
 const CASE_KEYWORD: &str = "CASE";
-const SENTINEL_PREFIX: &str = "__SQB_LINT_";
 const SINGLE_ITEM_CLAUSES: [&str; 4] = ["SELECT", "WHERE", "QUALIFY", "HAVING"];
 const SELECT_MODIFIERS: [&str; 10] = [
     "DISTINCT", "ALL", "TOP", "PERCENT", "WITH", "TIES", "ON", "AS", "STRUCT", "VALUE",
@@ -551,7 +550,9 @@ impl PrintedSql<'_> {
     /// The last token of the CTE, or CTE macro placeholder, that starts at `item`.
     fn common_table_expression_end(&self, item: usize) -> Option<usize> {
         let name = self.tokens.get(item)?;
-        if name.to_ascii_uppercase().starts_with(SENTINEL_PREFIX)
+        if name
+            .to_ascii_lowercase()
+            .starts_with(crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX)
             && !self.is(item + 1, "AS")
             && !self.is(item + 1, OPEN_PARENTHESIS)
         {

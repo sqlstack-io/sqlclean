@@ -143,14 +143,14 @@
 								<p class="more"><a href="/docs/rules/overview/">How Rules work →</a></p>
 							</div>
 <pre class="terminal"><span class="cmd">sqlclean check</span>
-<span class="bad">error[SQC018]</span>: ROW_NUMBER has no deterministic ordering
+<span class="bad">error[SQLCLEAN018]</span>: ROW_NUMBER has no deterministic ordering
   --&gt; models/open_orders.sql:2:3
    |
  2 |   ROW_NUMBER() OVER (PARTITION BY o.customer_id) AS order_rank
    |   <span class="bad">^^^^^^^^^^</span>
   <span class="dim">= help:</span> Add ORDER BY with a stable tie-breaker inside the window specification.
 
-<span class="bad">error[SQC001]</span>: Comparison with NULL is never true
+<span class="bad">error[SQLCLEAN001]</span>: Comparison with NULL is never true
   --&gt; models/open_orders.sql:4:22
    |
  4 | WHERE o.cancelled_at = NULL
@@ -158,7 +158,7 @@
   <span class="dim">= help:</span> Use IS NULL or IS NOT NULL when testing for NULL.
   <span class="dim">= fix:</span> available with `sqlclean fix --unsafe-fixes`
 
-<span class="bad">error[SQC019]</span>: NOT IN list contains NULL and can reject every row
+<span class="bad">error[SQLCLEAN019]</span>: NOT IN list contains NULL and can reject every row
   --&gt; models/open_orders.sql:5:16
    |
  5 |   AND o.status NOT IN ('refunded', NULL)
@@ -250,7 +250,7 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
 							</div>
 <pre class="terminal"><span class="cm"># sql_rules/layers.py</span>
 <span class="fn">@rule</span>(
-    <span class="arg">code</span>=<span class="str">&quot;XSQCLAYER001&quot;</span>,
+    <span class="arg">code</span>=<span class="str">&quot;XSQLCLEANLAYER001&quot;</span>,
     <span class="arg">message</span>=<span class="str">&quot;Marts must not read raw tables&quot;</span>,
     <span class="arg">remediation</span>=<span class="str">&quot;Read the staging model instead.&quot;</span>,
     <span class="arg">enabled_by_default</span>=<span class="kw">True</span>,
@@ -265,7 +265,7 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
     ]
 
 <span class="cmd">sqlclean check</span>
-<span class="bad">error[XSQCLAYER001]</span>: Marts must not read raw tables
+<span class="bad">error[XSQLCLEANLAYER001]</span>: Marts must not read raw tables
   --&gt; models/marts/revenue.sql:5:12
    |
  5 | INNER JOIN raw.payments p
@@ -317,20 +317,20 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
 							</div>
 <pre class="terminal"><span class="cm"># sqlclean.toml</span>
 [[rules.rule_exceptions]]
-<span class="arg">rule</span> = <span class="str">&quot;SQC038&quot;</span>
+<span class="arg">rule</span> = <span class="str">&quot;SQLCLEAN038&quot;</span>
 <span class="arg">path</span> = <span class="str">&quot;models/marts/calendar.sql&quot;</span>
 <span class="arg">relation</span> = <span class="str">&quot;regions&quot;</span>
 <span class="arg">reason</span> = <span class="str">&quot;Every date is reported for every region.&quot;</span>
 
 <span class="cmd">sqlclean check</span>
-<span class="bad">error[SQC038]</span>: CROSS JOIN with `markets` creates an explicit cartesian product
+<span class="bad">error[SQLCLEAN038]</span>: CROSS JOIN with `markets` creates an explicit cartesian product
   --&gt; models/marts/calendar.sql:5:1
    |
  5 | CROSS JOIN markets r
    | <span class="bad">^^^^^</span>
   <span class="dim">= help:</span> Use a keyed JOIN, or make one side provably at most one row <span class="dim">…</span>
 
-<span class="bad">error</span>: stale rule exception: SQC038 in models/marts/calendar.sql for relation regions
+<span class="bad">error</span>: stale rule exception: SQLCLEAN038 in models/marts/calendar.sql for relation regions
   matches no finding; remove it from sqlclean.toml</pre>
 						</div>
 
@@ -358,7 +358,7 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
   <span class="str">&quot;runs&quot;</span>: [{
     <span class="str">&quot;tool&quot;</span>: { <span class="str">&quot;driver&quot;</span>: { <span class="str">&quot;name&quot;</span>: <span class="str">&quot;sqlclean&quot;</span>, <span class="dim">…</span> } },
     <span class="str">&quot;results&quot;</span>: [{
-      <span class="str">&quot;ruleId&quot;</span>: <span class="str">&quot;XSQCLAYER001&quot;</span>,
+      <span class="str">&quot;ruleId&quot;</span>: <span class="str">&quot;XSQLCLEANLAYER001&quot;</span>,
       <span class="str">&quot;message&quot;</span>: { <span class="str">&quot;text&quot;</span>: <span class="str">&quot;Marts must not read raw tables. Read the staging model instead.&quot;</span> },
       <span class="dim">…</span></pre>
 						</div>

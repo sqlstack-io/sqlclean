@@ -14,7 +14,7 @@ use crate::sql_tokens::main::canonical_tokens::canonical_tokens;
 use crate::sql_tokens::main::query_fingerprint::query_fingerprint;
 
 /// The dependency sentinel the cross join cases name `order_policy`.
-pub(crate) const POLICY_SENTINEL: &str = "__sqb_lint_7__";
+pub(crate) const POLICY_SENTINEL: &str = "__sqlclean_interpolation_7__";
 
 /// Format a JSON array of format requests in parallel, as a JSON array of responses.
 pub(crate) fn format_batch_json(request_json: &str) -> Result<String, String> {
@@ -266,12 +266,12 @@ fn is_tight_call(name: &str, sql: &str, arguments: &str) -> bool {
             .contains(&format!("{} (", name.to_ascii_uppercase()))
 }
 
-/// The `SQC038` messages for one cross join case.
+/// The `SQLCLEAN038` messages for one cross join case.
 pub(crate) fn cross_join_messages(test_case: &CrossJoinTestCase) -> Result<Vec<String>, String> {
     cross_join_texts(test_case, "message")
 }
 
-/// The `SQC038` remediations for one cross join case.
+/// The `SQLCLEAN038` remediations for one cross join case.
 pub(crate) fn cross_join_remediations(
     test_case: &CrossJoinTestCase,
 ) -> Result<Vec<String>, String> {
@@ -288,7 +288,7 @@ fn cross_join_texts(test_case: &CrossJoinTestCase, field: &str) -> Result<Vec<St
         "version": 1,
         "sql": test_case.sql,
         "dialect": test_case.dialect,
-        "enabled_rules": ["SQC038"],
+        "enabled_rules": ["SQLCLEAN038"],
         "relation_keys": keys,
         "relation_names": { POLICY_SENTINEL: "order_policy" },
     });
@@ -301,4 +301,13 @@ fn cross_join_texts(test_case: &CrossJoinTestCase, field: &str) -> Result<Vec<St
         .iter()
         .map(|diagnostic| diagnostic[field].as_str().unwrap_or_default().to_owned())
         .collect())
+}
+
+/// A host fixture harness like a test runner's: generated CTE prefixes, input stand-ins and an empty relation.
+pub(crate) fn fixture_harness() -> Value {
+    json!({
+        "cte_prefixes": ["__expected__", "__ref__", "__source__", "__macro_actual__", "__macro_expected__"],
+        "input_cte_prefixes": ["__ref__", "__source__", "__seed__"],
+        "empty_relation": "__empty_fixture",
+    })
 }

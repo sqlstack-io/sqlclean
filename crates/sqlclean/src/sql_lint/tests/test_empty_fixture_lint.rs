@@ -1,6 +1,7 @@
 use serde_json::{Value, json};
 
 use crate::sql_lint::main::engine::lint_json;
+use crate::sql_lint::tests::helpers::fixture_harness;
 use crate::sql_lint::tests::test_types;
 
 #[test]
@@ -10,31 +11,31 @@ fn given_empty_fixture_context_when_linting_projected_star_then_only_canonical_i
         test_types::EmptyFixtureLintTestCase {
             description: "canonical ref fixture",
             sql: "WITH __ref__orders AS (SELECT * FROM __empty_fixture()) SELECT 1",
-            allows_empty_fixture_star: true,
+            in_fixture_harness: true,
             expected_diagnostic_count: 0,
         },
         test_types::EmptyFixtureLintTestCase {
             description: "canonical source fixture",
             sql: "WITH __source__web__orders AS (SELECT * FROM __empty_fixture()) SELECT 1",
-            allows_empty_fixture_star: true,
+            in_fixture_harness: true,
             expected_diagnostic_count: 0,
         },
         test_types::EmptyFixtureLintTestCase {
             description: "ordinary SQL has no intrinsic exemption",
             sql: "SELECT * FROM __empty_fixture()",
-            allows_empty_fixture_star: false,
+            in_fixture_harness: false,
             expected_diagnostic_count: 1,
         },
         test_types::EmptyFixtureLintTestCase {
             description: "expected fixture remains controlled",
             sql: "WITH __expected__orders AS (SELECT * FROM __empty_fixture()) SELECT 1",
-            allows_empty_fixture_star: true,
+            in_fixture_harness: true,
             expected_diagnostic_count: 1,
         },
         test_types::EmptyFixtureLintTestCase {
             description: "additional projection is not canonical",
             sql: "WITH __ref__orders AS (SELECT *, 1 AS extra FROM __empty_fixture()) SELECT 1",
-            allows_empty_fixture_star: true,
+            in_fixture_harness: true,
             expected_diagnostic_count: 1,
         },
     ];
@@ -44,8 +45,8 @@ fn given_empty_fixture_context_when_linting_projected_star_then_only_canonical_i
                 "version": 1,
                 "sql": test_case.sql,
                 "dialect": "snowflake",
-                "enabled_rules": ["SQC021"],
-                "allows_empty_fixture_star": test_case.allows_empty_fixture_star
+                "enabled_rules": ["SQLCLEAN021"],
+                "fixture_harness": test_case.in_fixture_harness.then(fixture_harness)
             })
             .to_string(),
         )?;

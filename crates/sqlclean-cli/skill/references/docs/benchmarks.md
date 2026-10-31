@@ -14,7 +14,7 @@ SQLFluff ran once.
 | Command | Wall time | CPU time | Peak memory | vs SQLClean defaults |
 |---|---:|---:|---:|---:|
 | `sqlclean check` (13 default Rules) | **0.81 s** | 2.5 s | 48 MiB | 1× |
-| `sqlclean check --select SQC` (all 45 Rules) | **1.33 s** | 3.8 s | 140 MiB | 1.6× |
+| `sqlclean check --select SQLCLEAN` (all 45 Rules) | **1.33 s** | 3.8 s | 140 MiB | 1.6× |
 | `sqlclean check` with three [custom Rules](#custom-rules) | **2.27 s** | 6.9 s | 182 MiB | 2.8× |
 | `sqlclean format --check` | **3.03 s** | 11.5 s | 49 MiB | 3.7× |
 | `sqruff lint` | 41.0 s | 114 s | 235 MiB | 51× |

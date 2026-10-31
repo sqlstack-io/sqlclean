@@ -5,7 +5,7 @@ use polyglot_sql::tokens::{Token, TokenType};
 use polyglot_sql::{ComplexityGuardOptions, Dialect, DialectType, ParseOptions};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-use crate::constants::LINT_SENTINEL_PREFIX;
+use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 use crate::sql_lint::_helpers::formatter_syntax::{cte_macro_indices, protect_syntax};
 use crate::sql_lint::_helpers::printed_layout::{PrintedSql, WrapOptions, wrap_lines};
 use crate::sql_lint::_helpers::token_layout::{
@@ -236,7 +236,7 @@ fn layout_oracle(
 }
 
 fn layout_cte_macros(mut formatted: String, dialect: &Dialect) -> Result<String, String> {
-    if !formatted.contains(LINT_SENTINEL_PREFIX) {
+    if !formatted.contains(INTERPOLATION_PLACEHOLDER_PREFIX) {
         return Ok(formatted);
     }
     let tokens = dialect

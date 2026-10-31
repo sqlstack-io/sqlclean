@@ -7,8 +7,8 @@ use polyglot_sql::{DialectType, Expression, ExpressionWalk};
 
 use crate::sql_lint::constants::LINT_API_VERSION;
 use crate::sql_lint::models::{
-    AdditionalFactOptions, CrossJoinRequest, LintDiagnostic, LintEdit, LintRequest, LintResponse,
-    LintRuleMetadata, ParsedSql, QueryFacts, SqlMacroOutput,
+    AdditionalFactOptions, CrossJoinRequest, FixtureHarness, LintDiagnostic, LintEdit, LintRequest,
+    LintResponse, LintRuleMetadata, ParsedSql, QueryFacts, SqlMacroOutput,
 };
 
 use crate::sql_lint::_helpers::additional::collect_additional_facts;
@@ -18,224 +18,211 @@ use crate::sql_lint::_helpers::parsing::parse;
 use crate::sql_lint::_helpers::terminal_shape::collect_terminal_shape_facts;
 
 const NULL_COMPARISON: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC001",
+    code: "SQLCLEAN001",
     message: "Comparison with NULL is never true",
     remediation: "Use IS NULL or IS NOT NULL when testing for NULL.",
 };
-const CEREMONIAL_CTE_PREFIXES: [&str; 11] = [
-    "__expected__",
-    "__assert__",
-    "__ref__",
-    "__source__",
-    "__seed__",
-    "__dbt_ref__",
-    "__macro_actual__",
-    "__macro_expected__",
-    "__udf_actual__",
-    "__udf_expected__",
-    "__table_fn_",
-];
 
 const IMPLICIT_CARTESIAN_JOIN: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC002",
+    code: "SQLCLEAN002",
     message: "Comma-separated sources create an implicit cartesian join",
     remediation: "Replace comma-separated sources with an explicit keyed join, or use CROSS JOIN when the cartesian product is intentional.",
 };
 const JOIN_WITHOUT_CONDITION: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC003",
+    code: "SQLCLEAN003",
     message: "Non-cross join has no meaningful condition",
     remediation: "Add a meaningful ON or USING condition, or declare an intentional cartesian product with CROSS JOIN.",
 };
 const UNORDERED_LIMIT: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC004",
+    code: "SQLCLEAN004",
     message: "Row selection is nondeterministic",
     remediation: "Add ORDER BY with a deterministic tie-breaker before LIMIT or OFFSET.",
 };
 const UNUSED_CTE: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC005",
+    code: "SQLCLEAN005",
     message: "CTE is unreachable from the final query",
     remediation: "Reference the CTE from the final query or another reachable CTE, or remove it.",
 };
 const REDUNDANT_DISTINCT: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC006",
+    code: "SQLCLEAN006",
     message: "DISTINCT is redundant with the grouped output",
     remediation: "Remove DISTINCT; the equivalent GROUP BY already determines the output groups.",
 };
 const POSITIONAL_SET_STAR: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC007",
+    code: "SQLCLEAN007",
     message: "Positional set operation is vulnerable to column-order drift",
     remediation: "Enumerate columns in the same order in every set-operation branch.",
 };
 const EXPLICIT_UNION: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC008",
+    code: "SQLCLEAN008",
     message: "Bare UNION leaves duplicate handling implicit",
     remediation: "Use UNION DISTINCT or UNION ALL to state duplicate handling explicitly.",
 };
 const DUPLICATE_TABLE_ALIAS: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC009",
+    code: "SQLCLEAN009",
     message: "Table alias is duplicated in the same query scope",
     remediation: "Give every relation in this query scope a unique alias.",
 };
 const DUPLICATE_OUTPUT_ALIAS: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC010",
+    code: "SQLCLEAN010",
     message: "Output alias is duplicated in the same select list",
     remediation: "Give every projected expression a unique output alias.",
 };
 const MIXED_GROUP_ORDER_REFERENCES: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC011",
+    code: "SQLCLEAN011",
     message: "Clause mixes positional and named references",
     remediation: "Use column names or positions consistently throughout this clause.",
 };
 const REDUNDANT_ELSE_NULL: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC012",
+    code: "SQLCLEAN012",
     message: "ELSE NULL is redundant",
     remediation: "Remove ELSE NULL; CASE expressions return NULL when ELSE is omitted.",
 };
 const PARENTHESIZED_DISTINCT: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC013",
+    code: "SQLCLEAN013",
     message: "DISTINCT is written as though it were a function",
     remediation: "Write DISTINCT as a SELECT modifier without function-like parentheses.",
 };
 const CONSTANT_PREDICATE: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC014",
+    code: "SQLCLEAN014",
     message: "Predicate compares identical constant values",
     remediation: "Remove the scaffold predicate or replace it with the intended condition.",
 };
 const CONSECUTIVE_SEMICOLON: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC015",
+    code: "SQLCLEAN015",
     message: "Empty statement follows another terminator",
     remediation: "Remove the redundant statement terminator.",
 };
 const REDUNDANT_SELF_ALIAS: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC016",
+    code: "SQLCLEAN016",
     message: "Expression is aliased to its existing name",
     remediation: "Remove the self-alias when the inferred output identity remains stable.",
 };
 const COUNT_ONE: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC017",
+    code: "SQLCLEAN017",
     message: "Row count uses a constant expression",
     remediation: "Use COUNT(*) to state that rows, rather than a nullable expression, are counted.",
 };
 const UNSTABLE_ROW_NUMBER: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC018",
+    code: "SQLCLEAN018",
     message: "ROW_NUMBER has no deterministic ordering",
     remediation: "Add ORDER BY with a stable tie-breaker inside the window specification.",
 };
 const NULL_NOT_IN: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC019",
+    code: "SQLCLEAN019",
     message: "NOT IN list contains NULL and can reject every row",
     remediation: "Remove NULL from the list or express the anti-join with a NULL-safe NOT EXISTS.",
 };
 const SET_ARITY_MISMATCH: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC020",
+    code: "SQLCLEAN020",
     message: "Set-operation branches project different column counts",
     remediation: "Project the same number of columns in every set-operation branch.",
 };
 const PROJECTED_STAR: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC021",
+    code: "SQLCLEAN021",
     message: "Query output has an uncontrolled column shape",
     remediation: "Enumerate the intended output columns explicitly.",
 };
 const UNALIASED_CALCULATION: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC022",
+    code: "SQLCLEAN022",
     message: "Calculated projection has no stable output name",
     remediation: "Add an explicit AS alias that describes the projected value.",
 };
 const UNUSED_TABLE_ALIAS: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC023",
+    code: "SQLCLEAN023",
     message: "Table alias is never referenced",
     remediation: "Use the alias to qualify references or remove it.",
 };
 const NULL_REJECTED_LEFT_JOIN: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC024",
+    code: "SQLCLEAN024",
     message: "WHERE predicate rejects NULL rows from a LEFT JOIN",
     remediation: "Move the right-side predicate into ON or use INNER JOIN when row rejection is intentional.",
 };
 const IMPLICIT_INNER_JOIN: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC025",
+    code: "SQLCLEAN025",
     message: "JOIN type is implicit",
     remediation: "Write INNER JOIN explicitly.",
 };
 const AMBIGUOUS_ORDER_DIRECTIONS: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC026",
+    code: "SQLCLEAN026",
     message: "ORDER BY mixes explicit and implicit directions",
     remediation: "State ASC or DESC for every ordering expression in this clause.",
 };
 const UNQUALIFIED_MULTI_SOURCE_COLUMN: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC027",
+    code: "SQLCLEAN027",
     message: "Column reference is unqualified in a multi-relation query",
     remediation: "Qualify the column with its relation alias.",
 };
 const INCONSISTENT_SINGLE_SOURCE_QUALIFICATION: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC028",
+    code: "SQLCLEAN028",
     message: "Single-relation query mixes qualified and unqualified columns",
     remediation: "Use one consistent qualification style in this query scope.",
 };
 const UNKNOWN_RELATION_QUALIFIER: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC029",
+    code: "SQLCLEAN029",
     message: "Qualified reference uses a relation absent from this query scope",
     remediation: "Use an available relation alias or add the intended relation to FROM.",
 };
 const SIMPLE_BOOLEAN_CASE: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC030",
+    code: "SQLCLEAN030",
     message: "CASE expression only converts a condition to TRUE or FALSE",
     remediation: "Use a NULL-safe boolean expression directly.",
 };
 const NESTED_ELSE_CASE: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC031",
+    code: "SQLCLEAN031",
     message: "CASE expression is nested directly inside ELSE",
     remediation: "Flatten the nested branch into the surrounding CASE expression.",
 };
 const UNUSED_JOINED_RELATION: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC032",
+    code: "SQLCLEAN032",
     message: "Joined relation contributes no referenced values",
     remediation: "Use the joined relation or remove the join. When the join intentionally filters rows, record it as a reviewed rule exception with a reason in the configuration file.",
 };
 const COMMENT_ATTACHMENT: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC033",
+    code: "SQLCLEAN033",
     message: "Comment is not attached to the syntax node it explains",
     remediation: "Use a standalone -- comment block immediately above the relevant CTE, JOIN, filter, predicate, selected expression, CASE branch, grouping, or ordering node.",
 };
 const CTE_ONLY_BODY: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC034",
+    code: "SQLCLEAN034",
     message: "Query keeps transformation logic outside top-level CTEs",
     remediation: "Move transformation logic into named top-level CTEs before the terminal SELECT.",
 };
 const TERMINAL_SELECT: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC035",
+    code: "SQLCLEAN035",
     message: "Terminal SELECT does not read plainly from the final top-level CTE",
     remediation: "Name the final logical CTE and leave one terminal SELECT from that CTE.",
 };
 const NESTED_CTE: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC036",
+    code: "SQLCLEAN036",
     message: "CTE is nested inside another query",
     remediation: "Hoist the nested CTE into the statement's top-level WITH list.",
 };
 const RECURSIVE_CTE: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC037",
+    code: "SQLCLEAN037",
     message: "Recursive CTE is not permitted",
     remediation: "Replace recursion with an explicit upstream relation or a bounded non-recursive query shape.",
 };
 const CROSS_JOIN: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC038",
+    code: "SQLCLEAN038",
     message: "CROSS JOIN creates an explicit cartesian product",
     remediation: "Use a keyed JOIN, or make one side provably at most one row (LIMIT 1, an aggregate without GROUP BY, or a one-row VALUES). When the cartesian product is intentional, record it as a reviewed [[rules.rule_exceptions]] entry with rule, path, relation and reason in the configuration file.",
 };
 const INLINE_QUERY_RELATION: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC039",
+    code: "SQLCLEAN039",
     message: "Inline query relation obscures data flow",
     remediation: "Extract the derived relation into a named top-level CTE; use explicit LATERAL only when the relation must remain correlated.",
 };
 const TRIVIAL_EQUALITY_TOKEN_COUNT: usize = 3;
 const JOIN_EXPRESSION: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC040",
+    code: "SQLCLEAN040",
     message: "JOIN ON contains a computed expression",
     remediation: "Compute keys, including variant path access, in input CTEs and join on plain columns. Literal-only predicates such as ON TRUE are allowed.",
 };
 const FINAL_CTE_NAME: LintRuleMetadata = LintRuleMetadata {
-    code: "SQC041",
+    code: "SQLCLEAN041",
     message: "Only the last top-level CTE may be named final, and it must use that name",
-    remediation: "Name the last top-level CTE final and rename any other final CTE; SQC035 checks the terminal SELECT.",
+    remediation: "Name the last top-level CTE final and rename any other final CTE; SQLCLEAN035 checks the terminal SELECT.",
 };
 
 pub(crate) const DEFAULT_RULES: [&str; 19] = [
@@ -316,10 +303,12 @@ const ALL_RULE_METADATA: [&LintRuleMetadata; 53] = [
     &crate::sql_quality::constants::MISPLACED_AGGREGATE,
 ];
 
-fn is_ceremonial_cte_name(name: &str) -> bool {
-    CEREMONIAL_CTE_PREFIXES
+/// Whether the harness generated the CTE `name`.
+fn is_harness_cte(harness: &FixtureHarness, name: &str) -> bool {
+    harness
+        .cte_prefixes
         .iter()
-        .any(|prefix| name.starts_with(prefix))
+        .any(|prefix| name.starts_with(prefix.as_str()))
 }
 
 struct QueryTokenContext<'a> {
@@ -352,7 +341,7 @@ struct FactBuildOptions<'a> {
     externally_referenced_ctes: &'a HashSet<String>,
     allows_ceremonial_select: bool,
     allows_dynamic_output_star: bool,
-    allows_empty_fixture_star: bool,
+    fixture_harness: Option<&'a FixtureHarness>,
 }
 
 pub(crate) fn lint_json_impl(request_json: &str) -> Result<String, String> {
@@ -399,9 +388,9 @@ pub(crate) fn lint(request: LintRequest) -> Result<LintResponse, String> {
         sql_macro_outputs: &request.sql_macro_outputs,
         dependency_identifiers: &dependency_identifiers,
         externally_referenced_ctes: &externally_referenced_ctes,
-        allows_ceremonial_select: request.allows_ceremonial_select,
+        allows_ceremonial_select: request.fixture_harness.is_some(),
         allows_dynamic_output_star: request.allows_dynamic_output_star,
-        allows_empty_fixture_star: request.allows_empty_fixture_star,
+        fixture_harness: request.fixture_harness.as_ref(),
     };
     let facts = build_facts(&statements, &tokens, &request.sql, &options);
     let context = DiagnosticContext {
@@ -434,7 +423,7 @@ pub(crate) fn lint(request: LintRequest) -> Result<LintResponse, String> {
             Some("computing a join key requires an authored CTE rewrite"),
         ));
     }
-    if enabled.contains(FINAL_CTE_NAME.code) && !request.allows_ceremonial_select {
+    if enabled.contains(FINAL_CTE_NAME.code) && request.fixture_harness.is_none() {
         diagnostics.extend(diagnostics_for_spans(
             &FINAL_CTE_NAME,
             &crate::sql_lint::_helpers::terminal_shape::final_cte_name_spans(&tokens, &depths),
@@ -455,7 +444,7 @@ pub(crate) fn lint(request: LintRequest) -> Result<LintResponse, String> {
                 .unwrap_or(crate::sql_quality::constants::DEFAULT_MAX_RANKING_ORDER_BY),
             relation_keys: &request.relation_keys,
             externally_referenced_ctes: &externally_referenced_ctes,
-            fixture_body: request.allows_ceremonial_select,
+            fixture_body: request.fixture_harness.is_some(),
             config_file: request
                 .config_file
                 .as_deref()
@@ -515,7 +504,7 @@ fn build_facts(
             dependency_identifiers: options.dependency_identifiers,
             allows_ceremonial_select: options.allows_ceremonial_select,
             allows_dynamic_output_star: options.allows_dynamic_output_star,
-            allows_empty_fixture_star: options.allows_empty_fixture_star,
+            fixture_harness: options.fixture_harness,
         },
     );
     for expression in expressions {
@@ -1145,11 +1134,11 @@ fn collect_unused_for_with(
             .intersection(&names)
             .cloned(),
     );
-    if options.allows_ceremonial_select {
+    if let Some(harness) = options.fixture_harness {
         reachable.extend(
             names
                 .iter()
-                .filter(|name| is_ceremonial_cte_name(name))
+                .filter(|name| is_harness_cte(harness, name))
                 .cloned(),
         );
     }

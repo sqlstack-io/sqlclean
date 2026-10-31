@@ -17,12 +17,12 @@ from tests.unit.src.sqlclean.rules.helpers import empty_rule
     [
         RuleCodeTestCase(
             description="a bare custom prefix with three digits",
-            code="XSQC001",
+            code="XSQLCLEAN001",
             expected_error=None,
         ),
         RuleCodeTestCase(
             description="a family of capital letters",
-            code="XSQCNAME001",
+            code="XSQLCLEANNAME001",
             expected_error=None,
         ),
     ],
@@ -44,18 +44,18 @@ def test_given_custom_code_when_declaring_then_the_definition_is_attached(
     [
         RuleCodeTestCase(
             description="a built-in code is reserved",
-            code="SQC001",
-            expected_error="custom Rule code must be XSQC",
+            code="SQLCLEAN001",
+            expected_error="custom Rule code must be XSQLCLEAN",
         ),
         RuleCodeTestCase(
             description="a lower-case family",
-            code="XSQCname001",
-            expected_error="custom Rule code must be XSQC",
+            code="XSQLCLEANname001",
+            expected_error="custom Rule code must be XSQLCLEAN",
         ),
         RuleCodeTestCase(
             description="two digits",
-            code="XSQCNAME01",
-            expected_error="custom Rule code must be XSQC",
+            code="XSQLCLEANNAME01",
+            expected_error="custom Rule code must be XSQLCLEAN",
         ),
     ],
     ids=lambda case: case.description,

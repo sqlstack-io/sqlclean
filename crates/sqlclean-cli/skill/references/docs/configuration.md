@@ -31,25 +31,25 @@ line_width = 100
 indent = 4
 
 [rules]
-select = ["SQC"]              # omit to run the Rules enabled by default
-ignore = ["SQC027"]
+select = ["SQLCLEAN"]              # omit to run the Rules enabled by default
+ignore = ["SQLCLEAN027"]
 custom = ["sql_rules"]        # Python files or directories that define custom Rules
 
 [rules.thresholds]
-max_literal_length = 100      # SQC044
-max_ranking_order_by = 5      # SQC043
+max_literal_length = 100      # SQLCLEAN044
+max_ranking_order_by = 5      # SQLCLEAN043
 
-[rules.rule_options.XSQCNAME001]
+[rules.rule_options.XSQLCLEANNAME001]
 prefixes = ["tmp_", "scratch_"]
 
 [[rules.rule_exceptions]]     # one reviewed finding that is allowed
-rule = "SQC038"
+rule = "SQLCLEAN038"
 path = "models/calendar.sql"
 relation = "dates"
 reason = "Every pair of dates is needed."
 
 [[rules.rule_ignores]]        # Rules that do not apply to some paths
-rules = ["SQC034"]
+rules = ["SQLCLEAN034"]
 paths = ["scratch/**"]
 reason = "Exploratory queries."
 ```
@@ -76,8 +76,8 @@ directory is the root.
 | `[rules] select` | Rules enabled by default | Rule codes or prefixes to run |
 | `[rules] ignore` | `[]` | Rule codes or prefixes to skip |
 | `[rules] custom` | `[]` | Python files or directories that define [custom Rules](custom-rules/overview.md) |
-| `[rules.thresholds] max_literal_length` | `100` | The longest string literal `SQC044` allows |
-| `[rules.thresholds] max_ranking_order_by` | `5` | The most `ORDER BY` expressions `SQC043` allows in a ranking window |
+| `[rules.thresholds] max_literal_length` | `100` | The longest string literal `SQLCLEAN044` allows |
+| `[rules.thresholds] max_ranking_order_by` | `5` | The most `ORDER BY` expressions `SQLCLEAN043` allows in a ranking window |
 | `[rules.rule_options.<CODE>]` | none | Option values of one custom Rule; see [Options](custom-rules/fixes-and-options.md#options) |
 | `[[rules.rule_exceptions]]` | none | One allowed finding; see [Exceptions](rules/overview.md#exceptions) |
 | `[[rules.rule_ignores]]` | none | Rules that do not apply to some paths; see [Path ignores](rules/overview.md#path-ignores) |
@@ -112,7 +112,7 @@ dialect = "tsql"
 ```
 
 A file that does not parse under its dialect is reported as
-[`SQC999`](rules/overview.md#parse-errors-sqc999), with the dialect in the message. Without
+[`SQLCLEAN999`](rules/overview.md#parse-errors-sqlclean999), with the dialect in the message. Without
 the `[[dialects]]` entry above, this T-SQL file under `reports/` is parsed as `duckdb`:
 
 ```sql
@@ -120,7 +120,7 @@ SELECT [order id] FROM orders
 ```
 
 ```text
-error[SQC999]: SQL could not be parsed as duckdb: Parse error at line 1, column 17: Expected RBracket, got Var ('id') near [SELECT [order id] FROM orders]
+error[SQLCLEAN999]: SQL could not be parsed as duckdb: Parse error at line 1, column 17: Expected RBracket, got Var ('id') near [SELECT [order id] FROM orders]
 ```
 
 Supported dialects, case-insensitive:
@@ -178,11 +178,11 @@ report any finding.
 | `line_width` of `0` | `sqlclean.toml: [format] line_width must be positive` |
 | `indent` of `0` or more than `8` | `sqlclean.toml: [format] indent must be between 1 and 8` |
 | A threshold of `0` | `sqlclean.toml: [rules.thresholds] max_literal_length and max_ranking_order_by must be positive` |
-| An exception or ignore without a reason | `sqlclean.toml: rule exception or ignore for SQC001 needs a reason` |
-| An exception with `cte` but no `relation` | `sqlclean.toml: rule exception for SQC038 at models/calendar.sql sets cte without relation` |
+| An exception or ignore without a reason | `sqlclean.toml: rule exception or ignore for SQLCLEAN001 needs a reason` |
+| An exception with `cte` but no `relation` | `sqlclean.toml: rule exception for SQLCLEAN038 at models/calendar.sql sets cte without relation` |
 | A `custom` path that does not exist | `[rules] custom path does not exist: sql_rules` |
-| `rule_options` for a built-in Rule | `[rules.rule_options.SQC001]: built-in Rules take no options; set limits in [rules.thresholds]` |
-| `rule_options` for a code no custom Rule has | `[rules.rule_options.XSQCNOPE001]: no custom Rule has this code` |
-| A selector that matches no Rule | `Rule selector 'SQC9' matches no Rule` |
+| `rule_options` for a built-in Rule | `[rules.rule_options.SQLCLEAN001]: built-in Rules take no options; set limits in [rules.thresholds]` |
+| `rule_options` for a code no custom Rule has | `[rules.rule_options.XSQLCLEANNOPE001]: no custom Rule has this code` |
+| A selector that matches no Rule | `Rule selector 'SQLCLEAN9' matches no Rule` |
 
 Errors are printed as `sqlclean: error: <message>`.

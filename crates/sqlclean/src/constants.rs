@@ -10,6 +10,16 @@ pub(crate) const SETTING_SNIPPET_INDENT: &str = "            ";
 /// The configuration file remediation text names when the request does not name one.
 pub const DEFAULT_CONFIG_FILE: &str = "sqlclean.toml";
 /// The identifier prefix a host writes in place of each template interpolation.
-pub const LINT_SENTINEL_PREFIX: &str = "__sqb_lint_";
+pub const INTERPOLATION_PLACEHOLDER_PREFIX: &str = "__sqlclean_interpolation_";
 /// The identifier prefix a host writes in place of a SQL macro parameter.
-pub const SQL_MACRO_PARAMETER_SENTINEL_PREFIX: &str = "__sqlbuild_macro_parameter_";
+pub const MACRO_PARAMETER_PLACEHOLDER_PREFIX: &str = "__sqlclean_macro_parameter_";
+/// The prefix of a relation parameter placeholder, written `<prefix><index>__`.
+pub const RELATION_PARAMETER_PLACEHOLDER_PREFIX: &str = "__sqlclean_relation_parameter_";
+/// The identifier prefix a host writes in place of a value parameter.
+pub const VALUE_PARAMETER_PLACEHOLDER_PREFIX: &str = "__sqlclean_value_parameter_";
+/// Placeholders standing for names the host generates, which Rules never judge as authored names.
+pub(crate) const GENERATED_PLACEHOLDER_PREFIXES: [&str; 3] = [
+    INTERPOLATION_PLACEHOLDER_PREFIX,
+    RELATION_PARAMETER_PLACEHOLDER_PREFIX,
+    VALUE_PARAMETER_PLACEHOLDER_PREFIX,
+];

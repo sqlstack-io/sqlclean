@@ -62,7 +62,7 @@ fn given_sql_macro_output_when_linting_qualification_then_each_column_counts_as_
                 "version": 1,
                 "sql": test_case.sql,
                 "dialect": "duckdb",
-                "enabled_rules": ["SQC028"],
+                "enabled_rules": ["SQLCLEAN028"],
                 "sql_macro_outputs": [{
                     "start": start,
                     "end": start + test_case.output.len(),
@@ -103,7 +103,7 @@ unrelated AS (SELECT * FROM pivot_input) SELECT * FROM final",
                 "version": 1,
                 "sql": test_case.sql,
                 "dialect": "snowflake",
-                "enabled_rules": ["SQC021"],
+                "enabled_rules": ["SQLCLEAN021"],
                 "allows_dynamic_output_star": true,
             })
             .to_string(),

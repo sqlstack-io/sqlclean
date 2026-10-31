@@ -1,4 +1,4 @@
-//! SQC044: string literals longer than the project limit.
+//! SQLCLEAN044: string literals longer than the project limit.
 
 use std::borrow::Cow;
 

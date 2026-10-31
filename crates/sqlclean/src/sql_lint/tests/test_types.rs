@@ -8,7 +8,7 @@ pub(crate) struct LintTestCase {
 pub(crate) struct EmptyFixtureLintTestCase {
     pub(crate) description: &'static str,
     pub(crate) sql: &'static str,
-    pub(crate) allows_empty_fixture_star: bool,
+    pub(crate) in_fixture_harness: bool,
     pub(crate) expected_diagnostic_count: usize,
 }
 

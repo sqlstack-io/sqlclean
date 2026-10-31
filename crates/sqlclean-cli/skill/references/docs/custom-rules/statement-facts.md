@@ -29,7 +29,7 @@ carries its position, so a finding can point at it and a fix can replace it.
 from sqlclean import Finding, RuleContext, Statement, rule
 
 @rule(
-    code="XSQCJOIN001",
+    code="XSQLCLEANJOIN001",
     message="Join to customers has no condition",
     remediation="Join customers on customer_id.",
 )

@@ -67,7 +67,7 @@ SQLClean in other configurations, on the same files:
 
 | SQLClean command | Wall time |
 |---|---:|
-| `sqlclean check --select SQC` (every built-in Rule) | 1.33 s |
+| `sqlclean check --select SQLCLEAN` (every built-in Rule) | 1.33 s |
 | `sqlclean check` plus three custom Python Rules | 2.27 s |
 | `sqlclean check` rerun with nothing changed (result cache) | 0.23 s |
 
@@ -114,7 +114,7 @@ def lowered(operand: ast.Expression) -> bool:
 
 
 @rule(
-    code="XSQCTEAM001",
+    code="XSQLCLEANTEAM001",
     message="Email comparisons must be case-insensitive",
     remediation="Compare LOWER(email) with LOWER(...) instead.",
     enabled_by_default=True,

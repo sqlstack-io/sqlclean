@@ -34,7 +34,7 @@ trap 'rm -rf "$WORK"' EXIT
 
 declare -A CMD
 CMD[sqlclean]="$SQLCLEAN check --output-format json"
-CMD[sqlclean_all]="$SQLCLEAN check --select SQC --output-format json"
+CMD[sqlclean_all]="$SQLCLEAN check --select SQLCLEAN --output-format json"
 # The default Rules plus the three Python Rules in rules/, copied into the work directory.
 CMD[sqlclean_custom]="$SQLCLEAN check --config custom.toml --output-format json"
 # sqruff's and SQLFluff's default rules include layout; SQLClean checks layout with its formatter.

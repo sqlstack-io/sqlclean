@@ -41,7 +41,7 @@ def define_rule(
     if not is_custom_code(code):
         raise RuleDefinitionError(
             f"custom Rule code must be {CUSTOM_CODE_PREFIX}, optional capital letters and "
-            f"{RULE_CODE_DIGIT_COUNT} digits, such as XSQCNAME001: {code}"
+            f"{RULE_CODE_DIGIT_COUNT} digits, such as XSQLCLEANNAME001: {code}"
         )
     names: list[str] = [option.name for option in options]
     if len(names) != len(set(names)):
@@ -70,7 +70,7 @@ def define_rule(
 
 
 def is_custom_code(code: str) -> bool:
-    """Return whether code is XSQC, optional capital letters and three digits."""
+    """Return whether code is XSQLCLEAN, optional capital letters and three digits."""
 
     family: str = code[:-RULE_CODE_DIGIT_COUNT]
     number: str = code[-RULE_CODE_DIGIT_COUNT:]

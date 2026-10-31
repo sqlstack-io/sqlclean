@@ -67,10 +67,10 @@ fn given_lines_over_the_width_when_formatting_then_each_wrap_rule_applies_idempo
         },
         test_types::LineWrapTestCase {
             description: "a sentinel counts with the width of the text it stands for",
-            sql: "select coalesce(__sqb_lint_0__, b) as amount from orders",
+            sql: "select coalesce(__sqlclean_interpolation_0__, b) as amount from orders",
             line_width: 40,
-            token_widths: &[("__SQB_LINT_0__", 30)],
-            expected_sql: "SELECT\n  COALESCE(\n    __sqb_lint_0__,\n    b\n  ) AS amount\nFROM orders",
+            token_widths: &[("__SQLCLEAN_INTERPOLATION_0__", 30)],
+            expected_sql: "SELECT\n  COALESCE(\n    __sqlclean_interpolation_0__,\n    b\n  ) AS amount\nFROM orders",
         },
         test_types::LineWrapTestCase {
             description: "a nested expression breaks only the levels that overflow",

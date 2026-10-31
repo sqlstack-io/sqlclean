@@ -21,7 +21,7 @@ fn given_many_wide_ctes_with_findings_when_linting_then_quality_rules_stay_linea
             "version": 1,
             "sql": wide_cte_chain(test_case.cte_count, test_case.column_count),
             "dialect": "duckdb",
-            "enabled_rules": ["SQC018", "SQC042", "SQC043", "SQC044"],
+            "enabled_rules": ["SQLCLEAN018", "SQLCLEAN042", "SQLCLEAN043", "SQLCLEAN044"],
         });
         let started: Instant = Instant::now();
         let response: Value = serde_json::from_str(&lint_json(&request.to_string())?)

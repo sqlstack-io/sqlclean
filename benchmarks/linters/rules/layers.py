@@ -8,7 +8,7 @@ NONDETERMINISTIC_FUNCTIONS: frozenset[str] = frozenset(
 
 
 @rule(
-    code="XSQCLAYER001",
+    code="XSQLCLEANLAYER001",
     message="Mart reads a raw source",
     remediation="Read the staging model instead.",
     enabled_by_default=True,
@@ -26,7 +26,7 @@ def marts_read_staging(*, statement: Statement, ctx: RuleContext) -> list[Findin
 
 
 @rule(
-    code="XSQCLAYER002",
+    code="XSQLCLEANLAYER002",
     message="Staging model reads another model",
     remediation="Staging models read only raw sources and seeds.",
     enabled_by_default=True,
@@ -46,7 +46,7 @@ def staging_reads_sources(*, statement: Statement, ctx: RuleContext) -> list[Fin
 
 
 @rule(
-    code="XSQCDET001",
+    code="XSQLCLEANDET001",
     message="Model calls a nondeterministic function",
     remediation="Pass the time or seed in as a column so reruns give the same rows.",
     enabled_by_default=True,

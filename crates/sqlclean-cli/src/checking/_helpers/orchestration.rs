@@ -100,7 +100,7 @@ pub(crate) fn check_sources(
     })
 }
 
-/// Whether a selection can match custom Rules: an `XSQC` code or a prefix of `XSQC`.
+/// Whether a selection can match custom Rules: an `XSQLCLEAN` code or a prefix of `XSQLCLEAN`.
 fn selects_custom_rules(selectors: &[String]) -> bool {
     selectors.iter().any(|selector| {
         selector.starts_with(CUSTOM_RULE_PREFIX)
