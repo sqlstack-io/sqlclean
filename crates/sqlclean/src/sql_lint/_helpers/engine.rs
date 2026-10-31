@@ -13,7 +13,9 @@ use crate::sql_lint::models::{
 
 use crate::sql_lint::_helpers::additional::collect_additional_facts;
 use crate::sql_lint::_helpers::inline_relations::collect_inline_query_relation_spans;
-use crate::sql_lint::_helpers::join_predicates::cross_join_diagnostics;
+use crate::sql_lint::_helpers::join_predicates::{
+    condition_tokens, cross_join_diagnostics, trivial_on_condition,
+};
 use crate::sql_lint::_helpers::parsing::parse;
 use crate::sql_lint::_helpers::terminal_shape::collect_terminal_shape_facts;
 
@@ -213,7 +215,6 @@ const INLINE_QUERY_RELATION: LintRuleMetadata = LintRuleMetadata {
     message: "Inline query relation obscures data flow",
     remediation: "Extract the derived relation into a named top-level CTE; use explicit LATERAL only when the relation must remain correlated.",
 };
-const TRIVIAL_EQUALITY_TOKEN_COUNT: usize = 3;
 const JOIN_EXPRESSION: LintRuleMetadata = LintRuleMetadata {
     code: "SQLCLEAN040",
     message: "JOIN ON contains a computed expression",
@@ -901,8 +902,10 @@ fn collect_from_and_join_facts(tokens: &[Token], direct: &[usize]) -> (Vec<Span>
             .iter()
             .any(|&candidate| tokens[candidate].token_type == TokenType::Using);
         if !has_using
-            && on_position
-                .is_none_or(|offset| trivial_on_condition(tokens, &condition[offset + 1..]))
+            && on_position.is_none_or(|offset| {
+                let end = direct.get(condition_end).copied().unwrap_or(tokens.len());
+                trivial_on_condition(tokens, &condition_tokens(tokens, condition[offset], end))
+            })
         {
             missing_conditions.push(tokens[index].span);
         }
@@ -941,24 +944,6 @@ fn is_conditionless_join(tokens: &[Token], direct: &[usize], join_position: usiz
                 "CROSS" | "NATURAL" | "APPLY" | "POSITIONAL" | "PASTE"
             )
         })
-}
-
-fn trivial_on_condition(tokens: &[Token], condition: &[usize]) -> bool {
-    let significant: Vec<&Token> = condition
-        .iter()
-        .map(|&index| &tokens[index])
-        .filter(|token| !matches!(token.token_type, TokenType::LParen | TokenType::RParen))
-        .collect();
-    significant.is_empty()
-        || significant.len() == 1 && significant[0].token_type == TokenType::True
-        || significant.len() == TRIVIAL_EQUALITY_TOKEN_COUNT
-            && significant[1].token_type == TokenType::Eq
-            && matches!(
-                significant[0].token_type,
-                TokenType::Number | TokenType::String | TokenType::True | TokenType::False
-            )
-            && significant[0].token_type == significant[2].token_type
-            && significant[0].text == significant[2].text
 }
 
 fn collect_set_operation_facts(tokens: &[Token], depths: &[usize]) -> Vec<Span> {

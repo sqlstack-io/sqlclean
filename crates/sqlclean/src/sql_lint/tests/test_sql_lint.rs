@@ -79,6 +79,18 @@ fn given_sql_cases_when_linting_then_diagnostics_match() -> Result<(), String> {
             expected_anchors: &[("SQLCLEAN003", "JOIN")],
         },
         test_types::LintTestCase {
+            description: "parenthesized join condition is a condition",
+            sql: "SELECT a.id FROM a JOIN b ON (a.id = b.id OR a.status = 'new')",
+            expected_codes: &[],
+            expected_anchors: &[],
+        },
+        test_types::LintTestCase {
+            description: "parenthesized constant join condition is no condition",
+            sql: "SELECT a.id FROM a JOIN b ON (1 = 1)",
+            expected_codes: &["SQLCLEAN003"],
+            expected_anchors: &[("SQLCLEAN003", "JOIN")],
+        },
+        test_types::LintTestCase {
             description: "unordered limit",
             sql: "SELECT id FROM items LIMIT 1",
             expected_codes: &["SQLCLEAN004"],
