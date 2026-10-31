@@ -1,41 +1,44 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/sqlclean-logo.png" alt="SQLClean" width="100%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/sqlclean-logo-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/sqlclean-logo-light.png">
+    <img src="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/sqlclean-logo-light.png" alt="SQLClean" width="100%">
+  </picture>
 </p>
 
 <h2 align="center">The fastest SQL linter.</h2>
 
 <p align="center">
   <strong>50× faster than sqruff. Lint 10,000 SQL files in under a second.</strong> <a href="https://sqlclean.io/docs/benchmarks/">Benchmarks</a>
-</p>
-
-<p align="center">
-  Catch SQL mistakes, apply safe fixes, and format consistently. Add your own rules in Python.
-</p>
-
-<p align="center">
+  <br>
   <a href="https://sqlclean.io">Website</a> ·
   <a href="https://sqlclean.io/docs/quickstart/">Get started</a> ·
   <a href="https://sqlclean.io/docs/">Docs</a> ·
   <a href="https://sqlclean.io/docs/benchmarks/">Benchmarks</a>
 </p>
 
+Catch SQL mistakes, apply safe fixes, and format consistently. Add your own rules in Python.
+SQLClean parses and checks SQL in Rust, and runs your Python Rules on statements it has already
+parsed.
+
 ```bash
 uv tool install sqlclean        # or: pip install sqlclean
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/demos/check-fix.gif" alt="sqlclean check reports three findings, then sqlclean fix applies two fixes and formats the file" width="100%">
+  <img src="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/demos/check-fix.gif" alt="sqlclean check reports an unused CTE, a temporary table from a custom Rule and a comparison with NULL; sqlclean fix removes the CTE and formats the file; sqlclean fix --unsafe-fixes rewrites = NULL to IS NULL" width="100%">
 </p>
 
-`sqlclean check` reports a bare `JOIN`, a `COUNT(1)` and a temporary table from a custom Rule.
-`sqlclean fix` applies the two fixes and formats the file; the custom Rule's finding has no fix,
-so it stays.
+`sqlclean check` reports an unused CTE, a temporary table from a custom Rule and a `= NULL`
+comparison that is never true. `sqlclean fix` applies the safe fix, removing the CTE, and formats
+the file. It leaves `= NULL` alone because rewriting it to `IS NULL` changes which rows match;
+`sqlclean fix --unsafe-fixes` applies that fix. The custom Rule's finding has no fix, so it stays.
 
 ## Speed
 
 Linting the same 10,282 Snowflake SQL files on 4 CPUs, with no cache:
 
-| Command | Wall time | vs `sqlclean check` |
+| Command | Wall time | Time relative to `sqlclean check` |
 |---|---:|---:|
 | `sqlclean check` (default Rules) | **0.81 s** | 1× |
 | `sqlclean check --select SQC` (all Rules) | **1.33 s** | 1.6× |
@@ -48,6 +51,18 @@ Run again with nothing changed, `sqlclean check` reads its result cache and fini
 The tools don't check the same things, so see the
 [benchmarks](https://sqlclean.io/docs/benchmarks/) for coverage, the corpus, the method and how
 to run it yourself.
+
+## Quick start
+
+```bash
+sqlclean check     # report findings in every .sql file under the directory
+sqlclean fix       # apply safe fixes, then format
+sqlclean format    # rewrite files in the canonical layout
+```
+
+Add a `sqlclean.toml` to choose a dialect, files or Rules. See the
+[quickstart](https://sqlclean.io/docs/quickstart/) and
+[configuration](https://sqlclean.io/docs/configuration/).
 
 ## Correct and safe
 
@@ -87,18 +102,6 @@ def temporary_table(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
 Point `[rules] custom = ["sql_rules"]` in `sqlclean.toml` at it. See
 [custom Rules](https://sqlclean.io/docs/custom-rules/overview/) and
 [testing custom Rules](https://sqlclean.io/docs/custom-rules/testing/).
-
-## Quick start
-
-```bash
-sqlclean check     # report findings in every .sql file under the directory
-sqlclean fix       # apply safe fixes, then format
-sqlclean format    # rewrite files in the canonical layout
-```
-
-Add a `sqlclean.toml` to choose a dialect, files or Rules. See the
-[quickstart](https://sqlclean.io/docs/quickstart/) and
-[configuration](https://sqlclean.io/docs/configuration/).
 
 ## Integrations
 

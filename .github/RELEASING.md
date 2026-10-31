@@ -26,6 +26,14 @@ Documentation edits usually do release, on purpose: `make skills` copies the doc
 installed skill stays in step with the docs. A homepage or styling change touches only `website/`
 and does not.
 
+Merge pull requests one at a time, each with its branch up to date with `main`. The release
+workflow only trusts a release base whose tree passed Verify on the pull request that produced
+it. If two pull requests merge back to back, `main` holds a combination no pull request verified,
+and the release workflow stops before it refreshes the release pull request's lockfiles. A later
+run that leaves the release pull request unchanged does not repair it. To recover, close the
+release pull request, then merge the next up-to-date pull request; Release Please opens a fresh
+release pull request from the verified tree.
+
 ## One-time setup
 
 A repository administrator does these once, in a browser:
