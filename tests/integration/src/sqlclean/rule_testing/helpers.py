@@ -103,3 +103,22 @@ def sample_rule(directory: Path, name: str) -> RuleCheck:
     spec.loader.exec_module(module)
     check: RuleCheck = getattr(module, name)
     return check
+
+
+README: Path = Path(__file__).resolve().parents[5] / "README.md"
+BLOCK_START: str = "```python\n# sql_rules/team.py\n"
+
+
+def readme_rule(directory: Path) -> RuleCheck:
+    """Return the README's case_insensitive_email Rule, imported from its code block."""
+
+    text: str = README.read_text(encoding="utf-8")
+    start: int = text.index(BLOCK_START) + len(BLOCK_START)
+    path: Path = directory / "readme_team.py"
+    path.write_text(text[start : text.index("```", start)], encoding="utf-8")
+    spec: ModuleSpec | None = importlib.util.spec_from_file_location("readme_team", path)
+    assert spec is not None and spec.loader is not None
+    module: ModuleType = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    check: RuleCheck = module.case_insensitive_email
+    return check

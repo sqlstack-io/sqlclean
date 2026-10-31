@@ -37,21 +37,27 @@ reports, so its finding stays.
 
 ## Speed
 
-Linting the same 10,282 Snowflake SQL files on 4 CPUs, with no cache:
+Linting the same 10,282 Snowflake SQL files on a Linux machine with 4 CPUs, each tool with its
+default rules and no cache:
 
-| Command | Wall time | Time relative to `sqlclean check` |
-|---|---:|---:|
-| `sqlclean check` (default Rules) | **0.81 s** | 1× |
-| `sqlclean check --select SQC` (all Rules) | **1.33 s** | 1.6× |
-| `sqlclean check` with three custom Python Rules | **2.27 s** | 2.8× |
-| `sqruff lint` | 41.0 s | 51× |
-| `sqlfluff lint --processes 4` | 919 s | 1,135× |
+| Tool | Wall time |
+|---|---:|
+| `sqlclean check` | **0.81 s** |
+| `sqruff lint` | 41.0 s |
+| `sqlfluff lint --processes 4` | 919 s |
 
-Run again with nothing changed, `sqlclean check` reads its result cache and finishes in 0.23 s.
-
-The tools don't check the same things, so see the
+The tools don't check the same things: almost every sqruff and SQLFluff finding comes from a
+layout rule, which SQLClean leaves to its formatter. See the
 [benchmarks](https://sqlclean.io/docs/benchmarks/) for coverage, the corpus, the method and how
 to run it yourself.
+
+SQLClean in other configurations, on the same files:
+
+| SQLClean command | Wall time |
+|---|---:|
+| `sqlclean check --select SQC` (every built-in Rule) | 1.33 s |
+| `sqlclean check` plus three custom Python Rules | 2.27 s |
+| `sqlclean check` rerun with nothing changed (result cache) | 0.23 s |
 
 ## Quick start
 
@@ -79,10 +85,11 @@ Add a `sqlclean.toml` to choose a dialect, files or Rules. See the
 ## Custom Rules in Python
 
 A custom Rule is a Python function over each statement, already parsed and located by the Rust
-engine. This one enforces a team convention: the columns the team designates as email addresses
-are compared case-insensitively, as `LOWER(email) = LOWER(...)`. It reads the comparisons from
-the statement's syntax tree, so comments, string literals and `LOWER(email)` never match, and it
-only reports, because changing a comparison is the author's call.
+engine. This one enforces a team convention, not a rule of SQL: the columns the team lists in
+`EMAIL_COLUMNS` are compared case-insensitively. An `=` or `<>` that reads one of them, bare or as
+`LOWER(email)`, passes only when both sides are `LOWER(...)` or a lower-case string literal. It
+reads comparisons from the statement's syntax tree, so comments and string literals never match,
+and it only reports, because changing a comparison is the author's call.
 
 ```python
 # sql_rules/team.py
@@ -93,6 +100,19 @@ from sqlclean import Finding, RuleContext, Statement, rule
 EMAIL_COLUMNS = {"email", "billing_email"}  # the columns this team treats as email addresses
 
 
+def email_column(operand: ast.Expression) -> ast.Column | None:
+    """The designated email column an operand reads, written bare or as LOWER(column)."""
+    column = operand.this if isinstance(operand, ast.Lower) else operand
+    is_email = isinstance(column, ast.Column) and column.name.lower() in EMAIL_COLUMNS
+    return column if is_email else None
+
+
+def lowered(operand: ast.Expression) -> bool:
+    """Whether an operand is LOWER(...) or a string literal with no upper-case letters."""
+    literal = isinstance(operand, ast.Literal) and operand.is_string
+    return isinstance(operand, ast.Lower) or (literal and operand.name == operand.name.lower())
+
+
 @rule(
     code="XSQCTEAM001",
     message="Email comparisons must be case-insensitive",
@@ -101,10 +121,10 @@ EMAIL_COLUMNS = {"email", "billing_email"}  # the columns this team treats as em
 )
 def case_insensitive_email(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
     starts = {
-        operand.to_dict()["column"]["span"]["start"]
+        column.to_dict()["column"]["span"]["start"]
         for comparison in statement.polyglot_ast().find_all(ast.Eq, ast.Neq)
-        for operand in (comparison.this, comparison.expression)
-        if isinstance(operand, ast.Column) and operand.name.lower() in EMAIL_COLUMNS
+        for column in map(email_column, (comparison.this, comparison.expression))
+        if column is not None and not all(map(lowered, (comparison.this, comparison.expression)))
     }
     return [
         ctx.finding(subject=statement, node=column)

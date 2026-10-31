@@ -35,6 +35,19 @@ from sqlclean import Finding, RuleContext, Statement, rule
 EMAIL_COLUMNS = {"email", "billing_email"}  # the columns this team treats as email addresses
 
 
+def email_column(operand: ast.Expression) -> ast.Column | None:
+    """The designated email column an operand reads, written bare or as LOWER(column)."""
+    column = operand.this if isinstance(operand, ast.Lower) else operand
+    is_email = isinstance(column, ast.Column) and column.name.lower() in EMAIL_COLUMNS
+    return column if is_email else None
+
+
+def lowered(operand: ast.Expression) -> bool:
+    """Whether an operand is LOWER(...) or a string literal with no upper-case letters."""
+    literal = isinstance(operand, ast.Literal) and operand.is_string
+    return isinstance(operand, ast.Lower) or (literal and operand.name == operand.name.lower())
+
+
 @rule(
     code="XSQCTEAM001",
     message="Email comparisons must be case-insensitive",
@@ -43,10 +56,10 @@ EMAIL_COLUMNS = {"email", "billing_email"}  # the columns this team treats as em
 )
 def case_insensitive_email(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
     starts = {
-        operand.to_dict()["column"]["span"]["start"]
+        column.to_dict()["column"]["span"]["start"]
         for comparison in statement.polyglot_ast().find_all(ast.Eq, ast.Neq)
-        for operand in (comparison.this, comparison.expression)
-        if isinstance(operand, ast.Column) and operand.name.lower() in EMAIL_COLUMNS
+        for column in map(email_column, (comparison.this, comparison.expression))
+        if column is not None and not all(map(lowered, (comparison.this, comparison.expression)))
     }
     return [
         ctx.finding(subject=statement, node=column)
