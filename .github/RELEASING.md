@@ -34,6 +34,11 @@ run that leaves the release pull request unchanged does not repair it. To recove
 release pull request, then merge the next up-to-date pull request; Release Please opens a fresh
 release pull request from the verified tree.
 
+`main` was rewritten after 0.1.0 to drop tool attribution trailers, with every tree unchanged, so
+the `v0.1.0` tag points at the pre-rewrite commit and is not an ancestor of `main`.
+`last-release-sha` in `release-please-config.json` names the rewritten 0.1.0 release commit, so
+Release Please collects only the commits after it.
+
 ## One-time setup
 
 A repository administrator does these once, in a browser:
