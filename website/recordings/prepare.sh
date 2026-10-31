@@ -9,7 +9,7 @@ mkdir -p "$dir"
 cd "$dir"
 case "$demo" in
   check-fix)
-    # One query with a NULL comparison, an unused CTE and a temporary table that a custom Rule forbids.
+    # One query with an unused CTE, a case-sensitive email comparison that a custom Rule forbids, and a NULL comparison.
     mkdir -p models sql_rules
     cat > sqlclean.toml <<'TOML'
 dialect = "duckdb"
@@ -23,24 +23,35 @@ with refunds as (
 )
 select o.order_id, c.name, o.total
 from orders o
-join tmp_customers c on o.customer_id = c.customer_id
-where o.shipped_at = null
+join customers c on o.customer_id = c.customer_id
+where c.email = 'Alice@example.com'
+  and o.shipped_at = null
 SQL
-    cat > sql_rules/naming.py <<'PY'
+    cat > sql_rules/team.py <<'PY'
+import polyglot_sql as ast  # pip install "sqlclean[ast]"
+
 from sqlclean import Finding, RuleContext, Statement, rule
+
+EMAIL_COLUMNS = {"email", "billing_email"}  # the columns this team treats as email addresses
 
 
 @rule(
-    code="XSQCNAME001",
-    message="Query reads a temporary table",
-    remediation="Read from the published table instead.",
+    code="XSQCTEAM001",
+    message="Email comparisons must be case-insensitive",
+    remediation="Compare LOWER(email) with LOWER(...) instead.",
     enabled_by_default=True,
 )
-def temporary_table(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
+def case_insensitive_email(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
+    starts = {
+        operand.to_dict()["column"]["span"]["start"]
+        for comparison in statement.polyglot_ast().find_all(ast.Eq, ast.Neq)
+        for operand in (comparison.this, comparison.expression)
+        if isinstance(operand, ast.Column) and operand.name.lower() in EMAIL_COLUMNS
+    }
     return [
-        ctx.finding(subject=statement, node=table)
-        for table in statement.tables
-        if table.name.startswith("tmp_")
+        ctx.finding(subject=statement, node=column)
+        for column in statement.columns
+        if column.start - statement.start in starts
     ]
 PY
     ;;

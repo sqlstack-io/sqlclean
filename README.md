@@ -26,13 +26,14 @@ uv tool install sqlclean        # or: pip install sqlclean
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/demos/check-fix.gif" alt="sqlclean check reports an unused CTE, a temporary table from a custom Rule and a comparison with NULL; sqlclean fix removes the CTE and formats the file; sqlclean fix --unsafe-fixes rewrites = NULL to IS NULL" width="100%">
+  <img src="https://raw.githubusercontent.com/sqlstack-io/sqlclean/main/.github/demos/check-fix.gif" alt="sqlclean check reports an unused CTE, a case-sensitive email comparison from a custom Rule and a comparison with NULL; sqlclean fix removes the CTE and formats the file; sqlclean fix --unsafe-fixes rewrites = NULL to IS NULL" width="100%">
 </p>
 
-`sqlclean check` reports an unused CTE, a temporary table from a custom Rule and a `= NULL`
-comparison that is never true. `sqlclean fix` applies the safe fix, removing the CTE, and formats
-the file. It leaves `= NULL` alone because rewriting it to `IS NULL` changes which rows match;
-`sqlclean fix --unsafe-fixes` applies that fix. The custom Rule's finding has no fix, so it stays.
+`sqlclean check` reports an unused CTE, a case-sensitive email comparison that a team's custom
+Rule forbids, and a `= NULL` comparison that is never true. `sqlclean fix` applies the safe fix,
+removing the CTE, and formats the file. It leaves `= NULL` alone because rewriting it to `IS NULL`
+changes which rows match; `sqlclean fix --unsafe-fixes` applies that fix. The custom Rule only
+reports, so its finding stays.
 
 ## Speed
 
@@ -77,30 +78,45 @@ Add a `sqlclean.toml` to choose a dialect, files or Rules. See the
 
 ## Custom Rules in Python
 
-A custom Rule is a Python function over the tables, joins, columns and literals of each
-statement, already parsed and located by the Rust engine:
+A custom Rule is a Python function over each statement, already parsed and located by the Rust
+engine. This one enforces a team convention: the columns the team designates as email addresses
+are compared case-insensitively, as `LOWER(email) = LOWER(...)`. It reads the comparisons from
+the statement's syntax tree, so comments, string literals and `LOWER(email)` never match, and it
+only reports, because changing a comparison is the author's call.
 
 ```python
-# sql_rules/naming.py
+# sql_rules/team.py
+import polyglot_sql as ast  # pip install "sqlclean[ast]"
+
 from sqlclean import Finding, RuleContext, Statement, rule
+
+EMAIL_COLUMNS = {"email", "billing_email"}  # the columns this team treats as email addresses
 
 
 @rule(
-    code="XSQCNAME001",
-    message="Query reads a temporary table",
-    remediation="Read from the published table instead.",
+    code="XSQCTEAM001",
+    message="Email comparisons must be case-insensitive",
+    remediation="Compare LOWER(email) with LOWER(...) instead.",
     enabled_by_default=True,
 )
-def temporary_table(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
+def case_insensitive_email(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
+    starts = {
+        operand.to_dict()["column"]["span"]["start"]
+        for comparison in statement.polyglot_ast().find_all(ast.Eq, ast.Neq)
+        for operand in (comparison.this, comparison.expression)
+        if isinstance(operand, ast.Column) and operand.name.lower() in EMAIL_COLUMNS
+    }
     return [
-        ctx.finding(subject=statement, node=table)
-        for table in statement.tables
-        if table.name.startswith("tmp_")
+        ctx.finding(subject=statement, node=column)
+        for column in statement.columns
+        if column.start - statement.start in starts
     ]
 ```
 
-Point `[rules] custom = ["sql_rules"]` in `sqlclean.toml` at it. See
-[custom Rules](https://sqlclean.io/docs/custom-rules/overview/) and
+Point `[rules] custom = ["sql_rules"]` in `sqlclean.toml` at it. The syntax tree needs the `ast`
+extra: `pip install "sqlclean[ast]"`. See
+[custom Rules](https://sqlclean.io/docs/custom-rules/overview/),
+[statement facts](https://sqlclean.io/docs/custom-rules/statement-facts/) and
 [testing custom Rules](https://sqlclean.io/docs/custom-rules/testing/).
 
 ## Integrations

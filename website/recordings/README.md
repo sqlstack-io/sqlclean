@@ -16,6 +16,8 @@ The README uses `check-fix`, copied into `.github/demos/`.
 - DejaVu Sans Mono, the font the tapes use.
 - `sqlclean` on `PATH` with its Python package in the same environment, or `SQLCLEAN_BIN` pointing at
   a directory that contains the `sqlclean` to record.
+- The `ast` extra (`pip install "sqlclean[ast]"`) for the `check-fix` custom Rule, or
+  `SQLCLEAN_PYTHON` pointing at an interpreter that has it.
 
 ## Record
 
