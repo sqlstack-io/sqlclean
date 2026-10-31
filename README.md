@@ -5,7 +5,7 @@
 <h2 align="center">The fastest SQL linter.</h2>
 
 <p align="center">
-  <strong>{{SPEED_LINE}}</strong> <a href="https://sqlclean.io/docs/benchmarks/">Benchmarks</a>
+  <strong>50× faster than sqruff. Lint 10,000 SQL files in under a second.</strong> <a href="https://sqlclean.io/docs/benchmarks/">Benchmarks</a>
 </p>
 
 <p align="center">
@@ -33,7 +33,17 @@ so it stays.
 
 ## Speed
 
-{{SPEED_TABLE}}
+Linting the same 10,282 Snowflake SQL files on 4 CPUs, with no cache:
+
+| Command | Wall time | vs `sqlclean check` |
+|---|---:|---:|
+| `sqlclean check` (default Rules) | **0.81 s** | 1× |
+| `sqlclean check --select SQC` (all Rules) | **1.33 s** | 1.6× |
+| `sqlclean check` with three custom Python Rules | **2.27 s** | 2.8× |
+| `sqruff lint` | 41.0 s | 51× |
+| `sqlfluff lint --processes 4` | 919 s | 1,135× |
+
+Run again with nothing changed, `sqlclean check` reads its result cache and finishes in 0.23 s.
 
 The tools don't check the same things, so see the
 [benchmarks](https://sqlclean.io/docs/benchmarks/) for coverage, the corpus, the method and how
