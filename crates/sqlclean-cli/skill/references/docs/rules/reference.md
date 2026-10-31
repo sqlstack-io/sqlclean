@@ -13,10 +13,11 @@ Online: https://sqlclean.io/docs/rules/reference/
 - SQC005: unused CTEs
 - SQC018: unstable row numbers
 - SQC019: NULL in NOT IN
+- SQC046 to SQC053: queries that cannot do what they say
 - SQC039: inline subqueries
 - SQC034, SQC035 and SQC041: query structure
 
-SQLClean has 45 built-in Rules. `Default` Rules run when `[rules] select` is not set; the others
+SQLClean has 53 built-in Rules. `Default` Rules run when `[rules] select` is not set; the others
 run when `select` names them by code or prefix. A Rule with a `Safe` fix is fixed by
 `sqlclean fix`; an `Unsafe` fix also needs `--unsafe-fixes`. See
 [Selecting Rules](overview.md#selecting-rules) and
@@ -71,6 +72,14 @@ Run `sqlclean rules <CODE>` for a Rule's remediation.
 | `SQC043` | Ranking window sorts by more expressions than max_ranking_order_by | No | — |
 | `SQC044` | String literal is longer than max_literal_length | No | — |
 | `SQC045` | JSON payload is parsed more than once in one SELECT | No | — |
+| `SQC046` | WITH defines the same CTE name more than once | Yes | — |
+| `SQC047` | CASE WHEN NULL or IN (NULL) never matches | Yes | — |
+| `SQC048` | Expression divides by a literal zero | Yes | — |
+| `SQC049` | UPDATE or DELETE has no limiting predicate and changes every row | No | — |
+| `SQC050` | INSERT does not list its target columns | No | — |
+| `SQC051` | NATURAL JOIN matches on every column the relations share | Yes | — |
+| `SQC052` | BETWEEN lower bound is greater than its upper bound | Yes | — |
+| `SQC053` | Aggregate or window function is used in WHERE, ON or GROUP BY | Yes | — |
 
 `SQC999` is the [parse error](overview.md#parse-errors-sqc999) finding. It is not a
 selectable Rule.
@@ -224,6 +233,48 @@ error[SQC019]: NOT IN list contains NULL and can reject every row
    |              ^^^
   = help: Remove NULL from the list or express the anti-join with a NULL-safe NOT EXISTS.
 ```
+
+## SQC046 to SQC053: queries that cannot do what they say
+
+These Rules report a query that runs differently from how it reads. None of them has a fix,
+because only the author knows the intended query.
+
+```sql
+WITH paid AS (
+  SELECT order_id, amount FROM orders WHERE amount BETWEEN 100 AND 10  -- SQC052
+),
+
+paid AS (                                                              -- SQC046
+  SELECT order_id, amount / 0 AS ratio FROM orders                     -- SQC048
+)
+
+SELECT
+  customer_id,
+  CASE region WHEN NULL THEN 'unknown' END AS region_label             -- SQC047
+FROM paid
+NATURAL JOIN customers                                                 -- SQC051
+WHERE SUM(amount) > 100                                                -- SQC053
+GROUP BY customer_id
+```
+
+- `SQC046` compares CTE names within one `WITH` the way the dialect resolves them, so quoted
+  `"paid"` and `"PAID"` are different names in PostgreSQL but the same name in DuckDB. A nested
+  `WITH` may reuse an outer name.
+- `SQC047` reports `CASE x WHEN NULL` and `x IN (NULL)`, which compare with `=` and so never
+  match. `NOT IN` lists with NULL are `SQC019`.
+- `SQC048` reports `/`, `%`, `//` and `MOD` with a literal zero divisor. Depending on the dialect
+  the query fails or returns NULL.
+- `SQC052` compares number and `DATE 'YYYY-MM-DD'` bounds exactly and skips `BETWEEN SYMMETRIC`.
+  A reversed `NOT BETWEEN` is reported too, because it matches every non-NULL value.
+- `SQC053` reports aggregates in `WHERE`, `ON` and `GROUP BY`, and window functions anywhere in
+  those clauses. Aggregates in `HAVING`, windows in `QUALIFY`, `FILTER (WHERE ...)` and
+  subqueries pass.
+
+Two write-safety Rules are opt-in, because changing every row is sometimes intended:
+
+- `SQC049` reports an `UPDATE` or `DELETE` whose rows nothing limits. A `WHERE` without a column
+  or subquery, such as `WHERE TRUE`, does not count; a join condition or a `LIMIT` does.
+- `SQC050` reports `INSERT` without a column list. `DEFAULT VALUES` and DuckDB's `BY NAME` pass.
 
 ## SQC039: inline subqueries
 

@@ -5,7 +5,7 @@ use crate::sql_quality::constants::{
 };
 use crate::sql_quality::keys::{KeyEnvironment, key_environment};
 use crate::sql_quality::models::QualityRequest;
-use crate::sql_quality::{cte_columns, json_parses, literals, ranking};
+use crate::sql_quality::{cte_columns, json_parses, literals, ranking, safety};
 
 /// Run every enabled SQL quality Rule over one parsed body.
 pub(crate) fn diagnostics(request: &QualityRequest<'_>) -> Result<Vec<LintDiagnostic>, String> {
@@ -19,6 +19,7 @@ pub(crate) fn diagnostics(request: &QualityRequest<'_>) -> Result<Vec<LintDiagno
     if request.enabled.contains(REPEATED_JSON_PARSE.code) {
         found.extend(json_parses::diagnostics(request));
     }
+    found.extend(safety::diagnostics(request));
     if request.enabled.contains(UNUSED_CTE_OUTPUT.code) {
         found.extend(cte_columns::diagnostics(request));
     }

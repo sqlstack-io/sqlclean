@@ -19,7 +19,7 @@ Online: https://sqlclean.io/docs/rules/overview/
 - Continue
 
 A Rule is one check over SQL. It reports a finding at an exact position, with a message, a
-remediation, and sometimes a fix. SQLClean has 45 built-in Rules with `SQC###` codes, and runs
+remediation, and sometimes a fix. SQLClean has 53 built-in Rules with `SQC###` codes, and runs
 [custom Rules](../custom-rules/overview.md) written in Python with `XSQC` codes.
 
 Consider a query that returns an arbitrary hundred rows:

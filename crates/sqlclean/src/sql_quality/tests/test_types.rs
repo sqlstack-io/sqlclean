@@ -36,3 +36,11 @@ pub(crate) struct JsonParseScaleTestCase {
     pub(crate) expected_findings: usize,
     pub(crate) expected_max_seconds: f64,
 }
+
+pub(crate) struct SafetyRuleTestCase {
+    pub(crate) description: &'static str,
+    pub(crate) dialect: &'static str,
+    pub(crate) sql: &'static str,
+    pub(crate) rule: &'static str,
+    pub(crate) expected_anchors: &'static [&'static str],
+}

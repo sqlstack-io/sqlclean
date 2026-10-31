@@ -17,6 +17,8 @@ pub mod models;
 mod ranking;
 #[path = "_helpers/removal_safety.rs"]
 mod removal_safety;
+#[path = "_helpers/safety.rs"]
+mod safety;
 #[path = "_helpers/setting_help.rs"]
 mod setting_help;
 #[path = "_helpers/syntax.rs"]
