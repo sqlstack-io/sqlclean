@@ -15,18 +15,13 @@ use crate::sql_lint::main::parse_sql::parse_sql;
 use crate::sql_lint::models::ParsedSql;
 
 pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> {
-    let ParsedSql {
-        tokens, statements, ..
-    } = parse_sql(sql, dialect)?;
+    let (
+        ParsedSql {
+            tokens, statements, ..
+        },
+        ranges,
+    ) = parsed_statements(sql, dialect)?;
     let characters: Vec<char> = sql.chars().collect();
-    let ranges: Vec<StatementTokens> = statement_token_ranges(&tokens);
-    if ranges.len() != statements.len() {
-        return Err(format!(
-            "found {} statements but {} statement ranges",
-            statements.len(),
-            ranges.len()
-        ));
-    }
     let facts: Vec<StatementFacts> = statements
         .iter()
         .zip(ranges)
@@ -44,6 +39,28 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
         })
         .collect();
     Ok(FileFacts { statements: facts })
+}
+
+pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Vec<usize>, String> {
+    let (_, ranges) = parsed_statements(sql, dialect)?;
+    Ok(ranges.iter().map(|range| range.terminated_end).collect())
+}
+
+/// Parse `sql` and split its tokens into one range per parsed statement.
+fn parsed_statements(
+    sql: &str,
+    dialect: &str,
+) -> Result<(ParsedSql, Vec<StatementTokens>), String> {
+    let parsed: ParsedSql = parse_sql(sql, dialect)?;
+    let ranges: Vec<StatementTokens> = statement_token_ranges(&parsed.tokens);
+    if ranges.len() != parsed.statements.len() {
+        return Err(format!(
+            "found {} statements but {} statement ranges",
+            parsed.statements.len(),
+            ranges.len()
+        ));
+    }
+    Ok((parsed, ranges))
 }
 
 /// One parsed statement, its tokens and the end offset of its terminator.

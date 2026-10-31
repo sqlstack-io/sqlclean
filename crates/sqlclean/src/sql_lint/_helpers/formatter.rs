@@ -187,11 +187,11 @@ impl Layout<'_> {
         authored: &AuthoredSql<'_>,
         oracle: &OracleLayout,
     ) -> Result<(String, BTreeMap<usize, KeywordRecase>, TokenTexts), String> {
-        let (printed, recases, texts) = print_authored_tokens(authored, oracle, self.dialect)?;
+        let print = print_authored_tokens(authored, oracle, self.dialect)?;
         let no_widths: HashMap<String, usize> = HashMap::new();
         let token_widths = self.wrap.map_or(&no_widths, |wrap| wrap.token_widths);
-        let Some(mut sql) = PrintedSql::parse(&printed, self.dialect, token_widths)? else {
-            return Ok((printed, recases, texts));
+        let Some(mut sql) = PrintedSql::new(&print.sql, &print.tokens, token_widths) else {
+            return Ok((print.sql, print.recases, print.texts));
         };
         sql.set_indent(self.indent);
         sql.attach_commas_before_comments();
@@ -203,7 +203,7 @@ impl Layout<'_> {
             wrap_lines(&mut sql, wrap.line_width);
         }
         sql.lead_operators_of_multiline_operands();
-        Ok((sql.render(), recases, texts))
+        Ok((sql.render(), print.recases, print.texts))
     }
 }
 
