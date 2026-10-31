@@ -19,3 +19,9 @@ pub(crate) struct ParseOutcomeTestCase {
     pub(crate) sql: &'static str,
     pub(crate) expected_statements: Option<usize>,
 }
+
+pub(crate) struct StatementEndsTestCase {
+    pub(crate) description: &'static str,
+    pub(crate) sql: &'static str,
+    pub(crate) expected_statements: Option<&'static [&'static str]>,
+}
