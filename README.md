@@ -35,6 +35,18 @@ removing the CTE, and formats the file. It leaves `= NULL` alone because rewriti
 changes which rows match; `sqlclean fix --unsafe-fixes` applies that fix. The custom Rule only
 reports, so its finding stays.
 
+## Quick start
+
+```bash
+sqlclean check     # report findings in every .sql file under the directory
+sqlclean fix       # apply safe fixes, then format
+sqlclean format    # rewrite files in the canonical layout
+```
+
+Add a `sqlclean.toml` to choose a dialect, files or Rules. See the
+[quickstart](https://sqlclean.io/docs/quickstart/) and
+[configuration](https://sqlclean.io/docs/configuration/).
+
 ## Speed
 
 Linting the same 10,282 Snowflake SQL files on a Linux machine with 4 CPUs, each tool with its
@@ -58,18 +70,6 @@ SQLClean in other configurations, on the same files:
 | `sqlclean check --select SQC` (every built-in Rule) | 1.33 s |
 | `sqlclean check` plus three custom Python Rules | 2.27 s |
 | `sqlclean check` rerun with nothing changed (result cache) | 0.23 s |
-
-## Quick start
-
-```bash
-sqlclean check     # report findings in every .sql file under the directory
-sqlclean fix       # apply safe fixes, then format
-sqlclean format    # rewrite files in the canonical layout
-```
-
-Add a `sqlclean.toml` to choose a dialect, files or Rules. See the
-[quickstart](https://sqlclean.io/docs/quickstart/) and
-[configuration](https://sqlclean.io/docs/configuration/).
 
 ## Correct and safe
 
