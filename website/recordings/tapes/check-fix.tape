@@ -1,5 +1,5 @@
 Source tapes/common.tape
-Set Height 820
+Set Height 880
 Output out/check-fix.gif
 Output out/check-fix.mp4
 Hide
@@ -14,8 +14,26 @@ Type "sqlclean check"
 Sleep 300ms
 Enter
 Wait@60s /\$\s*$/
-Sleep 3s
-Type "clear && sqlclean fix"
+Sleep 5s
+Hide
+Type "clear"
+Enter
+Sleep 300ms
+Show
+Type "sqlclean fix"
+Sleep 300ms
+Enter
+Wait@60s /\$\s*$/
+Sleep 1500ms
+Type "cat models/orders.sql"
+Enter
+Sleep 5s
+Hide
+Type "clear"
+Enter
+Sleep 300ms
+Show
+Type "sqlclean fix --unsafe-fixes"
 Sleep 300ms
 Enter
 Wait@60s /\$\s*$/
@@ -24,4 +42,4 @@ Type "cat models/orders.sql"
 Enter
 Sleep 1s
 Screenshot out/check-fix.png
-Sleep 8s
+Sleep 5s

@@ -6,7 +6,7 @@ scripts are the source; the rendered GIF, MP4 and PNG files go to `out/`, which 
 
 | Demo | Shows |
 |------|-------|
-| `check-fix` | `sqlclean check` reports built-in and custom findings, and `sqlclean fix` fixes and formats. |
+| `check-fix` | `sqlclean check` reports built-in and custom findings, `sqlclean fix` applies the safe fix and formats, and `sqlclean fix --unsafe-fixes` applies the unsafe one. |
 
 The README uses `check-fix`, copied into `.github/demos/`.
 
