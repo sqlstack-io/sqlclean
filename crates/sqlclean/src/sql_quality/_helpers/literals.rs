@@ -6,7 +6,7 @@ use polyglot_sql::tokens::TokenType;
 
 use crate::sql_lint::models::LintDiagnostic;
 use crate::sql_quality::constants::{
-    LONG_LITERAL, LONG_LITERAL_GUIDANCE, MAX_LITERAL_LENGTH_KEY, RULES_THRESHOLDS_SECTION,
+    LONG_LITERAL, MAX_LITERAL_LENGTH_KEY, RULES_THRESHOLDS_SECTION,
 };
 use crate::sql_quality::models::QualityRequest;
 use crate::sql_quality::setting_help::{Setting, setting_help};
@@ -24,11 +24,7 @@ pub(crate) fn diagnostics(request: &QualityRequest<'_>) -> Vec<LintDiagnostic> {
             (length > request.max_literal_length).then(|| LintDiagnostic {
                 code: LONG_LITERAL.code,
                 message: Cow::Borrowed(LONG_LITERAL.message),
-                remediation: Cow::Owned(remediation(
-                    length,
-                    request.max_literal_length,
-                    request.config_file,
-                )),
+                remediation: Cow::Owned(remediation(length, request)),
                 start: token.span.start,
                 end: token.span.end,
                 fix: None,
@@ -38,14 +34,16 @@ pub(crate) fn diagnostics(request: &QualityRequest<'_>) -> Vec<LintDiagnostic> {
         .collect()
 }
 
-fn remediation(length: usize, limit: usize, config_file: &str) -> String {
+fn remediation(length: usize, request: &QualityRequest<'_>) -> String {
     format!(
-        "{LONG_LITERAL_GUIDANCE} {}",
+        "{} {}",
+        request.long_literal_guidance,
         setting_help(&Setting {
             purpose: &format!(
-                "To allow literals of {length} characters (the current value is {limit})"
+                "To allow literals of {length} characters (the current value is {})",
+                request.max_literal_length
             ),
-            config_file,
+            config_file: request.config_file,
             section: RULES_THRESHOLDS_SECTION,
             key: MAX_LITERAL_LENGTH_KEY,
             value: &length.to_string(),

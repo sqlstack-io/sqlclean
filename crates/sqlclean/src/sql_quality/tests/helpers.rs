@@ -4,9 +4,19 @@ use crate::sql_lint::main::engine::lint_json;
 use crate::sql_quality::tests::test_types::QualityRuleTestCase;
 
 pub(crate) fn lint(test_case: &QualityRuleTestCase) -> Result<Vec<Value>, String> {
+    lint_with_host_fields(test_case, "{}")
+}
+
+/// Lint `test_case` with `host_fields`, a JSON object, merged into the request.
+pub(crate) fn lint_with_host_fields(
+    test_case: &QualityRuleTestCase,
+    host_fields: &str,
+) -> Result<Vec<Value>, String> {
     let relation_keys: Value =
         serde_json::from_str(test_case.relation_keys).map_err(|error| error.to_string())?;
-    let request: Value = json!({
+    let host_fields: Value =
+        serde_json::from_str(host_fields).map_err(|error| error.to_string())?;
+    let mut request: Value = json!({
         "version": 1,
         "sql": test_case.sql,
         "dialect": "duckdb",
@@ -15,6 +25,15 @@ pub(crate) fn lint(test_case: &QualityRuleTestCase) -> Result<Vec<Value>, String
         "max_ranking_order_by": 2,
         "relation_keys": relation_keys,
     });
+    request
+        .as_object_mut()
+        .ok_or("the request is not an object")?
+        .extend(
+            host_fields
+                .as_object()
+                .cloned()
+                .ok_or("host fields are not an object")?,
+        );
     let response: Value = serde_json::from_str(&lint_json(&request.to_string())?)
         .map_err(|error| error.to_string())?;
     Ok(response["diagnostics"]

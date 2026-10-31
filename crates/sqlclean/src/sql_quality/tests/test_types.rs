@@ -19,7 +19,10 @@ pub(crate) struct QualityRemediationTestCase {
     pub(crate) description: &'static str,
     pub(crate) sql: &'static str,
     pub(crate) rule: &'static str,
+    /// Extra request fields as a JSON object, as a host sends them.
+    pub(crate) host_fields: &'static str,
     pub(crate) expected_fragments: &'static [&'static str],
+    pub(crate) absent_fragments: &'static [&'static str],
 }
 
 pub(crate) struct JsonParseTestCase {

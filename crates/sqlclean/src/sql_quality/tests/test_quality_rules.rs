@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use crate::sql_quality::tests::helpers::{anchors, fixed, lint};
+use crate::sql_quality::tests::helpers::{anchors, fixed, lint, lint_with_host_fields};
 use crate::sql_quality::tests::test_types::{QualityRemediationTestCase, QualityRuleTestCase};
 
 #[test]
@@ -345,44 +345,64 @@ fn given_threshold_findings_when_linting_then_remediation_shows_the_exact_settin
             description: "long literal points at shortening it and the length setting",
             sql: "SELECT 'pending orders awaiting shipment' AS label",
             rule: "SQLCLEAN044",
+            host_fields: "{}",
             expected_fragments: &[
                 "Shorten the literal",
                 "set this in sqlclean.toml:",
                 "the current value is 24",
                 "[rules.thresholds]\n            max_literal_length = 32",
             ],
+            absent_fragments: &[],
+        },
+        QualityRemediationTestCase {
+            description: "a host's long literal guidance replaces SQLClean's and names its file",
+            sql: "SELECT 'pending orders awaiting shipment' AS label",
+            rule: "SQLCLEAN044",
+            host_fields: r#"{"long_literal_guidance": "Declare it once as a constant.", "config_file": "host.toml"}"#,
+            expected_fragments: &[
+                "Declare it once as a constant. To allow literals of 32 characters",
+                "set this in host.toml:",
+            ],
+            absent_fragments: &["Shorten the literal", "sqlclean.toml"],
         },
         QualityRemediationTestCase {
             description: "long ranking sort points at a row key and the sort setting",
             sql: "SELECT ROW_NUMBER() OVER (PARTITION BY o.customer_id ORDER BY o.a, o.b, o.order_id) AS rn FROM orders AS o",
             rule: "SQLCLEAN043",
+            host_fields: "{}",
             expected_fragments: &[
                 "unique row key as the final tie-breaker",
                 "HASH(source_partition, source_offset, line_index) AS row_key",
                 "the current value is 2",
                 "[rules.thresholds]\n            max_ranking_order_by = 3",
             ],
+            absent_fragments: &[],
         },
         QualityRemediationTestCase {
             description: "unproven ranking points at a unique tie-breaker and a built row key",
             sql: "SELECT ROW_NUMBER() OVER (PARTITION BY o.customer_id ORDER BY o.a) AS rn FROM orders AS o",
             rule: "SQLCLEAN018",
+            host_fields: "{}",
             expected_fragments: &[
                 "cover a unique key of the ranked rows",
                 "a unique, non-null tie-breaker column",
                 "HASH(source_partition, source_offset, line_index) AS row_key",
             ],
+            absent_fragments: &[],
         },
     ];
     for test_case in &test_cases {
-        let diagnostics: Vec<Value> = lint(&QualityRuleTestCase {
-            description: test_case.description,
-            sql: test_case.sql,
-            rule: test_case.rule,
-            relation_keys: "{}",
-            expected_anchors: &[],
-            expected_fixed_sql: None,
-        })?;
+        let diagnostics: Vec<Value> = lint_with_host_fields(
+            &QualityRuleTestCase {
+                description: test_case.description,
+                sql: test_case.sql,
+                rule: test_case.rule,
+                relation_keys: "{}",
+                expected_anchors: &[],
+                expected_fixed_sql: None,
+            },
+            test_case.host_fields,
+        )?;
         let remediation: &str = diagnostics
             .first()
             .and_then(|diagnostic| diagnostic["remediation"].as_str())
@@ -395,6 +415,18 @@ fn given_threshold_findings_when_linting_then_remediation_shows_the_exact_settin
             .collect();
         assert_eq!(
             present, test_case.expected_fragments,
+            "{}: {remediation}",
+            test_case.description
+        );
+        let leaked: Vec<&str> = test_case
+            .absent_fragments
+            .iter()
+            .copied()
+            .filter(|fragment| remediation.contains(fragment))
+            .collect();
+        assert_eq!(
+            leaked,
+            Vec::<&str>::new(),
             "{}: {remediation}",
             test_case.description
         );
