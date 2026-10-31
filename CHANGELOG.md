@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/sqlstack-io/sqlclean/compare/v0.2.0...v0.3.0) (2026-10-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* SQC and XSQC codes are now SQLCLEAN and XSQLCLEAN, and the lint request replaces the two harness flags with fixture_harness.
+
+### Features
+
+* name built-in Rules SQLCLEAN and own the host contract ([#17](https://github.com/sqlstack-io/sqlclean/issues/17)) ([c8c6b30](https://github.com/sqlstack-io/sqlclean/commit/c8c6b3087cae7505b681882cda79ed7e7fdbab2d))
+
+
+### Bug Fixes
+
+* **rules:** keep SQLCLEAN013, 030 and 003 results meaning-preserving ([#19](https://github.com/sqlstack-io/sqlclean/issues/19)) ([3b9f539](https://github.com/sqlstack-io/sqlclean/commit/3b9f539197edc351753a8467059109a1001517f1))
+
 ## [0.2.0](https://github.com/sqlstack-io/sqlclean/compare/v0.1.1...v0.2.0) (2026-10-31)
 
 
