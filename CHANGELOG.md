@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.2](https://github.com/sqlstack-io/sqlclean/compare/v0.4.1...v0.4.2) (2026-11-01)
+
+
+### Bug Fixes
+
+* **rules:** end the SQLCLEAN053 ON scan at a PIVOT USING list ([aed227a](https://github.com/sqlstack-io/sqlclean/commit/aed227a01101d434a2e43098468400989b60537f))
+
+
+### Performance Improvements
+
+* **rules:** find SET assignments in one forward pass ([aed227a](https://github.com/sqlstack-io/sqlclean/commit/aed227a01101d434a2e43098468400989b60537f))
+
 ## [0.4.1](https://github.com/sqlstack-io/sqlclean/compare/v0.4.0...v0.4.1) (2026-11-01)
 
 
