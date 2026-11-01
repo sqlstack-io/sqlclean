@@ -36,6 +36,7 @@ export default defineConfig({
 				SiteTitle: './src/components/SiteTitle.astro',
 				Pagination: './src/components/Pagination.astro',
 				ThemeSelect: './src/components/ThemeSelect.astro',
+				Footer: './src/components/Footer.astro',
 			},
 			customCss: ['./src/styles/fonts.css', './src/styles/sqlclean.css'],
 			expressiveCode: {

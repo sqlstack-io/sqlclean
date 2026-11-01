@@ -96,6 +96,7 @@
 html {
 	-webkit-text-size-adjust: 100%;
 	scroll-behavior: smooth;
+	scroll-padding-top: 88px;
 }
 
 body {
@@ -140,7 +141,24 @@ pre {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	height: 60px;
+	height: 80px;
+}
+
+.brand-lockup {
+	display: flex;
+	flex-direction: column;
+	flex-shrink: 0;
+}
+
+.brand-byline {
+	display: flex;
+	align-items: center;
+	min-height: 24px;
+	margin-inline-start: 41%;
+	color: var(--muted-foreground);
+	font-size: 11px;
+	line-height: 14px;
+	white-space: nowrap;
 }
 
 .brand {
@@ -655,6 +673,39 @@ footer .wrap {
 
 footer a {
 	color: var(--muted-foreground);
+}
+
+.sqlstack-family {
+	align-items: center;
+	margin-top: 20px;
+	padding-top: 20px;
+	border-top: 1px solid var(--inner-line);
+}
+
+.sqlstack-parent {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.sqlstack-parent img {
+	width: 28px;
+	height: auto;
+}
+
+.sqlstack-for-dark,
+:root[data-theme='dark'] .sqlstack-for-light {
+	display: none;
+}
+
+:root[data-theme='dark'] .sqlstack-for-dark {
+	display: block;
+}
+
+.sqlstack-tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 20px;
 }
 
 @media (max-width: 880px) {
