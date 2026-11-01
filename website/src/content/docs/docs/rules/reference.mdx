@@ -199,7 +199,8 @@ FROM customer_orders
 ```
 
 `SQLCLEAN004` reports the same problem for `LIMIT` and `OFFSET`; see the example in
-[Rules](/docs/rules/overview/).
+[Rules](/docs/rules/overview/). It skips a query that selects only constants, such as
+`SELECT 1 AS present FROM orders LIMIT 1`, because every row it could return is identical.
 
 ## SQLCLEAN019: NULL in NOT IN
 
