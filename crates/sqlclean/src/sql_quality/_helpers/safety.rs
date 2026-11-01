@@ -702,6 +702,7 @@ fn ends_clause(significant: &Significant<'_>, index: usize, comma_ends: bool) ->
                 | TokenType::Cross
                 | TokenType::Natural
                 | TokenType::Set
+                | TokenType::Using
         ),
         None => true,
     }
