@@ -17,7 +17,10 @@ use crate::sql_lint::_helpers::join_predicates::{
     condition_tokens, cross_join_diagnostics, trivial_on_condition,
 };
 use crate::sql_lint::_helpers::parsing::parse;
-use crate::sql_lint::_helpers::terminal_shape::collect_terminal_shape_facts;
+use crate::sql_lint::_helpers::terminal_shape::{
+    collect_terminal_shape_facts, first_row_selection_clause, limits_to_no_rows,
+    projects_only_constants,
+};
 
 const NULL_COMPARISON: LintRuleMetadata = LintRuleMetadata {
     code: "SQLCLEAN001",
@@ -539,6 +542,7 @@ fn collect_token_query_facts(
         if order.is_none()
             && let Some(index) = limit
             && !limits_to_no_rows(tokens, index)
+            && !projects_only_constants(tokens, &direct, index)
         {
             facts.unordered_limits.push(tokens[index].span);
         }
@@ -702,33 +706,6 @@ fn first_type(tokens: &[Token], indices: &[usize], token_type: TokenType) -> Opt
         .iter()
         .copied()
         .find(|&index| tokens[index].token_type == token_type)
-}
-
-fn first_row_selection_clause(tokens: &[Token], direct: &[usize]) -> Option<usize> {
-    let from = direct
-        .iter()
-        .copied()
-        .find(|&index| is_query_from(tokens, index));
-    direct.iter().copied().find(|&index| {
-        matches!(
-            tokens[index].token_type,
-            TokenType::Limit | TokenType::Offset
-        ) && from.is_none_or(|from_index| index > from_index)
-            && significant_before(tokens, index).is_none_or(|previous| {
-                !matches!(
-                    tokens[previous].token_type,
-                    TokenType::Colon | TokenType::DColon | TokenType::Dot | TokenType::DotColon
-                )
-            })
-    })
-}
-
-/// Whether a row-selection clause is `LIMIT 0`, which selects no rows in any order.
-fn limits_to_no_rows(tokens: &[Token], index: usize) -> bool {
-    tokens[index].token_type == TokenType::Limit
-        && tokens.get(index + 1).is_some_and(|count| {
-            count.token_type == TokenType::Number && count.text.parse::<u64>() == Ok(0)
-        })
 }
 
 pub(super) fn is_query_from(tokens: &[Token], index: usize) -> bool {

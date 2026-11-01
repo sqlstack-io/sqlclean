@@ -1,8 +1,9 @@
 use serde_json::{Value, json};
 
 use crate::sql_lint::main::engine::lint_json;
+use crate::sql_lint::tests::helpers;
 use crate::sql_lint::tests::test_types::{
-    DynamicOutputStarLintTestCase, SqlMacroOutputLintTestCase,
+    DynamicOutputStarLintTestCase, LintTestCase, SqlMacroOutputLintTestCase,
 };
 
 #[test]
@@ -122,6 +123,48 @@ unrelated AS (SELECT * FROM pivot_input) SELECT * FROM final",
         let start = diagnostics[0]["start"].as_u64().unwrap_or_default() as usize;
         assert!(
             test_case.sql[..start].ends_with(test_case.expected_prefix),
+            "{}",
+            test_case.description
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn given_constant_projection_when_linting_row_selection_then_only_column_dependent_rows_fail()
+-> Result<(), String> {
+    let test_cases = [
+        LintTestCase {
+            description: "constant-only projection selects identical rows in any order",
+            sql: "SELECT CAST(100 AS DOUBLE) AS measured_value, CAST(NULL AS INTEGER), 0 samples FROM items LIMIT 1",
+            expected_codes: &[],
+            expected_anchors: &[],
+        },
+        LintTestCase {
+            description: "a column reference inside a cast still makes row selection nondeterministic",
+            sql: "SELECT CAST(id AS DOUBLE) AS measured_value FROM items LIMIT 1",
+            expected_codes: &["SQLCLEAN004"],
+            expected_anchors: &[("SQLCLEAN004", "LIMIT")],
+        },
+        LintTestCase {
+            description: "a function call in a constant-looking projection still needs ordering",
+            sql: "SELECT now() AS observed_at FROM items OFFSET 1",
+            expected_codes: &["SQLCLEAN004"],
+            expected_anchors: &[("SQLCLEAN004", "OFFSET")],
+        },
+    ];
+    for test_case in &test_cases {
+        let diagnostics = helpers::diagnostics(test_case.sql)?;
+        let found: Vec<(&str, &str)> = diagnostics
+            .iter()
+            .filter_map(|item| {
+                let start = item["start"].as_u64()? as usize;
+                let end = item["end"].as_u64()? as usize;
+                Some((item["code"].as_str()?, &test_case.sql[start..end]))
+            })
+            .collect();
+        assert_eq!(
+            found, test_case.expected_anchors,
             "{}",
             test_case.description
         );

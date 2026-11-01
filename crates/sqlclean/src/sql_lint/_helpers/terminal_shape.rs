@@ -1,5 +1,7 @@
 use polyglot_sql::tokens::{Span, Token, TokenType};
 
+use crate::sql_lint::_helpers::engine::{is_query_from, significant_before};
+
 const CEREMONIAL_SELECT_LITERAL: &str = "1";
 
 pub(super) fn final_cte_name_spans(tokens: &[Token], depths: &[usize]) -> Vec<Span> {
@@ -300,4 +302,72 @@ fn is_terminal_from(tokens: &[Token], significant: &[usize], index: usize) -> bo
         .position(|&candidate| candidate == index)
         .and_then(|position| position.checked_sub(1))
         .is_none_or(|position| tokens[significant[position]].token_type != TokenType::Distinct)
+}
+
+pub(super) fn first_row_selection_clause(tokens: &[Token], direct: &[usize]) -> Option<usize> {
+    let from = direct
+        .iter()
+        .copied()
+        .find(|&index| is_query_from(tokens, index));
+    direct.iter().copied().find(|&index| {
+        matches!(
+            tokens[index].token_type,
+            TokenType::Limit | TokenType::Offset
+        ) && from.is_none_or(|from_index| index > from_index)
+            && significant_before(tokens, index).is_none_or(|previous| {
+                !matches!(
+                    tokens[previous].token_type,
+                    TokenType::Colon | TokenType::DColon | TokenType::Dot | TokenType::DotColon
+                )
+            })
+    })
+}
+
+/// Whether a row-selection clause is `LIMIT 0`, which selects no rows in any order.
+pub(super) fn limits_to_no_rows(tokens: &[Token], index: usize) -> bool {
+    tokens[index].token_type == TokenType::Limit
+        && tokens.get(index + 1).is_some_and(|count| {
+            count.token_type == TokenType::Number && count.text.parse::<u64>() == Ok(0)
+        })
+}
+
+/// Whether the projection before `limit` holds only constants, so every row it could select is identical.
+pub(super) fn projects_only_constants(tokens: &[Token], direct: &[usize], limit: usize) -> bool {
+    let Some(&first) = direct.first() else {
+        return false;
+    };
+    let end: usize = direct
+        .iter()
+        .copied()
+        .find(|&index| is_query_from(tokens, index))
+        .unwrap_or(limit);
+    (first..end).all(|index| match tokens[index].token_type {
+        TokenType::Var | TokenType::Identifier | TokenType::QuotedIdentifier => {
+            names_output_or_type(tokens, index)
+        }
+        TokenType::Star | TokenType::Select => false,
+        _ => true,
+    })
+}
+
+/// Whether the name at `index` is an alias or a type after `AS`, or a bare alias after a value.
+fn names_output_or_type(tokens: &[Token], index: usize) -> bool {
+    let Some(previous) = index.checked_sub(1).map(|previous| &tokens[previous]) else {
+        return false;
+    };
+    let followed_by_list_end: bool = tokens
+        .get(index + 1)
+        .is_none_or(|next| matches!(next.token_type, TokenType::Comma | TokenType::From));
+    previous.token_type == TokenType::As
+        || (followed_by_list_end
+            && matches!(
+                previous.token_type,
+                TokenType::Number
+                    | TokenType::String
+                    | TokenType::Null
+                    | TokenType::True
+                    | TokenType::False
+                    | TokenType::Parameter
+                    | TokenType::RParen
+            ))
 }
