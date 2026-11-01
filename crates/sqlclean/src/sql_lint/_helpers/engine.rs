@@ -1876,11 +1876,12 @@ fn null_comparison_spans(tokens: &[Token]) -> Vec<Span> {
         TokenType::Gte,
     ];
     let depths = token_depths(tokens);
+    let assignments: Vec<bool> = assignment_operators(tokens, &depths);
     tokens
         .iter()
         .enumerate()
         .filter(|(_, token)| comparison_types.contains(&token.token_type))
-        .filter(|(index, _)| !is_assignment_operator(tokens, &depths, *index))
+        .filter(|(index, _)| !assignments[*index])
         .filter(|(index, _)| {
             adjacent_null(tokens, *index, false) || adjacent_null(tokens, *index, true)
         })
@@ -1888,22 +1889,27 @@ fn null_comparison_spans(tokens: &[Token]) -> Vec<Span> {
         .collect()
 }
 
-fn is_assignment_operator(tokens: &[Token], depths: &[usize], operator_index: usize) -> bool {
-    let depth = depths[operator_index];
-    for index in (0..operator_index).rev() {
-        if depths[index] != depth {
-            continue;
+/// For each token, whether its nearest same-depth clause opener is `SET`, found in one forward pass.
+fn assignment_operators(tokens: &[Token], depths: &[usize]) -> Vec<bool> {
+    let mut in_set: Vec<bool> = Vec::new();
+    let mut assignments: Vec<bool> = Vec::with_capacity(tokens.len());
+    for (token, &depth) in tokens.iter().zip(depths) {
+        if in_set.len() <= depth {
+            in_set.resize(depth + 1, false);
         }
-        match tokens[index].token_type {
-            TokenType::Where | TokenType::Having | TokenType::Qualify | TokenType::On => {
-                return false;
-            }
-            TokenType::Set => return true,
-            TokenType::Select | TokenType::Semicolon => return false,
+        assignments.push(in_set[depth]);
+        match token.token_type {
+            TokenType::Set => in_set[depth] = true,
+            TokenType::Where
+            | TokenType::Having
+            | TokenType::Qualify
+            | TokenType::On
+            | TokenType::Select
+            | TokenType::Semicolon => in_set[depth] = false,
             _ => {}
         }
     }
-    false
+    assignments
 }
 
 fn adjacent_null(tokens: &[Token], operator_index: usize, forward: bool) -> bool {
