@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "sqlclean-cli"
-version = "0.4.1" # x-release-please-version
+version = "0.4.2" # x-release-please-version
 description = "Native command-line executable for SQLClean"
 readme = "README.md"
 requires-python = ">=3.12"
