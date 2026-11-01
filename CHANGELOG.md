@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/sqlstack-io/sqlclean/compare/v0.4.0...v0.4.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **rules:** let SQLCLEAN004 skip constant-only projections ([#22](https://github.com/sqlstack-io/sqlclean/issues/22)) ([57fc554](https://github.com/sqlstack-io/sqlclean/commit/57fc554518ab9c943f116dfcf0992d7c2a5316b4))
+
 ## [0.4.0](https://github.com/sqlstack-io/sqlclean/compare/v0.3.0...v0.4.0) (2026-10-31)
 
 
