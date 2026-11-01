@@ -172,6 +172,20 @@ fn given_safety_rule_inputs_when_linting_then_exactly_the_mistakes_are_reported(
             expected_anchors: &[],
         },
         SafetyRuleTestCase {
+            description: "DuckDB PIVOT USING aggregates end the pivot ON clause",
+            dialect: "duckdb",
+            sql: "PIVOT orders ON status IN ('placed') USING MAX(amount), SUM(amount) GROUP BY customer_id",
+            rule: "SQLCLEAN053",
+            expected_anchors: &[],
+        },
+        SafetyRuleTestCase {
+            description: "a join ON aggregate is still reported beside a pivot",
+            dialect: "duckdb",
+            sql: "SELECT o.id FROM orders AS o JOIN (PIVOT items ON kind USING MAX(qty)) AS p ON p.id = o.id AND MIN(o.amount) > 0",
+            rule: "SQLCLEAN053",
+            expected_anchors: &["MIN(o.amount)"],
+        },
+        SafetyRuleTestCase {
             description: "multi-argument MAX is the scalar function in SQLite",
             dialect: "sqlite",
             sql: "SELECT order_id FROM orders WHERE max(amount, refunded) > 100",
