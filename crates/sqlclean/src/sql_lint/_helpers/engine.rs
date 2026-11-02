@@ -1023,56 +1023,51 @@ fn projection_projects_star(tokens: &[Token], depths: &[usize], range: &Expressi
 fn collect_unused_ctes(expression: &Expression, options: &FactBuildOptions<'_>) -> Vec<String> {
     let mut unused: Vec<String> = Vec::new();
     for node in expression.dfs() {
-        match node {
-            Expression::Select(select) if select.with.is_some() => {
-                let mut root = select.clone();
-                if let Some(with) = root.with.take() {
-                    unused.extend(collect_unused_for_with(
-                        &with,
-                        &Expression::Select(root),
-                        options,
-                    ));
-                }
-            }
-            Expression::Union(operation) if operation.with.is_some() => {
-                let mut root = operation.clone();
-                if let Some(with) = root.with.take() {
-                    unused.extend(collect_unused_for_with(
-                        &with,
-                        &Expression::Union(root),
-                        options,
-                    ));
-                }
-            }
-            Expression::Intersect(operation) if operation.with.is_some() => {
-                let mut root = operation.clone();
-                if let Some(with) = root.with.take() {
-                    unused.extend(collect_unused_for_with(
-                        &with,
-                        &Expression::Intersect(root),
-                        options,
-                    ));
-                }
-            }
-            Expression::Except(operation) if operation.with.is_some() => {
-                let mut root = operation.clone();
-                if let Some(with) = root.with.take() {
-                    unused.extend(collect_unused_for_with(
-                        &with,
-                        &Expression::Except(root),
-                        options,
-                    ));
-                }
-            }
-            _ => {}
+        let with: Option<&With> = match node {
+            Expression::Select(select) => select.with.as_ref(),
+            Expression::Union(operation) => operation.with.as_ref(),
+            Expression::Intersect(operation) => operation.with.as_ref(),
+            Expression::Except(operation) => operation.with.as_ref(),
+            _ => None,
         };
+        if let Some(with) = with {
+            unused.extend(collect_unused_for_with(
+                with,
+                &outside_with_table_names(node, with),
+                options,
+            ));
+        }
     }
     unused
 }
 
+/// Table names `root` references outside its own `with`, counted so a name the WITH also uses still counts.
+fn outside_with_table_names(root: &Expression, with: &With) -> HashSet<String> {
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    for name in table_name_occurrences(root) {
+        *counts.entry(name).or_default() += 1;
+    }
+    let inside = with
+        .ctes
+        .iter()
+        .map(|cte| &cte.this)
+        .chain(with.search.as_deref());
+    for expression in inside {
+        for name in table_name_occurrences(expression) {
+            if let Some(count) = counts.get_mut(&name) {
+                *count -= 1;
+            }
+        }
+    }
+    counts
+        .into_iter()
+        .filter_map(|(name, count)| (count > 0).then_some(name))
+        .collect()
+}
+
 fn collect_unused_for_with(
     with: &With,
-    root: &Expression,
+    root_tables: &HashSet<String>,
     options: &FactBuildOptions<'_>,
 ) -> Vec<String> {
     let names: HashSet<String> = with
@@ -1093,7 +1088,7 @@ fn collect_unused_for_with(
             )
         })
         .collect();
-    let mut reachable: HashSet<String> = table_names(root).intersection(&names).cloned().collect();
+    let mut reachable: HashSet<String> = root_tables.intersection(&names).cloned().collect();
     reachable.extend(
         options
             .externally_referenced_ctes
@@ -1126,13 +1121,14 @@ fn collect_unused_for_with(
 }
 
 fn table_names(expression: &Expression) -> HashSet<String> {
-    expression
-        .dfs()
-        .filter_map(|node| match node {
-            Expression::Table(table) => Some(table.name.name.to_ascii_lowercase()),
-            _ => None,
-        })
-        .collect()
+    table_name_occurrences(expression).collect()
+}
+
+fn table_name_occurrences(expression: &Expression) -> impl Iterator<Item = String> + '_ {
+    expression.dfs().filter_map(|node| match node {
+        Expression::Table(table) => Some(table.name.name.to_ascii_lowercase()),
+        _ => None,
+    })
 }
 
 fn null_comparison_fix(tokens: &[Token], span: Span) -> Option<LintEdit> {

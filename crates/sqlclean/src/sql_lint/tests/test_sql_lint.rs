@@ -133,8 +133,8 @@ fn given_sql_cases_when_linting_then_diagnostics_match() -> Result<(), String> {
             expected_anchors: &[("SQLCLEAN005", "unused")],
         },
         test_types::LintTestCase {
-            description: "unreachable CTE chain",
-            sql: "WITH first AS (SELECT 1), second AS (SELECT * FROM first) SELECT 1",
+            description: "unreachable CTE chain beside a CTE both it and the main query read",
+            sql: "WITH used AS (SELECT 1 AS id), first AS (SELECT * FROM used), second AS (SELECT * FROM first) SELECT id FROM used",
             expected_codes: &["SQLCLEAN005", "SQLCLEAN005"],
             expected_anchors: &[],
         },
