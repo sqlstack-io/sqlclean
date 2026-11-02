@@ -34,6 +34,12 @@ run that leaves the release pull request unchanged does not repair it. To recove
 release pull request, then merge the next up-to-date pull request; Release Please opens a fresh
 release pull request from the verified tree.
 
+A squash merge of a branch that is behind `main` breaks the release the same way, even when it
+applies cleanly: the merged tree is not the one Verify checked. Update the branch and let Verify
+finish on the new head before merging. When the recovery pull request touches only light paths,
+such as this file, also run Verify by `workflow_dispatch` on its branch so the release base gets
+every suite, not only the light checks.
+
 `main` was rewritten after 0.1.0 to drop tool attribution trailers, with every tree unchanged, so
 the `v0.1.0` tag points at the pre-rewrite commit and is not an ancestor of `main`.
 `last-release-sha` in `release-please-config.json` names the rewritten 0.1.0 release commit, so
