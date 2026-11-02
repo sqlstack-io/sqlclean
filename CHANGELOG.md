@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/sqlstack-io/sqlclean/compare/v0.4.2...v0.4.3) (2026-11-02)
+
+
+### Performance Improvements
+
+* **rules:** find unused CTEs without cloning each WITH query ([#30](https://github.com/sqlstack-io/sqlclean/issues/30)) ([c8ce21f](https://github.com/sqlstack-io/sqlclean/commit/c8ce21f023f169d9e778647cf6e2f750ba5e7825))
+
 ## [0.4.2](https://github.com/sqlstack-io/sqlclean/compare/v0.4.1...v0.4.2) (2026-11-01)
 
 
