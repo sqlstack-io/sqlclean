@@ -1,4 +1,4 @@
-"""The custom Rule example in README.md, run as written through the Rule harness."""
+"""The introductory custom Rule examples, run as written through the Rule harness."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import pytest
 from sqlclean.rules.types import RuleCheck
 from sqlclean.testing import RuleCase, RuleResult, evaluate_rule
 from tests.integration.src.sqlclean.rule_testing._test_types import ReadmeRuleTestCase
+from tests.integration.src.sqlclean.rule_testing.helpers import document as document
 from tests.integration.src.sqlclean.rule_testing.helpers import readme_rule
 
 
@@ -16,59 +17,40 @@ from tests.integration.src.sqlclean.rule_testing.helpers import readme_rule
     "test_case",
     [
         ReadmeRuleTestCase(
-            description="a bare email column compared with a mixed-case literal",
-            source="SELECT id FROM customers c WHERE c.email = 'Alice@example.com'",
-            expected_texts=("c.email",),
+            description="the documented SQL reports the function name",
+            source="SELECT IFNULL(discount, 0) FROM orders;",
+            expected_texts=("IFNULL",),
         ),
         ReadmeRuleTestCase(
-            description="LOWER on one side only still compares with a mixed-case literal",
-            source="SELECT id FROM customers WHERE LOWER(email) = 'Alice@Example.com'",
-            expected_texts=("email",),
+            description="mixed-case calls nested in a CTE and subquery are reported",
+            source="WITH totals AS (SELECT ifnull(discount, 0) AS discount FROM orders) "
+            "SELECT (SELECT IfNull(MAX(discount), 0) FROM totals)",
+            expected_texts=("ifnull", "IfNull"),
         ),
         ReadmeRuleTestCase(
-            description="a designated column on the right of <> in upper case",
-            source="SELECT id FROM customers WHERE 'Carol@example.com' <> BILLING_EMAIL",
-            expected_texts=("BILLING_EMAIL",),
+            description="a later statement after a multibyte literal uses file character offsets",
+            source="SELECT 'é';\nSELECT IFNULL(discount, 0) FROM orders;",
+            expected_texts=("IFNULL",),
         ),
         ReadmeRuleTestCase(
-            description="UPPER does not normalize the other side to lower case",
-            source="SELECT id FROM customers WHERE LOWER(email) = UPPER('x')",
-            expected_texts=("email",),
-        ),
-        ReadmeRuleTestCase(
-            description="a bare column against a lower-case literal is still not normalized",
-            source="SELECT id FROM customers WHERE email = 'carol@example.com'",
-            expected_texts=("email",),
-        ),
-        ReadmeRuleTestCase(
-            description="a comparison inside a CTE after a multibyte literal",
-            source="WITH u AS (SELECT 'é' AS m, email FROM users WHERE email = 'X@y.com') "
-            "SELECT * FROM u",
-            expected_texts=("email",),
-        ),
-        ReadmeRuleTestCase(
-            description="LOWER on both sides passes",
-            source="SELECT * FROM u JOIN a ON LOWER(u.email) = LOWER(a.email)",
+            description="the recommended COALESCE replacement passes",
+            source="SELECT COALESCE(discount, 0) FROM orders;",
             expected_texts=(),
         ),
         ReadmeRuleTestCase(
-            description="LOWER against a lower-case literal passes",
-            source="SELECT id FROM customers WHERE LOWER(email) = 'bob@example.com'",
-            expected_texts=(),
-        ),
-        ReadmeRuleTestCase(
-            description="comments, strings, other columns, LIKE and projections never match",
-            source="-- email = 'A@b.c'\nSELECT email, 'email = x' AS note FROM customers "
-            "WHERE email_verified = TRUE AND email LIKE '%dave%'",
+            description="comments, strings, identifiers and longer function names never match",
+            source="-- IFNULL(discount, 0)\n"
+            "SELECT 'IFNULL(discount, 0)' AS note, \"IFNULL\", "
+            "my_ifnull(discount, 0) FROM orders /* IFNULL(discount, 0) */",
             expected_texts=(),
         ),
     ],
     ids=lambda case: case.description,
 )
-def test_given_readme_email_rule_when_evaluating_then_unnormalized_comparisons_are_reported(
-    tmp_path: Path, test_case: ReadmeRuleTestCase
+def test_given_introductory_rule_when_evaluating_then_only_ifnull_calls_are_reported(
+    tmp_path: Path, document: Path, test_case: ReadmeRuleTestCase
 ) -> None:
-    rule: RuleCheck = readme_rule(tmp_path)
+    rule: RuleCheck = readme_rule(tmp_path, document)
 
     result: RuleResult = evaluate_rule(
         rule=rule,
@@ -84,4 +66,5 @@ def test_given_readme_email_rule_when_evaluating_then_unnormalized_comparisons_a
     )
 
     assert texts == test_case.expected_texts
+    assert all(finding.edits == () for finding in result.findings)
     assert result.fixed_source == test_case.source

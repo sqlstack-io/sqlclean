@@ -30,7 +30,7 @@ class HarnessFailureTestCase:
 
 @dataclass(frozen=True)
 class ReadmeRuleTestCase:
-    """SQL for the README custom Rule and the text of every column it must report."""
+    """SQL for the introductory custom Rule and the text of every function it must report."""
 
     description: str
     source: str

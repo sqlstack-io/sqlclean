@@ -10,22 +10,26 @@ A custom Rule is a Python function decorated with `@rule`. It receives a stateme
 whole repository, and returns findings. Custom Rules use the same selection, exceptions, fixes,
 output and cache as the built-in Rules.
 
+This team uses `COALESCE` instead of `IFNULL` to keep queries portable. The Rule reads function
+facts, so comments and string literals don't match. It only reports, leaving the replacement to
+the author. No extra dependencies are needed.
+
 ```python
-# sql_rules/naming.py
+# sql_rules/team.py
 from sqlclean import Finding, RuleContext, Statement, rule
 
 
 @rule(
-    code="XSQLCLEANNAME001",
-    message="Query reads a temporary table",
-    remediation="Read from the published table instead.",
+    code="XSQLCLEANTEAM001",
+    message="Use COALESCE instead of IFNULL",
+    remediation="Write COALESCE(value, fallback).",
     enabled_by_default=True,
 )
-def temporary_table(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
+def prefer_coalesce(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
     return [
-        ctx.finding(subject=statement, node=table)
-        for table in statement.tables
-        if table.name.startswith("tmp_")
+        ctx.finding(subject=statement, node=function)
+        for function in statement.functions
+        if function.name.upper() == "IFNULL"
     ]
 ```
 
@@ -36,14 +40,22 @@ Point `[rules] custom` at the file or its directory:
 custom = ["sql_rules"]
 ```
 
-```text
-error[XSQLCLEANNAME001]: Query reads a temporary table
-  --> models/orders.sql:2:6
-   |
- 2 | FROM tmp_orders
-   |      ^^^^^^^^^^
-  = help: Read from the published table instead.
+Run `sqlclean check` on `orders.sql`:
+
+```sql
+SELECT IFNULL(discount, 0) FROM orders;
 ```
+
+```text
+error[XSQLCLEANTEAM001]: Use COALESCE instead of IFNULL
+  --> orders.sql:1:8
+   |
+ 1 | SELECT IFNULL(discount, 0) FROM orders;
+   |        ^^^^^^
+  = help: Write COALESCE(value, fallback).
+```
+
+Write `SELECT COALESCE(discount, 0) FROM orders;` to satisfy this convention.
 
 ## Where Rules live
 
@@ -53,8 +65,8 @@ functions, constants and classes stay ordinary Python.
 
 - Files named `test_*.py`, `conftest.py` and `__init__.py` are not loaded as Rules, so tests can
   live next to the Rules they test.
-- Modules are imported by their path from the configuration root: `sql_rules/naming.py` is
-  `sql_rules.naming`. A Rule module can import a helper the same way, for example
+- Modules are imported by their path from the configuration root: `sql_rules/team.py` is
+  `sql_rules.team`. A Rule module can import a helper the same way, for example
   `from sql_rules.helpers import table_prefixes`.
 - Two Rules with the same code are an error: `custom Rule code XSQLCLEANNAME001 is defined twice`.
 

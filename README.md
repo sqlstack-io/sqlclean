@@ -85,56 +85,45 @@ SQLClean in other configurations, on the same files:
 ## Custom Rules in Python
 
 A custom Rule is a Python function over each statement, already parsed and located by the Rust
-engine. This one enforces a team convention, not a rule of SQL: the columns the team lists in
-`EMAIL_COLUMNS` are compared case-insensitively. An `=` or `<>` that reads one of them, bare or as
-`LOWER(email)`, passes only when both sides are `LOWER(...)` or a lower-case string literal. It
-reads comparisons from the statement's syntax tree, so comments and string literals never match,
-and it only reports, because changing a comparison is the author's call.
+engine. This team uses `COALESCE` instead of `IFNULL` to keep queries portable. The Rule reads
+function facts, not SQL text, so comments and string literals don't match. It only reports;
+the author chooses the replacement.
 
 ```python
 # sql_rules/team.py
-import polyglot_sql as ast  # pip install "sqlclean[ast]"
-
 from sqlclean import Finding, RuleContext, Statement, rule
-
-EMAIL_COLUMNS = {"email", "billing_email"}  # the columns this team treats as email addresses
-
-
-def email_column(operand: ast.Expression) -> ast.Column | None:
-    """The designated email column an operand reads, written bare or as LOWER(column)."""
-    column = operand.this if isinstance(operand, ast.Lower) else operand
-    is_email = isinstance(column, ast.Column) and column.name.lower() in EMAIL_COLUMNS
-    return column if is_email else None
-
-
-def lowered(operand: ast.Expression) -> bool:
-    """Whether an operand is LOWER(...) or a string literal with no upper-case letters."""
-    literal = isinstance(operand, ast.Literal) and operand.is_string
-    return isinstance(operand, ast.Lower) or (literal and operand.name == operand.name.lower())
 
 
 @rule(
     code="XSQLCLEANTEAM001",
-    message="Email comparisons must be case-insensitive",
-    remediation="Compare LOWER(email) with LOWER(...) instead.",
+    message="Use COALESCE instead of IFNULL",
+    remediation="Write COALESCE(value, fallback).",
     enabled_by_default=True,
 )
-def case_insensitive_email(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
-    starts = {
-        column.to_dict()["column"]["span"]["start"]
-        for comparison in statement.polyglot_ast().find_all(ast.Eq, ast.Neq)
-        for column in map(email_column, (comparison.this, comparison.expression))
-        if column is not None and not all(map(lowered, (comparison.this, comparison.expression)))
-    }
+def prefer_coalesce(*, statement: Statement, ctx: RuleContext) -> list[Finding]:
     return [
-        ctx.finding(subject=statement, node=column)
-        for column in statement.columns
-        if column.start - statement.start in starts
+        ctx.finding(subject=statement, node=function)
+        for function in statement.functions
+        if function.name.upper() == "IFNULL"
     ]
 ```
 
-Point `[rules] custom = ["sql_rules"]` in `sqlclean.toml` at it. The syntax tree needs the `ast`
-extra: `pip install "sqlclean[ast]"`. See
+Point `[rules] custom = ["sql_rules"]` in `sqlclean.toml` at it, then run `sqlclean check`:
+
+```sql
+SELECT IFNULL(discount, 0) FROM orders;
+```
+
+```text
+error[XSQLCLEANTEAM001]: Use COALESCE instead of IFNULL
+  --> orders.sql:1:8
+   |
+ 1 | SELECT IFNULL(discount, 0) FROM orders;
+   |        ^^^^^^
+  = help: Write COALESCE(value, fallback).
+```
+
+No extra dependencies are needed. See
 [custom Rules](https://sqlclean.io/docs/custom-rules/overview/),
 [statement facts](https://sqlclean.io/docs/custom-rules/statement-facts/) and
 [testing custom Rules](https://sqlclean.io/docs/custom-rules/testing/).

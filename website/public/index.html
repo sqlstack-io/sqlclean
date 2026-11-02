@@ -116,7 +116,7 @@
 						</div>
 						<div class="card">
 							<h3>Team rules live in people's heads</h3>
-							<p>"Marts read staging, not raw" holds until someone new misses it.</p>
+							<p>"Use COALESCE, not IFNULL" holds until someone new misses it.</p>
 						</div>
 						<div class="card">
 							<h3>Autofixes you can't trust</h3>
@@ -246,35 +246,40 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
 								<span class="num">04 · Make lessons permanent</span>
 								<h3>Turn review comments into Rules</h3>
 								<p>
-									A custom Rule is a Python function over the tables, joins, columns and literals of each statement,
-									already parsed and located for you. No regular expressions, no parser to learn. Here marts must read
-									staging models, never raw tables.
+									A custom Rule is a Python function over statement facts, already parsed and located for you.
+									This team uses COALESCE instead of IFNULL to keep queries portable. The Rule reads function calls,
+									not comments or strings. No extra dependencies, no automatic rewrite: the author chooses the replacement.
 								</p>
 								<p class="more"><a href="/docs/custom-rules/overview/">Write a custom Rule →</a></p>
 							</div>
-<pre class="terminal"><span class="cm"># sql_rules/layers.py</span>
+<pre class="terminal"><span class="cm"># sql_rules/team.py</span>
+<span class="kw">from</span> sqlclean <span class="kw">import</span> <span class="ty">Finding</span>, <span class="ty">RuleContext</span>, <span class="ty">Statement</span>, rule
+
+
 <span class="fn">@rule</span>(
-    <span class="arg">code</span>=<span class="str">&quot;XSQLCLEANLAYER001&quot;</span>,
-    <span class="arg">message</span>=<span class="str">&quot;Marts must not read raw tables&quot;</span>,
-    <span class="arg">remediation</span>=<span class="str">&quot;Read the staging model instead.&quot;</span>,
+    <span class="arg">code</span>=<span class="str">&quot;XSQLCLEANTEAM001&quot;</span>,
+    <span class="arg">message</span>=<span class="str">&quot;Use COALESCE instead of IFNULL&quot;</span>,
+    <span class="arg">remediation</span>=<span class="str">&quot;Write COALESCE(value, fallback).&quot;</span>,
     <span class="arg">enabled_by_default</span>=<span class="kw">True</span>,
 )
-<span class="kw">def</span> <span class="fn">marts_read_staging</span>(*, statement: <span class="ty">Statement</span>, ctx: <span class="ty">RuleContext</span>) -&gt; <span class="ty">list</span>:
-    <span class="kw">if not</span> statement.path.startswith(<span class="str">&quot;models/marts/&quot;</span>):
-        <span class="kw">return</span> []
+<span class="kw">def</span> <span class="fn">prefer_coalesce</span>(*, statement: <span class="ty">Statement</span>, ctx: <span class="ty">RuleContext</span>) -&gt; <span class="ty">list</span>[<span class="ty">Finding</span>]:
     <span class="kw">return</span> [
-        ctx.finding(<span class="arg">subject</span>=statement, <span class="arg">node</span>=table)
-        <span class="kw">for</span> table <span class="kw">in</span> statement.tables
-        <span class="kw">if</span> table.qualified_name.startswith(<span class="str">&quot;raw.&quot;</span>)
+        ctx.finding(<span class="arg">subject</span>=statement, <span class="arg">node</span>=function)
+        <span class="kw">for</span> function <span class="kw">in</span> statement.functions
+        <span class="kw">if</span> function.name.upper() == <span class="str">&quot;IFNULL&quot;</span>
     ]
 
+<span class="cm"># sqlclean.toml: [rules] custom = ["sql_rules"]</span>
+<span class="cm"># orders.sql</span>
+SELECT IFNULL(discount, 0) FROM orders;
+
 <span class="cmd">sqlclean check</span>
-<span class="bad">error[XSQLCLEANLAYER001]</span>: Marts must not read raw tables
-  --&gt; models/marts/revenue.sql:5:12
+<span class="bad">error[XSQLCLEANTEAM001]</span>: Use COALESCE instead of IFNULL
+  --&gt; orders.sql:1:8
    |
- 5 | INNER JOIN raw.payments p
-   |            <span class="bad">^^^^^^^^^^^^</span>
-  <span class="dim">= help:</span> Read the staging model instead.</pre>
+ 1 | SELECT IFNULL(discount, 0) FROM orders;
+   |        <span class="bad">^^^^^^</span>
+  <span class="dim">= help:</span> Write COALESCE(value, fallback).</pre>
 						</div>
 
 						<div class="step">
@@ -288,24 +293,24 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
 								</p>
 								<p class="more"><a href="/docs/custom-rules/testing/">Test a custom Rule →</a></p>
 							</div>
-<pre class="terminal"><span class="cm"># tests/test_layers.py</span>
+<pre class="terminal"><span class="cm"># tests/test_team.py</span>
+<span class="kw">from</span> sql_rules.team <span class="kw">import</span> prefer_coalesce
 <span class="kw">from</span> sqlclean.testing <span class="kw">import</span> <span class="ty">RuleCase</span>, evaluate_rule
 
-<span class="kw">def</span> <span class="fn">test_marts_reading_raw_tables_are_reported</span>() -&gt; <span class="kw">None</span>:
+
+<span class="kw">def</span> <span class="fn">test_ifnull_is_reported</span>() -&gt; <span class="kw">None</span>:
     evaluate_rule(
-        <span class="arg">rule</span>=marts_read_staging,
+        <span class="arg">rule</span>=prefer_coalesce,
         <span class="arg">test_case</span>=<span class="ty">RuleCase</span>(
-            <span class="arg">description</span>=<span class="str">&quot;a mart joins raw.payments&quot;</span>,
-            <span class="arg">path</span>=<span class="str">&quot;models/marts/revenue.sql&quot;</span>,
-            <span class="arg">source</span>=<span class="str">&quot;SELECT o.order_id FROM stg_orders o JOIN raw.payments p ON …&quot;</span>,
-            <span class="arg">dialect</span>=<span class="str">&quot;duckdb&quot;</span>,
+            <span class="arg">description</span>=<span class="str">&quot;prefer portable null handling&quot;</span>,
+            <span class="arg">source</span>=<span class="str">&quot;SELECT IFNULL(discount, 0) FROM orders;&quot;</span>,
             <span class="arg">expected_finding_count</span>=<span class="num">1</span>,
         ),
     )
 
 <span class="cmd">pytest tests</span>
-..                                                    [100%]
-<span class="ok">2 passed</span> in 0.04s</pre>
+.                                                     [100%]
+<span class="ok">1 passed</span></pre>
 						</div>
 
 						<div class="step">
@@ -362,8 +367,8 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
   <span class="str">&quot;runs&quot;</span>: [{
     <span class="str">&quot;tool&quot;</span>: { <span class="str">&quot;driver&quot;</span>: { <span class="str">&quot;name&quot;</span>: <span class="str">&quot;sqlclean&quot;</span>, <span class="dim">…</span> } },
     <span class="str">&quot;results&quot;</span>: [{
-      <span class="str">&quot;ruleId&quot;</span>: <span class="str">&quot;XSQLCLEANLAYER001&quot;</span>,
-      <span class="str">&quot;message&quot;</span>: { <span class="str">&quot;text&quot;</span>: <span class="str">&quot;Marts must not read raw tables. Read the staging model instead.&quot;</span> },
+      <span class="str">&quot;ruleId&quot;</span>: <span class="str">&quot;XSQLCLEANTEAM001&quot;</span>,
+      <span class="str">&quot;message&quot;</span>: { <span class="str">&quot;text&quot;</span>: <span class="str">&quot;Use COALESCE instead of IFNULL. Write COALESCE(value, fallback).&quot;</span> },
       <span class="dim">…</span></pre>
 						</div>
 					</div>

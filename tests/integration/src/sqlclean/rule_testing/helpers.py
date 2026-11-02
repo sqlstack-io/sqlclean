@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import importlib.util
+import re
+from html import unescape
 from importlib.machinery import ModuleSpec
 from pathlib import Path
 from types import ModuleType
+
+import pytest
 
 from sqlclean.rules.types import RuleCheck
 
@@ -106,19 +110,32 @@ def sample_rule(directory: Path, name: str) -> RuleCheck:
 
 
 README: Path = Path(__file__).resolve().parents[5] / "README.md"
-BLOCK_START: str = "```python\n# sql_rules/team.py\n"
+INTRODUCTIONS: tuple[Path, ...] = (
+    README,
+    README.parent / "website/public/index.html",
+    README.parent / "website/src/content/docs/docs/custom-rules/overview.mdx",
+)
+BLOCK_START: str = "# sql_rules/team.py\n"
 
 
-def readme_rule(directory: Path) -> RuleCheck:
-    """Return the README's case_insensitive_email Rule, imported from its code block."""
+@pytest.fixture(params=INTRODUCTIONS, ids=lambda path: path.name)
+def document(request: pytest.FixtureRequest) -> Path:
+    """Run each case against every published introductory snippet."""
 
-    text: str = README.read_text(encoding="utf-8")
+    path: Path = request.param
+    return path
+
+
+def readme_rule(directory: Path, document: Path = README) -> RuleCheck:
+    """Import prefer_coalesce from an introductory example, removing HTML markup if needed."""
+
+    text: str = unescape(re.sub(r"</?span\b[^>]*>", "", document.read_text(encoding="utf-8")))
     start: int = text.index(BLOCK_START) + len(BLOCK_START)
     path: Path = directory / "readme_team.py"
-    path.write_text(text[start : text.index("```", start)], encoding="utf-8")
+    path.write_text(text[start:].split("```")[0].split("# sqlclean.toml:")[0], encoding="utf-8")
     spec: ModuleSpec | None = importlib.util.spec_from_file_location("readme_team", path)
     assert spec is not None and spec.loader is not None
     module: ModuleType = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    check: RuleCheck = module.case_insensitive_email
+    check: RuleCheck = module.prefer_coalesce
     return check
