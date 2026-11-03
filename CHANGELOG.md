@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4](https://github.com/sqlstack-io/sqlclean/compare/v0.4.3...v0.4.4) (2026-11-03)
+
+
+### Documentation
+
+* simplify introductory custom Python Rule examples ([#34](https://github.com/sqlstack-io/sqlclean/issues/34)) ([14f613c](https://github.com/sqlstack-io/sqlclean/commit/14f613c8464ccc176261fc60fb06727f25066db0))
+
 ## [0.4.3](https://github.com/sqlstack-io/sqlclean/compare/v0.4.2...v0.4.3) (2026-11-02)
 
 
