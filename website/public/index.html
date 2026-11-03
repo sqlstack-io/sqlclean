@@ -63,8 +63,9 @@
 					<h1>Clean SQL, every time</h1>
 					<p class="tagline">A SQL linter and formatter, 50× faster than sqruff.</p>
 					<p class="lede">
-						SQLClean flags SQL that runs but rarely does what you meant, applies safe fixes, and formats every file
-						one way. Custom Rules are plain Python functions, backed by a Rust API that keeps them fast.
+						SQLClean spots SQL patterns that look right but quietly misbehave, such as <code>=&nbsp;NULL</code> or a
+						<code>NOT&nbsp;IN</code> list with a NULL, applies safe fixes, and formats every file one way.
+						Custom Rules are plain Python functions, backed by a Rust API that keeps them fast.
 					</p>
 					<div class="actions">
 						<div class="install">
@@ -103,11 +104,11 @@
 			<section>
 				<div class="wrap">
 					<div class="section-head">
-						<h2>Why SQL stays messy</h2>
+						<h2>Where SQL review goes wrong</h2>
 					</div>
 					<div class="problem">
 						<div class="card">
-							<h3>Valid isn't the same as correct</h3>
+							<h3>Some bugs are right there in the text</h3>
 							<p><code>WHERE x = NULL</code> runs without an error and matches no rows.</p>
 						</div>
 						<div class="card">
@@ -115,8 +116,8 @@
 							<p>Reviewers argue about commas and casing instead of the logic.</p>
 						</div>
 						<div class="card">
-							<h3>Team rules live in people's heads</h3>
-							<p>"Use COALESCE, not IFNULL" holds until someone new misses it.</p>
+							<h3>House style is unwritten</h3>
+							<p>"Use COALESCE, not IFNULL" is only a convention until a tool checks it.</p>
 						</div>
 						<div class="card">
 							<h3>Autofixes you can't trust</h3>
@@ -138,7 +139,7 @@
 						<div class="step">
 							<div class="step-text">
 								<span class="num">01 · Catch common mistakes</span>
-								<h3>Flag SQL that runs but is easy to get wrong</h3>
+								<h3>Flag the SQL traps reviewers miss</h3>
 								<p>
 									Default Rules flag comparisons with <code>NULL</code>, <code>NOT IN</code> lists that contain
 									<code>NULL</code>, and <code>ROW_NUMBER</code> with no deterministic order. Each finding points at the
@@ -243,8 +244,8 @@ Would fix 1 problem(s) and change 1 file(s).</pre>
 						<p class="step-group">Keep them fixed</p>
 						<div class="step">
 							<div class="step-text">
-								<span class="num">04 · Make lessons permanent</span>
-								<h3>Turn review comments into Rules</h3>
+								<span class="num">04 · Encode your house style</span>
+								<h3>Write your conventions as Rules</h3>
 								<p>
 									A custom Rule is a Python function over statement facts, already parsed and located for you.
 									This team uses COALESCE instead of IFNULL to keep queries portable. The Rule reads function calls,
@@ -372,7 +373,7 @@ SELECT IFNULL(discount, 0) FROM orders;
       <span class="dim">…</span></pre>
 						</div>
 					</div>
-					<p class="caption">Real output from <code>sqlclean</code> on small example projects, trimmed to the relevant lines.</p>
+					<p class="caption">Each panel shows actual <code>sqlclean</code> output on a small example project, cut down to the findings that matter.</p>
 				</div>
 			</section>
 
@@ -438,7 +439,7 @@ Fixed 1 problem(s) and changed 1 file(s).
 			<section class="closing">
 				<div class="wrap">
 					<h2>Make clean SQL the default</h2>
-					<p>The docs cover every command, every Rule, configuration and custom Rules.</p>
+					<p>Browse every Rule with examples, then set up configuration, custom Rules and CI.</p>
 					<div class="actions">
 						<a class="button primary" href="/docs/">Read the docs</a>
 						<a class="button" href="/docs/quickstart/">Quickstart</a>
