@@ -1,23 +1,21 @@
 //! Token positions that decide which authored words may change letter case.
 
-use polyglot_sql::tokens::TokenType;
+use sqlquack_syntax::tokens::models::TokenType;
 
 /// Column aliases after `AS` may be any keyword in DuckDB and PostgreSQL.
 pub(crate) const ALIAS_KEYWORD: &str = "AS";
 /// The token that turns a preceding name into a function call.
 pub(crate) const CALL_OPENER: &str = "(";
+/// The token that closes a call's arguments or a column list.
+pub(crate) const CALL_CLOSER: &str = ")";
+/// Keywords after which a word followed by `(` names a relation and its column list.
+pub(crate) const COLUMN_LIST_RELATION_KEYWORDS: [&str; 2] = ["INTO", "TABLE"];
+/// The tokens that can follow `AS` after a CTE's column list.
+pub(crate) const CTE_BODY_OPENERS: [&str; 3] = ["(", "MATERIALIZED", "NOT"];
+/// The prefix of placeholder calls such as SQLBuild's `__ref` and `__source`.
+pub(crate) const PLACEHOLDER_PREFIX: &str = "__";
 /// Field names after `.`, path keys after `:`, and parameter names after `@` or `$`.
 pub(crate) const NAME_PREFIXES: [&str; 4] = [".", ":", "@", "$"];
-/// Built-in calls with keyword syntax inside their parentheses, which catalogues do not list.
-pub const CALL_SYNTAX_FUNCTIONS: [&str; 6] = [
-    "CAST",
-    "TRY_CAST",
-    "SAFE_CAST",
-    "EXTRACT",
-    "CONVERT",
-    "TRY_CONVERT",
-];
-
 pub(crate) const PROJECTION_ENDS: [TokenType; 13] = [
     TokenType::From,
     TokenType::Where,

@@ -1,7 +1,7 @@
 //! Unquoted SQL word recognition shared by canonical tokens and the formatter.
 
 /// Return whether `text` is an unquoted ASCII word whose letter case carries no meaning.
-pub fn is_unquoted_word(text: &str) -> bool {
+pub(crate) fn is_unquoted_word(text: &str) -> bool {
     let mut characters = text.chars();
     characters
         .next()
