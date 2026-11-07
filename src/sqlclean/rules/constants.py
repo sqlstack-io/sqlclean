@@ -8,5 +8,3 @@ SIGNATURE_REQUIREMENT: str = (
     "must accept exactly one typed Statement, SqlFile or Repository subject and one typed "
     "RuleContext, both keyword-only"
 )
-POLYGLOT_MODULE: str = "polyglot_sql"
-POLYGLOT_INSTALL_HINT: str = "install the ast extra: pip install 'sqlclean[ast]'"

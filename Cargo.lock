@@ -653,7 +653,7 @@ dependencies = [
 [[package]]
 name = "sqlquack-format"
 version = "0.2.0"
-source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=babbc292ee09f298ba2280f69f87e16d8fcdfbe3#babbc292ee09f298ba2280f69f87e16d8fcdfbe3"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=f2985b374694f3da56c4f1e5b36fbc5d81e101ef#f2985b374694f3da56c4f1e5b36fbc5d81e101ef"
 dependencies = [
  "serde_json",
  "sqlquack-syntax",
@@ -662,7 +662,7 @@ dependencies = [
 [[package]]
 name = "sqlquack-syntax"
 version = "0.2.0"
-source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=babbc292ee09f298ba2280f69f87e16d8fcdfbe3#babbc292ee09f298ba2280f69f87e16d8fcdfbe3"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=f2985b374694f3da56c4f1e5b36fbc5d81e101ef#f2985b374694f3da56c4f1e5b36fbc5d81e101ef"
 dependencies = [
  "serde",
  "serde_json",
@@ -675,7 +675,7 @@ dependencies = [
 [[package]]
 name = "sqlquack-syntax-derive"
 version = "0.2.0"
-source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=babbc292ee09f298ba2280f69f87e16d8fcdfbe3#babbc292ee09f298ba2280f69f87e16d8fcdfbe3"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=f2985b374694f3da56c4f1e5b36fbc5d81e101ef#f2985b374694f3da56c4f1e5b36fbc5d81e101ef"
 dependencies = [
  "proc-macro2",
  "quote",

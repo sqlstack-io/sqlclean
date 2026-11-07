@@ -66,6 +66,23 @@ fn diagnostic_values(response: &str) -> Result<Vec<Value>, String> {
         .ok_or_else(|| "diagnostics should be an array".to_string())
 }
 
+/// Corpus queries SQLQuack's formatter lays out or refuses differently from SQLClean's Polyglot layout, each with its reason.
+const SQLQUACK_DEPARTURES: &str = include_str!("fixtures/sqlquack_departures.json");
+
+/// The expected layout of a corpus `entry`: SQLQuack's named departure when it has one, else the recorded layout.
+fn expected_layout(entry: &Value) -> Value {
+    let departures: Vec<Value> = serde_json::from_str(SQLQUACK_DEPARTURES).unwrap_or_default();
+    departures
+        .into_iter()
+        .find(|departure| {
+            departure["dialect"] == entry["dialect"] && departure["sql"] == entry["sql"]
+        })
+        .map_or_else(
+            || entry["formatted"].clone(),
+            |departure| departure["formatted"].clone(),
+        )
+}
+
 /// A narrow width so that wrapping is exercised on most corpus queries.
 const CORPUS_LINE_WIDTH: usize = 40;
 
@@ -84,7 +101,7 @@ pub(crate) fn check_dialect_corpus(
             .filter(|_| formatted)
             .cloned()
             .unwrap_or(Value::Null);
-        let expected = entry["formatted"].as_str().map_or(Value::Null, Value::from);
+        let expected = expected_layout(entry);
         assert_eq!(actual, expected, "{dialect}: {sql}");
         let printed = actual.as_str().unwrap_or(sql);
         assert!(
@@ -95,10 +112,7 @@ pub(crate) fn check_dialect_corpus(
             .as_str()
             .map(|previous| relaid_previous_layout(previous, dialect))
             .transpose()?;
-        let layouts = [
-            entry["formatted"].as_str().map(str::to_string),
-            previous_layout,
-        ];
+        let layouts = [expected.as_str().map(str::to_string), previous_layout];
         for stable in layouts.iter().flatten() {
             let stable = stable.as_str();
             let again = format_once(stable, dialect, None)?;

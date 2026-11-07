@@ -1,0 +1,198 @@
+[
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT str[0:1]",
+  "formatted": "SELECT str[0:1]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x, y : COALESCE(x, y, 0) + 1)",
+  "formatted": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x, y: COALESCE(x, y, 0) + 1)",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT LIST_TRANSFORM(LIST_FILTER([0, 1, 2, 3, 4, 5], LAMBDA x : x % 2 = 0), LAMBDA y : y * y)",
+  "formatted": "SELECT LIST_TRANSFORM(LIST_FILTER([0, 1, 2, 3, 4, 5], LAMBDA x: x % 2 = 0), LAMBDA y: y * y)",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x : COALESCE(x, 0) + 1)",
+  "formatted": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x: COALESCE(x, 0) + 1)",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT LIST_TRANSFORM(nbr, LAMBDA x : x + 1) FROM article AS a",
+  "formatted": "SELECT LIST_TRANSFORM(nbr, LAMBDA x: x + 1)\nFROM article AS a",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT JSON_EXTRACT(c, '$[*].id')[0:2]",
+  "formatted": "SELECT JSON_EXTRACT(c, '$[*].id')[0:2]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT JSON_EXTRACT_STRING(c, '$[*].id')[0:2]",
+  "formatted": "SELECT JSON_EXTRACT_STRING(c, '$[*].id')[0:2]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT [1, 2, 3][1 + 1:LENGTH([1, 2, 3]) + -1]",
+  "formatted": "SELECT [1, 2, 3][1 + 1:LENGTH([1, 2, 3]) + -1]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT x::INT[3][3]",
+  "formatted": "SELECT x::INT[3][3]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT ARRAY[[[1]]]::INT[1][1][1]",
+  "formatted": "SELECT ARRAY[[[1]]]::INT[1][1][1]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "WITH t1 AS (FROM (FROM t2 SELECT foo1, foo2)) FROM t1",
+  "formatted": "WITH t1 AS (\n  FROM (\n    FROM t2\n    SELECT\n      foo1,\n      foo2\n  )\n)\n\nFROM t1",
+  "reason": "SQLClean aligned against Polyglot's SELECT-first rewrite of the FROM-first query",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT e: 1 + 2, f: len('asdf'), s: (SELECT 42)",
+  "formatted": "SELECT\n  e:1 + 2,\n  f:len('asdf'),\n  s:(\n    SELECT 42\n  )",
+  "reason": "SQLClean aligned against Polyglot's path reading of the prefix alias and lost the line break after a comma",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT (@col) + 1 FROM t",
+  "formatted": "SELECT\n  (\n    @col\n  )\n  + 1\nFROM t",
+  "reason": "SQLClean aligned against Polyglot's ABS() rewrite of `@`",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT (@-1) + 1",
+  "formatted": "SELECT\n  (\n    @-1\n  )\n  + 1",
+  "reason": "SQLClean aligned against Polyglot's ABS() rewrite of `@`",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT file[:256] FROM GLOB('*')",
+  "formatted": "SELECT file[:256]\nFROM GLOB('*')",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "WITH t (SELECT 1 AS c) SELECT c FROM t",
+  "formatted": null,
+  "reason": "Snowflake rejects a CTE body without AS, so SQLQuack's parser refuses it",
+  "receipt": "sf.query.with.select.k8b29420d51a4"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT DATE_PART('month' FROM CAST('2024-04-08' AS DATE))",
+  "formatted": null,
+  "reason": "Snowflake rejects a quoted date part in the FROM form of DATE_PART, so SQLQuack's parser refuses it",
+  "receipt": "sf.functions.date-part.date-part-from.k10b598e047b5"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "WITH t AS (SELECT PARSE_JSON('{\"level1\": {\"level2\": {\"level3\": \"value\"}}}') AS data) SELECT data:     level1  : level2 : level3::VARIANT FROM t",
+  "formatted": "WITH t AS (\n  SELECT PARSE_JSON('{\"level1\": {\"level2\": {\"level3\": \"value\"}}}') AS data\n)\n\nSELECT data:     level1  : level2 : level3::VARIANT\nFROM t",
+  "reason": "Snowflake names an unaliased select item by its text, spaces included, so the item keeps its spacing; SQLClean respaced it",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT RPAD(TO_BINARY('Hi', 'UTF8'), 10, TO_BINARY('_', 'UTF8'))",
+  "formatted": "SELECT\n  RPAD(TO_BINARY('Hi', 'UTF8'), 10, TO_BINARY('_', 'UTF8'))",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT TIMESTAMP_FROM_PARTS(CAST('2024-05-09' AS DATE), CAST('14:30:45' AS TIME))",
+  "formatted": "SELECT\n  TIMESTAMP_FROM_PARTS(CAST('2024-05-09' AS DATE), CAST('14:30:45' AS TIME))",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT ARRAYS_ZIP([1, 2, 3], ['a', 'b', 'c'], [10, 20, 30])",
+  "formatted": "SELECT\n  ARRAYS_ZIP([1, 2, 3], ['a', 'b', 'c'], [10, 20, 30])",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT AI_CLASSIFY('text', ['travel', 'cooking'], OBJECT_CONSTRUCT('output_mode', 'multi'))",
+  "formatted": "SELECT\n  AI_CLASSIFY('text', ['travel', 'cooking'], OBJECT_CONSTRUCT('output_mode', 'multi'))",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT {fn DAYNAME('2022-5-13')}",
+  "formatted": "SELECT {fn DAYNAME('2022-5-13')}",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean broke a line inside its `{fn ...}` escape",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT {fn LOG(5)}",
+  "formatted": "SELECT {fn LOG(5)}",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean broke a line inside its `{fn ...}` escape",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT {fn CEILING(5.3)}",
+  "formatted": "SELECT {fn CEILING(5.3)}",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean broke a line inside its `{fn ...}` escape",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT TIME_SLICE(CAST('2024-05-09 08:50:57.891' AS TIMESTAMP), 1, 'HOUR', 'start')",
+  "formatted": "SELECT\n  TIME_SLICE(CAST('2024-05-09 08:50:57.891' AS TIMESTAMP), 1, 'HOUR', 'start')",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT SEARCH(line, 'king', ANALYZER => 'UNICODE_ANALYZER', SEARCH_MODE => 'OR')",
+  "formatted": "SELECT\n  SEARCH(line, 'king', ANALYZER => 'UNICODE_ANALYZER', SEARCH_MODE => 'OR')",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT SEARCH(line, 'king', SEARCH_MODE => 'AND', ANALYZER => 'PATTERN_ANALYZER')",
+  "formatted": "SELECT\n  SEARCH(line, 'king', SEARCH_MODE => 'AND', ANALYZER => 'PATTERN_ANALYZER')",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ }
+]

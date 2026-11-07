@@ -13,9 +13,9 @@ fn given_generator_respellings_when_formatting_then_authored_spellings_are_kept(
 -> Result<(), String> {
     let test_cases = [
         test_types::FormatTestCase {
-            description: "Snowflake STARTSWITH keeps its authored name",
+            description: "Snowflake STARTSWITH keeps its authored spelling and folds to upper case like every called name",
             sql: "select startswith(order_code, 'EU') as is_eu_order from orders",
-            expected_sql: "SELECT startswith(order_code, 'EU') AS is_eu_order\nFROM orders",
+            expected_sql: "SELECT STARTSWITH(order_code, 'EU') AS is_eu_order\nFROM orders",
             expected_changed: true,
         },
         test_types::FormatTestCase {

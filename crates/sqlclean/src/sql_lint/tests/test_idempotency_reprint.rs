@@ -24,7 +24,7 @@ fn given_formatted_and_unformatted_bodies_when_formatting_then_only_changed_bodi
     for test_case in &test_cases {
         RELAYOUTS.with(|relayouts| relayouts.set(0));
         let response = format_json(
-            &json!({"version": 1, "sql": test_case.sql, "dialect": "duckdb"}).to_string(),
+            &json!({"version": 1, "sql": test_case.sql, "dialect": "postgres"}).to_string(),
         )?;
         let payload: Value = serde_json::from_str(&response).map_err(|error| error.to_string())?;
         assert_eq!(

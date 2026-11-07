@@ -1825,9 +1825,15 @@ fn given_format_cases_when_formatting_then_output_matches() -> Result<(), String
             expected_changed: true,
         },
         test_types::FormatTestCase {
-            description: "lowercase function canonicalization preserves structure",
+            description: "an unaliased Snowflake select item keeps its authored text, which names its column",
             sql: "select count(1) from items",
-            expected_sql: "SELECT COUNT(1)\nFROM items",
+            expected_sql: "SELECT count(1)\nFROM items",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "an aliased call folds to upper case",
+            sql: "select count(1) as n from items",
+            expected_sql: "SELECT COUNT(1) AS n\nFROM items",
             expected_changed: true,
         },
         test_types::FormatTestCase {

@@ -79,10 +79,6 @@ One statement of a file, without its terminating semicolon.
 
 Each tuple is in source order and includes nodes inside CTEs and subqueries.
 
-`statement.polyglot_ast()` returns the full Polyglot syntax tree of the statement, parsed on first
-use. It needs the `ast` extra: `pip install "sqlclean[ast]"`. Without it, the call fails with
-`polyglot_ast() needs the Polyglot SQL package: install the ast extra: pip install 'sqlclean[ast]'`.
-
 ## Cte
 
 A common table expression, located at its name.

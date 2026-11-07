@@ -30,3 +30,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+`sqlquack_departures.json` holds the corpus queries that SQLQuack's formatter lays out or refuses
+differently from the layouts in `format_corpus.json`, with the reason for each. Its queries come from
+the same SQLGlot fixtures, under the same licence.

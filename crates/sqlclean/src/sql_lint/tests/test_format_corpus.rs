@@ -24,8 +24,8 @@ fn given_dialect_corpus_when_formatting_then_output_layout_and_refusals_are_stab
         test_types::FormatCorpusTestCase {
             description: "DuckDB identity corpus",
             dialect: "duckdb",
-            expected_formatted: 178,
-            expected_refused: 11,
+            expected_formatted: 189,
+            expected_refused: 0,
         },
         test_types::FormatCorpusTestCase {
             description: "PostgreSQL identity corpus",
@@ -36,8 +36,8 @@ fn given_dialect_corpus_when_formatting_then_output_layout_and_refusals_are_stab
         test_types::FormatCorpusTestCase {
             description: "Snowflake identity corpus",
             dialect: "snowflake",
-            expected_formatted: 429,
-            expected_refused: 6,
+            expected_formatted: 427,
+            expected_refused: 8,
         },
         test_types::FormatCorpusTestCase {
             description: "T-SQL identity corpus",
