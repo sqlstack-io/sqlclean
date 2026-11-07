@@ -9,6 +9,7 @@ use crate::sql_facts::_helpers::statements::{StatementTokens, statement_token_ra
 use crate::sql_facts::_helpers::tokens::{
     function_nodes, join_clause_span, literal_nodes, star_nodes,
 };
+use crate::sql_facts::constants::{DATE_PART_CALLS, DATE_PART_NAMES};
 use crate::sql_facts::models::{
     ColumnNode, FileFacts, JoinNode, NamedNode, StatementFacts, TableNode,
 };
@@ -23,6 +24,7 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
         ranges,
     ) = parsed_statements(sql, dialect)?;
     let characters: Vec<char> = sql.chars().collect();
+    let snowflake: bool = dialect.eq_ignore_ascii_case("snowflake");
     let facts: Vec<StatementFacts> = statements
         .iter()
         .zip(ranges)
@@ -34,6 +36,7 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
                     statement,
                     tokens: &tokens[range.first..=range.last],
                     terminated_end: range.terminated_end,
+                    snowflake,
                 },
                 &characters,
             )
@@ -70,6 +73,8 @@ struct StatementSource<'a> {
     statement: &'a Expression,
     tokens: &'a [Token],
     terminated_end: usize,
+    /// Whether the dialect is Snowflake, whose date functions take a bare date part.
+    snowflake: bool,
 }
 
 fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> StatementFacts {
@@ -78,8 +83,16 @@ fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> Stateme
         statement,
         tokens,
         terminated_end,
+        snowflake,
     } = *source;
     let nodes: Vec<&Expression> = statement_nodes(statement);
+    let date_parts: Vec<&Expression> = match snowflake {
+        true => nodes
+            .iter()
+            .filter_map(|node| date_part_argument(node))
+            .collect(),
+        false => Vec::new(),
+    };
     StatementFacts {
         index,
         kind: statement.variant_name().to_owned(),
@@ -103,7 +116,13 @@ fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> Stateme
         ),
         stars: star_nodes(tokens),
         functions: function_nodes(tokens),
-        columns: sorted(nodes.iter().filter_map(|node| column_node(node)).collect()),
+        columns: sorted(
+            nodes
+                .iter()
+                .filter(|node| !is_date_part(node, &date_parts))
+                .filter_map(|node| column_node(node))
+                .collect(),
+        ),
         literals: literal_nodes(tokens, characters),
     }
 }
@@ -208,6 +227,35 @@ fn join_node(join: &Join, tokens: &[Token]) -> Option<JoinNode> {
         relation: relation.map(|table| table.name.name.clone()),
         has_condition: join.on.is_some() || !join.using.is_empty(),
     })
+}
+
+/// A Snowflake date call's bare date part, such as `day` in `DATEPART(day, ts)`: a unit, as Polyglot read it.
+fn date_part_argument(node: &Expression) -> Option<&Expression> {
+    let Expression::Function(function) = node else {
+        return None;
+    };
+    let (_, position, any_name) = DATE_PART_CALLS
+        .iter()
+        .find(|(name, _, _)| name.eq_ignore_ascii_case(&function.name))?;
+    function
+        .args
+        .get(*position)
+        .filter(|argument| reads_as_unit(argument, *any_name))
+}
+
+/// Whether `argument` is a bare name that reads as a date part: any name, or only a known unit.
+fn reads_as_unit(argument: &Expression, any_name: bool) -> bool {
+    match argument {
+        Expression::Column(column) if column.table.is_none() && !column.name.quoted => {
+            any_name || DATE_PART_NAMES.contains(&column.name.name.to_ascii_uppercase().as_str())
+        }
+        _ => false,
+    }
+}
+
+/// Whether `node` is one of the date parts found in its statement.
+fn is_date_part(node: &Expression, date_parts: &[&Expression]) -> bool {
+    date_parts.iter().any(|part| std::ptr::eq(*part, node))
 }
 
 fn column_node(node: &Expression) -> Option<ColumnNode> {
