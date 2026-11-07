@@ -179,7 +179,10 @@ fn macro_positions(sql: &str, tokens: &[LosslessToken], significant: &[usize]) -
                 || (text(position)
                     .chars()
                     .all(|character| character.is_alphanumeric() || character == '_')
-                    && matches!(kinds.get(position + 1), Some(TokenType::As | TokenType::LParen))))
+                    && matches!(
+                        kinds.get(position + 1),
+                        Some(TokenType::As | TokenType::LParen)
+                    )))
     };
     let mut depth = 0_usize;
     let mut scopes: Vec<usize> = Vec::new();

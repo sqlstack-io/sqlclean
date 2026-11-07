@@ -181,7 +181,7 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             dialect: "duckdb",
             sql: "WITH a AS (SELECT 1 AS x), __sqlclean_interpolation_0__ __sqlclean_interpolation_1__ paid AS (SELECT * FROM a) SELECT * FROM paid",
             line_width: 100,
-            expected_sql: "WITH a AS (\n  SELECT 1 AS x\n),\n\n__sqlclean_interpolation_0__\n\n__sqlclean_interpolation_1__\npaid AS (\n  SELECT *\n  FROM a\n)\nSELECT *\nFROM paid",
+            expected_sql: "WITH a AS (\n  SELECT 1 AS x\n),\n\n__sqlclean_interpolation_0__\n\n__sqlclean_interpolation_1__\n\npaid AS (\n  SELECT *\n  FROM a\n)\n\nSELECT *\nFROM paid",
         },
         test_types::LayoutRuleTestCase {
             description: "an alias and comma that push a call over the width break the call",

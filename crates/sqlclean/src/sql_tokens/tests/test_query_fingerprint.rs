@@ -3,9 +3,9 @@ use crate::sql_tokens::main::query_fingerprint::query_fingerprint;
 /// SQLBuild's golden fingerprints for the dialects SQLQuack tokenizes; SQLBuild stores these
 /// hashes, so SQLClean must compute the same ones.
 #[test]
-fn given_sqlbuild_golden_queries_when_fingerprinting_then_hashes_match_sqlbuild() -> Result<(), String>
-{
-    let test_cases: [(&str, &str, &str); 5] = [
+fn given_sqlbuild_golden_queries_when_fingerprinting_then_hashes_match_sqlbuild()
+-> Result<(), String> {
+    let test_cases: [(&str, &str, &str); 8] = [
         (
             "generic",
             "SELECT id, name FROM orders",
@@ -31,29 +31,88 @@ fn given_sqlbuild_golden_queries_when_fingerprinting_then_hashes_match_sqlbuild(
             "select o.id from __ref(\"orders\") as o where o.id > 0",
             "fda88b9b0f26486bdd25b8e3bab5a982fbb387901ab229091b17772d044aebd0",
         ),
+        (
+            "bigquery",
+            "SELECT o.id, r'raw\\d' AS pattern FROM `project.dataset.orders` AS o",
+            "ce893f2fd9ab11ba453fc3c02e77b6690df6c3d1d8bc141fc19cf3891d9a61b4",
+        ),
+        (
+            "databricks",
+            "SELECT /*+ BROADCAST(o) */ o.id FROM `catalog`.`orders` AS o",
+            "7cd96f42bcb764136a7f423181302ba13cead02bb6cfb7382502a3a2aa4107c3",
+        ),
+        (
+            "sqlserver",
+            "SELECT TOP 10 [o].[id], N'order' AS kind FROM [dbo].[orders] AS o",
+            "f4fac3edb7682bbeddf4f73cc199493d45f1419bc8e2cd1d972fead2d67e6b71",
+        ),
     ];
     for (dialect, sql, expected) in test_cases {
-        assert_eq!(query_fingerprint(sql, dialect)?, expected, "{dialect}: {sql}");
+        assert_eq!(
+            query_fingerprint(sql, dialect)?,
+            expected,
+            "{dialect}: {sql}"
+        );
     }
+    Ok(())
+}
+
+/// MotherDuck fingerprints as DuckDB; `qualify` is reserved in DuckDB but not generic SQL.
+#[test]
+fn given_the_motherduck_alias_when_fingerprinting_then_it_hashes_as_duckdb() -> Result<(), String> {
+    let sql = "select a from t qualify b";
+    assert_eq!(
+        query_fingerprint(sql, "motherduck")?,
+        query_fingerprint(sql, "duckdb")?
+    );
+    assert_ne!(
+        query_fingerprint(sql, "duckdb")?,
+        query_fingerprint(sql, "generic")?
+    );
     Ok(())
 }
 
 /// Called names fold to upper case, except placeholders, quoted names and relation or CTE column lists.
 #[test]
-fn given_called_names_when_fingerprinting_then_only_unquoted_calls_ignore_case() -> Result<(), String>
-{
+fn given_called_names_when_fingerprinting_then_only_unquoted_calls_ignore_case()
+-> Result<(), String> {
     let test_cases: [(&str, &str, &str, bool); 6] = [
-        ("duckdb", "SELECT MyFunc(id) FROM orders", "SELECT myfunc(id) FROM orders", true),
-        ("snowflake", "SELECT \"MyFunc\"(id) FROM orders", "SELECT \"myfunc\"(id) FROM orders", false),
-        ("duckdb", "SELECT id FROM __ref('orders')", "SELECT id FROM __REF('orders')", false),
+        (
+            "duckdb",
+            "SELECT MyFunc(id) FROM orders",
+            "SELECT myfunc(id) FROM orders",
+            true,
+        ),
+        (
+            "snowflake",
+            "SELECT \"MyFunc\"(id) FROM orders",
+            "SELECT \"myfunc\"(id) FROM orders",
+            false,
+        ),
+        (
+            "duckdb",
+            "SELECT id FROM __ref('orders')",
+            "SELECT id FROM __REF('orders')",
+            false,
+        ),
         (
             "duckdb",
             "WITH Tree(id) AS (SELECT 1) SELECT id FROM orders",
             "WITH tree(id) AS (SELECT 1) SELECT id FROM orders",
             false,
         ),
-        ("postgres", "INSERT INTO Paid(id) SELECT 1", "INSERT INTO paid(id) SELECT 1", false),
-        ("sqlite", "SELECT Upper(name) FROM orders", "SELECT UPPER(name) FROM orders", true),
+        (
+            "postgres",
+            "INSERT INTO Paid(id) SELECT 1",
+            "INSERT INTO paid(id) SELECT 1",
+            false,
+        ),
+        (
+            "sqlite",
+            "SELECT Upper(name) FROM orders",
+            "SELECT UPPER(name) FROM orders",
+            true,
+        ),
     ];
     for (dialect, left, right, expected_equal) in test_cases {
         assert_eq!(

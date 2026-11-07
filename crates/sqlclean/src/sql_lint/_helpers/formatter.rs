@@ -169,7 +169,9 @@ fn sqlquack_layout(sql: &str, options: &FormatOptions) -> Result<String, String>
 fn format_around_cte_macros(sql: &str, options: &FormatOptions) -> Result<String, String> {
     match take_out_cte_macros(sql, options.dialect)? {
         None => sqlquack_layout(sql, options),
-        Some(without) => without.put_back(&sqlquack_layout(&without.sql, options)?, options.dialect),
+        Some(without) => {
+            without.put_back(&sqlquack_layout(&without.sql, options)?, options.dialect)
+        }
     }
 }
 
