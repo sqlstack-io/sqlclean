@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use sqlclean::sql_lint::constants::LINT_API_VERSION;
 use sqlclean::sql_lint::main::fill_finding_path::fill_finding_path;
 use sqlclean::sql_lint::main::lint::lint;
-use sqlclean::sql_lint::models::{LintDiagnostic, LintRequest};
+use sqlclean::sql_lint::types::{LintDiagnostic, LintRequest};
 
 use crate::checking::constants::{
     PARSE_ERROR_CODE, PARSE_ERROR_MESSAGE, PARSE_ERROR_REMEDIATION, UNSAFE_FIX_BUILTIN_RULES,

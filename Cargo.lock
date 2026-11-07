@@ -629,7 +629,9 @@ dependencies = [
  "serde_json",
  "sha2",
  "sqlquack-format",
+ "sqlquack-lint",
  "sqlquack-syntax",
+ "sqlquack-syntax-postgres",
 ]
 
 [[package]]
@@ -653,8 +655,20 @@ dependencies = [
 [[package]]
 name = "sqlquack-format"
 version = "0.2.0"
-source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=f2985b374694f3da56c4f1e5b36fbc5d81e101ef#f2985b374694f3da56c4f1e5b36fbc5d81e101ef"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=c2f8b2b1b218bc82c2935629110ff4bac6a5620b#c2f8b2b1b218bc82c2935629110ff4bac6a5620b"
 dependencies = [
+ "serde_json",
+ "sqlquack-syntax",
+]
+
+[[package]]
+name = "sqlquack-lint"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=c2f8b2b1b218bc82c2935629110ff4bac6a5620b#c2f8b2b1b218bc82c2935629110ff4bac6a5620b"
+dependencies = [
+ "rayon",
+ "rustc-hash",
+ "serde",
  "serde_json",
  "sqlquack-syntax",
 ]
@@ -662,7 +676,7 @@ dependencies = [
 [[package]]
 name = "sqlquack-syntax"
 version = "0.2.0"
-source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=f2985b374694f3da56c4f1e5b36fbc5d81e101ef#f2985b374694f3da56c4f1e5b36fbc5d81e101ef"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=c2f8b2b1b218bc82c2935629110ff4bac6a5620b#c2f8b2b1b218bc82c2935629110ff4bac6a5620b"
 dependencies = [
  "serde",
  "serde_json",
@@ -675,11 +689,19 @@ dependencies = [
 [[package]]
 name = "sqlquack-syntax-derive"
 version = "0.2.0"
-source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=f2985b374694f3da56c4f1e5b36fbc5d81e101ef#f2985b374694f3da56c4f1e5b36fbc5d81e101ef"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=c2f8b2b1b218bc82c2935629110ff4bac6a5620b#c2f8b2b1b218bc82c2935629110ff4bac6a5620b"
 dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "sqlquack-syntax-postgres"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=c2f8b2b1b218bc82c2935629110ff4bac6a5620b#c2f8b2b1b218bc82c2935629110ff4bac6a5620b"
+dependencies = [
+ "sqlquack-syntax",
 ]
 
 [[package]]

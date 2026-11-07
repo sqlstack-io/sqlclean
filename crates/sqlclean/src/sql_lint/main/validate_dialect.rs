@@ -1,13 +1,6 @@
-//! Check a dialect name against the dialects the parser supports.
+//! Check a dialect name against the dialects lint knows.
 
-use std::str::FromStr;
-
-use polyglot_sql::DialectType;
-
-/// `Ok` when `name` names a supported SQL dialect, such as `duckdb` or `snowflake`.
+/// `Ok` when `name` names a known SQL dialect, such as `duckdb` or `snowflake`.
 pub fn validate_dialect(name: &str) -> Result<(), String> {
-    match DialectType::from_str(name) {
-        Ok(_) => Ok(()),
-        Err(error) => Err(format!("unknown SQL dialect '{name}': {error}")),
-    }
+    sqlquack_lint::validate_dialect(name)
 }
