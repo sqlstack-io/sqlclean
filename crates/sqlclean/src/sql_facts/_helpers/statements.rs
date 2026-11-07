@@ -1,6 +1,6 @@
 //! Statement source ranges from the token stream.
 
-use polyglot_sql::tokens::{Token, TokenType};
+use sqlquack_syntax::tokens::models::{Token, TokenType};
 
 /// The first and last token index of one statement, and the end of its terminator.
 pub(crate) struct StatementTokens {

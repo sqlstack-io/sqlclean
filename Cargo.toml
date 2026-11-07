@@ -40,6 +40,9 @@ serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.10"
 similar = "2"
 sqlclean = { path = "crates/sqlclean" }
+# SQLQuack's lint engine and the tokens and trees it reads, which replace Polyglot for lint and facts.
+sqlquack-lint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "4f9ac36d8382e8a1e15cb24fcceb6f5e5a4677db" }
+sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "4f9ac36d8382e8a1e15cb24fcceb6f5e5a4677db" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

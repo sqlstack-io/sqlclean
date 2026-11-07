@@ -1,6 +1,6 @@
-use crate::sql_lint::_helpers::engine::rule_metadata;
-use crate::sql_lint::models::LintRuleMetadata;
+use crate::sql_lint::types::LintRuleMetadata;
 
+/// Every built-in lint Rule's code, message and remediation.
 pub fn catalogue() -> Vec<LintRuleMetadata> {
-    rule_metadata()
+    sqlquack_lint::catalogue()
 }

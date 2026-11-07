@@ -1,5 +1,4 @@
-use crate::sql_lint::_helpers::engine::lint_json_impl;
-
+/// Lint one JSON request with SQLQuack's lint engine and return its JSON response.
 pub fn lint_json(request_json: &str) -> Result<String, String> {
-    lint_json_impl(request_json)
+    sqlquack_lint::lint_json(request_json)
 }

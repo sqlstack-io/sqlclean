@@ -1,6 +1,6 @@
 //! Function calls and literals, which the syntax tree does not locate, read from tokens.
 
-use polyglot_sql::tokens::{Token, TokenType};
+use sqlquack_syntax::tokens::models::{Token, TokenType};
 
 use crate::sql_facts::models::{LiteralNode, NamedNode, StarNode};
 

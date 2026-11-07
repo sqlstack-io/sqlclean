@@ -1,8 +1,8 @@
 //! Tokenize and parse SQL the way every lint request does.
 
-use crate::sql_lint::models::ParsedSql;
+use crate::sql_lint::types::ParsedSql;
 
-/// Parse `sql` under `dialect`, rejecting statements the parser kept as opaque text.
+/// Parse `sql` under `dialect` with SQLQuack, rejecting statements the parser kept as opaque text.
 pub fn parse_sql(sql: &str, dialect: &str) -> Result<ParsedSql, String> {
-    crate::sql_lint::_helpers::parsing::parse(sql, dialect)
+    sqlquack_lint::parse_sql(sql, dialect)
 }

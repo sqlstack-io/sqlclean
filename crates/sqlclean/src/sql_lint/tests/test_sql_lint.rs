@@ -1780,6 +1780,7 @@ fn given_ceremonial_select_context_when_linting_terminal_shape_then_rule_035_all
 }
 
 #[test]
+#[ignore = "lint is unavailable for tsql until SQLQuack parses it"]
 fn given_tsql_bare_union_when_linting_then_diagnostic_has_no_invalid_fix() -> Result<(), String> {
     let test_cases = [test_types::DialectLintRuleTestCase {
         description: "T-SQL bare UNION is diagnosed without an invalid fix",

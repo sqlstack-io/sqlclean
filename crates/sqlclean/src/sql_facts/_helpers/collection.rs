@@ -1,8 +1,9 @@
 //! Walk each parsed statement once and collect its structural facts.
 
-use polyglot_sql::expressions::{Column, Cte, Join, TableRef, With};
-use polyglot_sql::tokens::{Span, Token, TokenType};
-use polyglot_sql::{Expression, ExpressionWalk};
+use sqlquack_syntax::expressions::names::models::{Column, TableRef};
+use sqlquack_syntax::expressions::queries::models::{Cte, Join, With};
+use sqlquack_syntax::tokens::models::{Span, Token, TokenType};
+use sqlquack_syntax::{Expression, ExpressionWalk};
 
 use crate::sql_facts::_helpers::statements::{StatementTokens, statement_token_ranges};
 use crate::sql_facts::_helpers::tokens::{
@@ -12,7 +13,7 @@ use crate::sql_facts::models::{
     ColumnNode, FileFacts, JoinNode, NamedNode, StatementFacts, TableNode,
 };
 use crate::sql_lint::main::parse_sql::parse_sql;
-use crate::sql_lint::models::ParsedSql;
+use crate::sql_lint::types::ParsedSql;
 
 pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> {
     let (

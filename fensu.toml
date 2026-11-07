@@ -43,6 +43,11 @@ rule = "FPRSL105"
 path = "crates/sqlclean/src/sql_tokens/main/query_fingerprint.rs"
 reason = "This test-support entry checks that fixes preserve meaning in the sql_lint tests, which the analyzer does not count as importers."
 
+[[targets.rust.rule_exceptions]]
+rule = "FPRSL105"
+path = "crates/sqlclean/src/sql_tokens/main/projection_spans.rs"
+reason = "Integration surface: SQLBuild reads projection spans through this entry; SQLQuack's lint engine has its own copy."
+
 [targets.rust.rule_options.FPRSR311]
 # `skill/` is the agent skill the `sqlclean skills` command embeds; scripts.generate_docs_skill writes its references.
 allowed_entries = ["Cargo.toml", "build.rs", "src/", "tests/", "benches/", "examples/", "README*", "LICENSE*", "skill/"]
