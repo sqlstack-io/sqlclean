@@ -15,7 +15,6 @@ test-support = []
 
 [dependencies]
 polyglot-sql.workspace = true
-polyglot-sql-function-catalogs.workspace = true
 sqlquack-fingerprint.workspace = true
 sqlquack-format.workspace = true
 sqlquack-lint.workspace = true
@@ -25,6 +24,10 @@ rustc-hash.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+
+[dev-dependencies]
+# Only the Polyglot formatter's call-spacing sweep reads its function catalogues.
+polyglot-sql-function-catalogs.workspace = true
 
 [lints]
 workspace = true

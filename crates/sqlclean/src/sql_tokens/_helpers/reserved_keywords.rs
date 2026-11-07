@@ -3,33 +3,26 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use polyglot_sql::DialectType;
+use sqlquack_fingerprint::FingerprintDialect;
 
-static DUCKDB: LazyLock<HashSet<String>> =
-    LazyLock::new(|| keyword_set(include_str!("../reserved_keywords/duckdb.txt")));
-static POSTGRES: LazyLock<HashSet<String>> =
-    LazyLock::new(|| keyword_set(include_str!("../reserved_keywords/postgres.txt")));
 static BIGQUERY: LazyLock<HashSet<String>> =
     LazyLock::new(|| keyword_set(include_str!("../reserved_keywords/bigquery.txt")));
-static SNOWFLAKE: LazyLock<HashSet<String>> =
-    LazyLock::new(|| keyword_set(include_str!("../reserved_keywords/snowflake.txt")));
 static TSQL: LazyLock<HashSet<String>> =
     LazyLock::new(|| keyword_set(include_str!("../reserved_keywords/tsql.txt")));
 static DATABRICKS: LazyLock<HashSet<String>> =
     LazyLock::new(|| keyword_set(include_str!("../reserved_keywords/databricks.txt")));
-static GENERIC: LazyLock<HashSet<String>> =
-    LazyLock::new(|| keyword_set(include_str!("../reserved_keywords/generic.txt")));
 
-/// Return whether the upper-cased word is a reserved keyword of `dialect`.
-pub(crate) fn is_reserved_keyword(dialect: DialectType, upper_word: &str) -> bool {
+/// Whether the upper-cased word is reserved in `dialect`; unlisted dialects use SQLQuack's generic list.
+pub(crate) fn is_reserved_keyword(dialect: &str, upper_word: &str) -> bool {
     let keywords: &HashSet<String> = match dialect {
-        DialectType::DuckDB => &DUCKDB,
-        DialectType::PostgreSQL => &POSTGRES,
-        DialectType::BigQuery => &BIGQUERY,
-        DialectType::Snowflake => &SNOWFLAKE,
-        DialectType::TSQL => &TSQL,
-        DialectType::Databricks => &DATABRICKS,
-        _ => &GENERIC,
+        "bigquery" => &BIGQUERY,
+        "tsql" => &TSQL,
+        "databricks" => &DATABRICKS,
+        _ => {
+            let fingerprint =
+                FingerprintDialect::from_name(dialect).unwrap_or(FingerprintDialect::Generic);
+            return sqlquack_fingerprint::is_reserved_keyword(fingerprint, upper_word);
+        }
     };
     keywords.contains(upper_word)
 }

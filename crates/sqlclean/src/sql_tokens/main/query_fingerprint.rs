@@ -8,6 +8,7 @@ use sqlquack_fingerprint::FingerprintDialect;
 
 use crate::sql_tokens::constants::FINGERPRINT_DIALECT_ALIASES;
 use crate::sql_tokens::main::canonical_tokens::canonical_tokens;
+use crate::sql_tokens::main::token_texts::token_texts;
 
 /// Return the fingerprint of `sql` under `dialect_name` that SQLBuild stores: SQLQuack's for the
 /// dialects it fingerprints, and the Polyglot token stream's for the others, as SQLBuild does.
@@ -27,7 +28,8 @@ pub fn query_fingerprint(sql: &str, dialect_name: &str) -> Result<String, String
         .tokenize(sql)
         .map_err(|error| format!("SQL tokenization failed: {error}"))?;
     let mut digest = Sha256::new();
-    for token in canonical_tokens(sql, &tokens, &dialect)? {
+    let spans = tokens.iter().map(|token| token.span.start..token.span.end);
+    for token in canonical_tokens(token_texts(sql, spans)?, &dialect_type.to_string()) {
         digest.update(token.text.len().to_string().as_bytes());
         digest.update(b":");
         digest.update(token.text.as_bytes());
