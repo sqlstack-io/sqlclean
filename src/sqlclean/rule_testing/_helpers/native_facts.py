@@ -6,7 +6,7 @@ import subprocess
 import sysconfig
 from pathlib import Path
 
-from sqlclean.rule_testing.constants import EXECUTABLE_NAME, FACTS_COMMAND
+from sqlclean.rule_testing.constants import EXECUTABLE_NAME, FACTS_COMMAND, UNAVAILABLE_KEY
 from sqlclean.rule_testing.exceptions import RuleCaseError
 
 
@@ -23,6 +23,9 @@ def native_facts(*, source: str, dialect: str) -> dict[str, object]:
         stderr: str = completed.stderr.decode("utf-8", errors="replace").strip()
         raise RuleCaseError(f"sqlclean could not parse the case SQL: {stderr}")
     facts: dict[str, object] = json.loads(completed.stdout.decode("utf-8"))
+    unavailable: object = facts.get(UNAVAILABLE_KEY)
+    if unavailable is not None:
+        raise RuleCaseError(f"sqlclean could not parse the case SQL: {unavailable}")
     return facts
 
 

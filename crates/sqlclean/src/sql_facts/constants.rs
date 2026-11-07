@@ -87,3 +87,19 @@ pub(crate) const DATE_PART_NAMES: [&str; 78] = [
     "YYY",
     "YYYY",
 ];
+/// CREATE statements the native PostgreSQL tree keeps as a generic object, by object kind, and their kind.
+pub(crate) const CREATE_OBJECT_KINDS: [(&str, &str); 6] = [
+    ("INDEX", "create_index"),
+    ("TRIGGER", "create_trigger"),
+    ("TYPE", "create_type"),
+    ("DOMAIN", "create_type"),
+    ("SCHEMA", "create_schema"),
+    ("SEQUENCE", "create_sequence"),
+];
+/// ALTER statements the native PostgreSQL tree keeps as a generic object, by object kind, and their kind.
+pub(crate) const ALTER_OBJECT_KINDS: [(&str, &str); 4] = [
+    ("TABLE", "alter_table"),
+    ("INDEX", "alter_index"),
+    ("SEQUENCE", "alter_sequence"),
+    ("VIEW", "alter_view"),
+];
