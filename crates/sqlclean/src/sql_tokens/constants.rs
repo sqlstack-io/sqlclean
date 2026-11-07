@@ -34,5 +34,5 @@ pub(crate) const PROJECTION_ENDS: [TokenType; 13] = [
     TokenType::Intersect,
 ];
 /// Dialect names fingerprinted under another name, as SQLBuild resolves them.
-pub(crate) const FINGERPRINT_DIALECT_ALIASES: [(&str, &str); 2] =
-    [("motherduck", "duckdb"), ("sqlserver", "tsql")];
+#[cfg(any(test, feature = "test-support"))]
+pub(crate) const FINGERPRINT_DIALECT_ALIASES: [(&str, &str); 1] = [("motherduck", "duckdb")];

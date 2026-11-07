@@ -3,14 +3,7 @@ use serde_json::{Value, json};
 use crate::sql_lint::main::formatter::format_json;
 use crate::sql_lint::tests::test_types;
 
-const DIALECTS: [&str; 6] = [
-    "bigquery",
-    "databricks",
-    "duckdb",
-    "postgres",
-    "snowflake",
-    "tsql",
-];
+const DIALECTS: [&str; 2] = ["duckdb", "snowflake"];
 
 #[test]
 fn given_set_operation_after_scalar_subquery_operand_when_formatting_then_keyword_stays_outer()

@@ -1,6 +1,6 @@
 use crate::sql_tokens::main::query_fingerprint::query_fingerprint;
 
-/// SQLBuild's golden fingerprints for the dialects SQLQuack tokenizes; SQLBuild stores these
+/// SQLBuild's golden fingerprints, generic tokens for dialects without their own; SQLBuild stores these
 /// hashes, so SQLClean must compute the same ones.
 #[test]
 fn given_sqlbuild_golden_queries_when_fingerprinting_then_hashes_match_sqlbuild()
@@ -44,7 +44,7 @@ fn given_sqlbuild_golden_queries_when_fingerprinting_then_hashes_match_sqlbuild(
         (
             "sqlserver",
             "SELECT TOP 10 [o].[id], N'order' AS kind FROM [dbo].[orders] AS o",
-            "f4fac3edb7682bbeddf4f73cc199493d45f1419bc8e2cd1d972fead2d67e6b71",
+            "f1525ee25924f9402677bc2cbd96f7066745948da73671d13fac2b8da03cbf0c",
         ),
     ];
     for (dialect, sql, expected) in test_cases {

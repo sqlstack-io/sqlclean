@@ -27,4 +27,7 @@ pub struct FormatResponse {
     pub formatted: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    /// Set, with the SQL unchanged, for a dialect SQLQuack does not format yet; not a refusal.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unavailable: Option<String>,
 }
