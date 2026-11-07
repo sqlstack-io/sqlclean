@@ -22,14 +22,14 @@ ignore = "0.4"
 tempfile = "3"
 toml = "0.9"
 # The same Polyglot source and revision as SQLBuild, so a build that contains both compiles it once.
-polyglot-sql = { git = "https://github.com/sqlstack-io/polyglot.git", rev = "8767d688c5b504ad609645e27ab77a260d91c5a1", default-features = false, features = [
+polyglot-sql = { git = "https://github.com/sqlstack-io/polyglot.git", rev = "1cb2a73115963c12598da17cbc3057ccd8194e64", default-features = false, features = [
     "ast-tools",
     "builder",
     "all-dialects",
     "semantic",
     "stacker",
 ] }
-polyglot-sql-function-catalogs = { git = "https://github.com/sqlstack-io/polyglot.git", rev = "8767d688c5b504ad609645e27ab77a260d91c5a1", default-features = false, features = [
+polyglot-sql-function-catalogs = { git = "https://github.com/sqlstack-io/polyglot.git", rev = "1cb2a73115963c12598da17cbc3057ccd8194e64", default-features = false, features = [
     "dialect-duckdb",
 ] }
 rayon = "1"

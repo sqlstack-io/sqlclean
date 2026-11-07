@@ -402,7 +402,7 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 [[package]]
 name = "polyglot-sql"
 version = "0.13.9"
-source = "git+https://github.com/sqlstack-io/polyglot.git?rev=8767d688c5b504ad609645e27ab77a260d91c5a1#8767d688c5b504ad609645e27ab77a260d91c5a1"
+source = "git+https://github.com/sqlstack-io/polyglot.git?rev=1cb2a73115963c12598da17cbc3057ccd8194e64#1cb2a73115963c12598da17cbc3057ccd8194e64"
 dependencies = [
  "polyglot-sql-ast-derive",
  "polyglot-sql-function-catalogs",
@@ -417,7 +417,7 @@ dependencies = [
 [[package]]
 name = "polyglot-sql-ast-derive"
 version = "0.13.9"
-source = "git+https://github.com/sqlstack-io/polyglot.git?rev=8767d688c5b504ad609645e27ab77a260d91c5a1#8767d688c5b504ad609645e27ab77a260d91c5a1"
+source = "git+https://github.com/sqlstack-io/polyglot.git?rev=1cb2a73115963c12598da17cbc3057ccd8194e64#1cb2a73115963c12598da17cbc3057ccd8194e64"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -427,7 +427,7 @@ dependencies = [
 [[package]]
 name = "polyglot-sql-function-catalogs"
 version = "0.13.9"
-source = "git+https://github.com/sqlstack-io/polyglot.git?rev=8767d688c5b504ad609645e27ab77a260d91c5a1#8767d688c5b504ad609645e27ab77a260d91c5a1"
+source = "git+https://github.com/sqlstack-io/polyglot.git?rev=1cb2a73115963c12598da17cbc3057ccd8194e64#1cb2a73115963c12598da17cbc3057ccd8194e64"
 
 [[package]]
 name = "proc-macro2"
