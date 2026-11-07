@@ -628,6 +628,8 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sqlquack-format",
+ "sqlquack-syntax",
 ]
 
 [[package]]
@@ -646,6 +648,38 @@ dependencies = [
  "sqlclean",
  "tempfile",
  "toml",
+]
+
+[[package]]
+name = "sqlquack-format"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=babbc292ee09f298ba2280f69f87e16d8fcdfbe3#babbc292ee09f298ba2280f69f87e16d8fcdfbe3"
+dependencies = [
+ "serde_json",
+ "sqlquack-syntax",
+]
+
+[[package]]
+name = "sqlquack-syntax"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=babbc292ee09f298ba2280f69f87e16d8fcdfbe3#babbc292ee09f298ba2280f69f87e16d8fcdfbe3"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sqlquack-syntax-derive",
+ "stacker",
+ "thiserror",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "sqlquack-syntax-derive"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=babbc292ee09f298ba2280f69f87e16d8fcdfbe3#babbc292ee09f298ba2280f69f87e16d8fcdfbe3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]

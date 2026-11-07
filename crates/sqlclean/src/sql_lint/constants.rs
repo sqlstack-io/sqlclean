@@ -72,3 +72,7 @@ pub(crate) const SELECT_ITEM_END_TOKENS: [TokenType; 8] = [
     TokenType::Identifier,
     TokenType::QuotedIdentifier,
 ];
+/// The dialect name SQLQuack lays out as Snowflake.
+pub(crate) const SNOWFLAKE_DIALECT: &str = "snowflake";
+/// The dialect name SQLQuack lays out as DuckDB.
+pub(crate) const DUCKDB_DIALECT: &str = "duckdb";

@@ -4,6 +4,8 @@ use std::str::FromStr;
 use polyglot_sql::tokens::{Token, TokenType};
 use polyglot_sql::{ComplexityGuardOptions, Dialect, DialectType, ParseOptions};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use sqlquack_format::FormatOptions;
+use sqlquack_syntax::Dialect as SqlQuackDialect;
 
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 use crate::sql_lint::_helpers::formatter_syntax::{cte_macro_indices, protect_syntax};
@@ -13,7 +15,8 @@ use crate::sql_lint::_helpers::token_layout::{
     oracle_layout, print_authored_tokens, tokenize, verify_printed_tokens,
 };
 use crate::sql_lint::constants::{
-    CAST_TYPE_SEPARATOR_KEYWORD, CLOSE_PARENTHESIS, LINT_API_VERSION, OPEN_PARENTHESIS,
+    CAST_TYPE_SEPARATOR_KEYWORD, CLOSE_PARENTHESIS, DUCKDB_DIALECT, LINT_API_VERSION,
+    OPEN_PARENTHESIS, SNOWFLAKE_DIALECT,
 };
 use crate::sql_lint::models::{FormatRequest, FormatResponse};
 
@@ -74,6 +77,9 @@ fn try_format_sql(request: FormatRequest) -> Result<FormatResponse, String> {
             request.version
         ));
     }
+    if let Some(dialect) = sqlquack_dialect(&request.dialect) {
+        return format_with_sqlquack(request, dialect);
+    }
     let original = request.sql;
     let dialect_type =
         DialectType::from_str(&request.dialect).map_err(|error| error.to_string())?;
@@ -103,6 +109,43 @@ fn try_format_sql(request: FormatRequest) -> Result<FormatResponse, String> {
         version: LINT_API_VERSION,
         changed,
         sql: formatted,
+        formatted: true,
+        reason: None,
+    })
+}
+
+/// The SQLQuack dialect that lays out `dialect`, for the dialects SQLQuack parses natively.
+fn sqlquack_dialect(dialect: &str) -> Option<SqlQuackDialect> {
+    match dialect.to_ascii_lowercase().as_str() {
+        SNOWFLAKE_DIALECT => Some(SqlQuackDialect::Snowflake),
+        DUCKDB_DIALECT => Some(SqlQuackDialect::DuckDB),
+        _ => None,
+    }
+}
+
+/// Lay out `request` with SQLQuack's formatter, which checks token identity and idempotency itself.
+fn format_with_sqlquack(
+    request: FormatRequest,
+    dialect: SqlQuackDialect,
+) -> Result<FormatResponse, String> {
+    let options = FormatOptions {
+        line_width: request.line_width,
+        indent: request.indent.unwrap_or(DEFAULT_INDENT),
+        token_widths: request.token_widths,
+        parse: sqlquack_syntax::ParseOptions {
+            complexity_guard: Some(sqlquack_syntax::ComplexityGuardOptions {
+                max_function_call_depth: request.max_function_call_depth,
+                ..Default::default()
+            }),
+        },
+        ..FormatOptions::new(dialect)
+    };
+    let formatted =
+        sqlquack_format::format_sql(&request.sql, &options).map_err(|refusal| refusal.reason)?;
+    Ok(FormatResponse {
+        version: LINT_API_VERSION,
+        changed: formatted.changed,
+        sql: formatted.sql,
         formatted: true,
         reason: None,
     })

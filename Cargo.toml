@@ -40,6 +40,9 @@ serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.10"
 similar = "2"
 sqlclean = { path = "crates/sqlclean" }
+# SQLQuack's formatter, which lays out the dialects it parses natively without Polyglot.
+sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "babbc292ee09f298ba2280f69f87e16d8fcdfbe3" }
+sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "babbc292ee09f298ba2280f69f87e16d8fcdfbe3" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
