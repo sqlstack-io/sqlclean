@@ -2,7 +2,7 @@
 
 use crate::sql_facts::models::FileFacts;
 
-/// Parse `sql` under `dialect` and return each statement's structural facts.
+/// Each statement's structural facts, or why they are unavailable for a dialect SQLQuack does not parse yet.
 pub fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> {
     crate::sql_facts::_helpers::collection::file_facts(sql, dialect)
 }

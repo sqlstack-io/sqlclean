@@ -13,10 +13,18 @@ use crate::sql_facts::constants::{DATE_PART_CALLS, DATE_PART_NAMES};
 use crate::sql_facts::models::{
     ColumnNode, FileFacts, JoinNode, NamedNode, StatementFacts, TableNode,
 };
+use crate::sql_lint::constants::LINT_API_VERSION;
+use crate::sql_lint::main::lint::lint;
 use crate::sql_lint::main::parse_sql::parse_sql;
-use crate::sql_lint::types::ParsedSql;
+use crate::sql_lint::types::{LintRequest, LintResponse, ParsedSql};
 
 pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> {
+    if let Some(reason) = unavailable(dialect)? {
+        return Ok(FileFacts {
+            statements: Vec::new(),
+            unavailable: Some(reason),
+        });
+    }
     let (
         ParsedSql {
             tokens, statements, ..
@@ -42,12 +50,35 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
             )
         })
         .collect();
-    Ok(FileFacts { statements: facts })
+    Ok(FileFacts {
+        statements: facts,
+        unavailable: None,
+    })
 }
 
-pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Vec<usize>, String> {
+pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Option<Vec<usize>>, String> {
+    if unavailable(dialect)?.is_some() {
+        return Ok(None);
+    }
     let (_, ranges) = parsed_statements(sql, dialect)?;
-    Ok(ranges.iter().map(|range| range.terminated_end).collect())
+    Ok(Some(
+        ranges.iter().map(|range| range.terminated_end).collect(),
+    ))
+}
+
+/// Why facts are unavailable for `dialect`: lint's own answer for a dialect SQLQuack does not parse yet.
+fn unavailable(dialect: &str) -> Result<Option<String>, String> {
+    let probe: LintResponse = lint(LintRequest {
+        version: LINT_API_VERSION,
+        dialect: dialect.to_owned(),
+        enabled_rules: Some(Vec::new()),
+        ..LintRequest::default()
+    })?;
+    Ok(probe.unavailable.map(|_| {
+        format!(
+            "SQL facts are unavailable for the {dialect} dialect: SQLQuack does not parse it yet"
+        )
+    }))
 }
 
 /// Parse `sql` and split its tokens into one range per parsed statement.

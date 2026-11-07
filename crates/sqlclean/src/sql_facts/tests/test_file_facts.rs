@@ -3,7 +3,7 @@ use crate::sql_facts::main::statement_ends::statement_ends;
 use crate::sql_facts::models::{FileFacts, StatementFacts};
 use crate::sql_facts::tests::helpers::text;
 use crate::sql_facts::tests::test_types::{
-    ParseOutcomeTestCase, StatementEndsTestCase, StatementFactsTestCase,
+    ParseOutcomeTestCase, StatementEndsTestCase, StatementFactsTestCase, UnavailableFactsTestCase,
 };
 
 const TWO_STATEMENTS: &str = "WITH recent AS (SELECT o.order_id, o.* FROM shop.orders AS o WHERE o.total > 10)\n\
@@ -260,14 +260,15 @@ fn given_sql_text_when_finding_statement_ends_then_each_ends_after_its_terminato
     for test_case in &test_cases {
         let characters: Vec<char> = test_case.sql.chars().collect();
         let statements: Option<Vec<String>> = statement_ends(test_case.sql, "duckdb")
+            .ok()
+            .flatten()
             .map(|ends| {
                 let starts = std::iter::once(0).chain(ends.iter().copied());
                 starts
                     .zip(ends.iter().copied())
                     .map(|(start, end)| characters[start..end].iter().collect())
                     .collect()
-            })
-            .ok();
+            });
         let texts: Option<Vec<&str>> = statements
             .as_ref()
             .map(|statements| statements.iter().map(String::as_str).collect());
@@ -278,4 +279,43 @@ fn given_sql_text_when_finding_statement_ends_then_each_ends_after_its_terminato
             test_case.description
         );
     }
+}
+
+#[test]
+fn given_a_dialect_sqlquack_does_not_parse_when_collecting_facts_then_they_are_unavailable_not_empty()
+-> Result<(), String> {
+    let test_cases = [
+        UnavailableFactsTestCase {
+            description: "MySQL has no SQLQuack parser, so its facts are unavailable",
+            dialect: "mysql",
+            expected_unavailable: Some(
+                "SQL facts are unavailable for the mysql dialect: SQLQuack does not parse it yet",
+            ),
+        },
+        UnavailableFactsTestCase {
+            description: "DuckDB parses, so its facts are available",
+            dialect: "duckdb",
+            expected_unavailable: None,
+        },
+    ];
+    for test_case in &test_cases {
+        let facts: FileFacts = file_facts("SELECT 1; SELECT 2", test_case.dialect)?;
+        let ends: Option<Vec<usize>> = statement_ends("SELECT 1; SELECT 2", test_case.dialect)?;
+        assert_eq!(
+            facts.unavailable.as_deref(),
+            test_case.expected_unavailable,
+            "{}",
+            test_case.description
+        );
+        assert_eq!(
+            (facts.statements.len(), ends.map(|ends| ends.len())),
+            match test_case.expected_unavailable {
+                Some(_) => (0, None),
+                None => (2, Some(2)),
+            },
+            "{}",
+            test_case.description
+        );
+    }
+    Ok(())
 }

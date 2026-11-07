@@ -189,11 +189,15 @@ fn file_key(
 }
 
 fn host_file(file: &SourceFile, rules: Vec<String>) -> Result<HostFile, String> {
+    let facts = file_facts(&file.text, &file.dialect)?;
+    if let Some(reason) = facts.unavailable {
+        return Err(reason);
+    }
     Ok(HostFile {
         path: file.path.clone(),
         source: file.text.clone(),
         dialect: file.dialect.clone(),
-        facts: file_facts(&file.text, &file.dialect)?,
+        facts,
         rules,
     })
 }
