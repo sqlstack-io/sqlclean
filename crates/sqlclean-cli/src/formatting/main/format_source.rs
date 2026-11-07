@@ -15,7 +15,9 @@ pub fn format_source(
     indent: usize,
 ) -> Result<String, String> {
     let characters: Vec<char> = text.chars().collect();
-    let mut boundaries: Vec<usize> = statement_ends(text, dialect)?;
+    let mut boundaries: Vec<usize> = statement_ends(text, dialect)?.ok_or_else(|| {
+        format!("SQL formatting is unavailable for the {dialect} dialect: SQLQuack does not parse it yet")
+    })?;
     if let Some(last) = boundaries.last_mut() {
         *last = characters.len();
     }

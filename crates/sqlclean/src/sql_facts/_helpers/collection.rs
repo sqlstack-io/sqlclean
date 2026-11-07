@@ -1,6 +1,6 @@
 //! Walk each parsed statement once and collect its structural facts.
 
-use sqlquack_syntax::expressions::names::models::{Column, TableRef};
+use sqlquack_syntax::expressions::names::models::{Column, Identifier, TableRef};
 use sqlquack_syntax::expressions::queries::models::{Cte, Join, With};
 use sqlquack_syntax::tokens::models::{Span, Token, TokenType};
 use sqlquack_syntax::{Expression, ExpressionWalk};
@@ -9,14 +9,24 @@ use crate::sql_facts::_helpers::statements::{StatementTokens, statement_token_ra
 use crate::sql_facts::_helpers::tokens::{
     function_nodes, join_clause_span, literal_nodes, star_nodes,
 };
-use crate::sql_facts::constants::{DATE_PART_CALLS, DATE_PART_NAMES};
+use crate::sql_facts::constants::{
+    ALTER_OBJECT_KINDS, CREATE_OBJECT_KINDS, DATE_PART_CALLS, DATE_PART_NAMES,
+};
 use crate::sql_facts::models::{
     ColumnNode, FileFacts, JoinNode, NamedNode, StatementFacts, TableNode,
 };
+use crate::sql_lint::constants::LINT_API_VERSION;
+use crate::sql_lint::main::lint::lint;
 use crate::sql_lint::main::parse_sql::parse_sql;
-use crate::sql_lint::types::ParsedSql;
+use crate::sql_lint::types::{LintRequest, LintResponse, ParsedSql};
 
 pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> {
+    if let Some(reason) = unavailable(dialect)? {
+        return Ok(FileFacts {
+            statements: Vec::new(),
+            unavailable: Some(reason),
+        });
+    }
     let (
         ParsedSql {
             tokens, statements, ..
@@ -42,12 +52,35 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
             )
         })
         .collect();
-    Ok(FileFacts { statements: facts })
+    Ok(FileFacts {
+        statements: facts,
+        unavailable: None,
+    })
 }
 
-pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Vec<usize>, String> {
+pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Option<Vec<usize>>, String> {
+    if unavailable(dialect)?.is_some() {
+        return Ok(None);
+    }
     let (_, ranges) = parsed_statements(sql, dialect)?;
-    Ok(ranges.iter().map(|range| range.terminated_end).collect())
+    Ok(Some(
+        ranges.iter().map(|range| range.terminated_end).collect(),
+    ))
+}
+
+/// Why facts are unavailable for `dialect`: lint's own answer for a dialect SQLQuack does not parse yet.
+fn unavailable(dialect: &str) -> Result<Option<String>, String> {
+    let probe: LintResponse = lint(LintRequest {
+        version: LINT_API_VERSION,
+        dialect: dialect.to_owned(),
+        enabled_rules: Some(Vec::new()),
+        ..LintRequest::default()
+    })?;
+    Ok(probe.unavailable.map(|_| {
+        format!(
+            "SQL facts are unavailable for the {dialect} dialect: SQLQuack does not parse it yet"
+        )
+    }))
 }
 
 /// Parse `sql` and split its tokens into one range per parsed statement.
@@ -95,7 +128,7 @@ fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> Stateme
     };
     StatementFacts {
         index,
-        kind: statement.variant_name().to_owned(),
+        kind: statement_kind(statement),
         start: tokens.first().map_or(0, |token| token.span.start),
         end: tokens.last().map_or(0, |token| token.span.end),
         terminated_end,
@@ -103,15 +136,20 @@ fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> Stateme
             nodes
                 .iter()
                 .flat_map(|node| with_ctes(node))
-                .filter_map(|cte| cte_node(cte, tokens))
+                .filter_map(|cte| cte_node(cte, tokens, characters))
                 .collect(),
         ),
-        tables: sorted(nodes.iter().filter_map(|node| table_node(node)).collect()),
+        tables: sorted(
+            nodes
+                .iter()
+                .filter_map(|node| table_node(node, characters))
+                .collect(),
+        ),
         joins: sorted(
             nodes
                 .iter()
                 .flat_map(|node| select_joins(node))
-                .filter_map(|join| join_node(join, tokens))
+                .filter_map(|join| join_node(join, tokens, characters))
                 .collect(),
         ),
         stars: star_nodes(tokens),
@@ -120,7 +158,7 @@ fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> Stateme
             nodes
                 .iter()
                 .filter(|node| !is_date_part(node, &date_parts))
-                .filter_map(|node| column_node(node))
+                .filter_map(|node| column_node(node, characters))
                 .collect(),
         ),
         literals: literal_nodes(tokens, characters),
@@ -167,7 +205,7 @@ fn select_joins(node: &Expression) -> &[Join] {
 }
 
 /// The CTE located at its name; the parser leaves CTE names unlocated, so read `name AS (`.
-fn cte_node(cte: &Cte, tokens: &[Token]) -> Option<NamedNode> {
+fn cte_node(cte: &Cte, tokens: &[Token], characters: &[char]) -> Option<NamedNode> {
     let span: Span = cte.alias.span.or_else(|| {
         tokens
             .windows(2)
@@ -181,13 +219,13 @@ fn cte_node(cte: &Cte, tokens: &[Token]) -> Option<NamedNode> {
             .map(|pair| pair[0].span)
     })?;
     Some(NamedNode {
-        name: cte.alias.name.clone(),
+        name: authored(&cte.alias, characters),
         start: span.start,
         end: span.end,
     })
 }
 
-fn table_node(node: &Expression) -> Option<TableNode> {
+fn table_node(node: &Expression, characters: &[char]) -> Option<TableNode> {
     let Expression::Table(table) = node else {
         return None;
     };
@@ -201,20 +239,23 @@ fn table_node(node: &Expression) -> Option<TableNode> {
     let qualified_name: String = [&table.catalog, &table.schema]
         .into_iter()
         .flatten()
-        .map(|part| part.name.as_str())
-        .chain([table.name.name.as_str()])
-        .collect::<Vec<&str>>()
+        .chain([&table.name])
+        .map(|part| authored(part, characters))
+        .collect::<Vec<String>>()
         .join(".");
     Some(TableNode {
         start,
         end: span.end,
-        name: table.name.name.clone(),
+        name: authored(&table.name, characters),
         qualified_name,
-        alias: table.alias.as_ref().map(|alias| alias.name.clone()),
+        alias: table
+            .alias
+            .as_ref()
+            .map(|alias| authored(alias, characters)),
     })
 }
 
-fn join_node(join: &Join, tokens: &[Token]) -> Option<JoinNode> {
+fn join_node(join: &Join, tokens: &[Token], characters: &[char]) -> Option<JoinNode> {
     let relation: Option<&TableRef> = match &join.this {
         Expression::Table(table) => Some(table),
         _ => None,
@@ -224,7 +265,7 @@ fn join_node(join: &Join, tokens: &[Token]) -> Option<JoinNode> {
         start,
         end,
         kind: format!("{:?}", join.kind).to_ascii_uppercase(),
-        relation: relation.map(|table| table.name.name.clone()),
+        relation: relation.map(|table| authored(&table.name, characters)),
         has_condition: join.on.is_some() || !join.using.is_empty(),
     })
 }
@@ -258,18 +299,52 @@ fn is_date_part(node: &Expression, date_parts: &[&Expression]) -> bool {
     date_parts.iter().any(|part| std::ptr::eq(*part, node))
 }
 
-fn column_node(node: &Expression) -> Option<ColumnNode> {
+fn column_node(node: &Expression, characters: &[char]) -> Option<ColumnNode> {
     let Expression::Column(column) = node else {
         return None;
     };
     let column: &Column = column;
     let span: Span = column.span.or(column.name.span)?;
+    let start: usize = column
+        .table
+        .as_ref()
+        .and_then(|table| table.span)
+        .map_or(span.start, |table| table.start.min(span.start));
     Some(ColumnNode {
-        start: span.start,
+        start,
         end: span.end,
-        name: column.name.name.clone(),
-        qualifier: column.table.as_ref().map(|table| table.name.clone()),
+        name: authored(&column.name, characters),
+        qualifier: column
+            .table
+            .as_ref()
+            .map(|table| authored(table, characters)),
     })
+}
+
+/// A name as written: a parser that folds unquoted names keeps the folded name, so read the source.
+fn authored(identifier: &Identifier, characters: &[char]) -> String {
+    let written: Option<String> = identifier
+        .span
+        .filter(|_| !identifier.quoted)
+        .and_then(|span| characters.get(span.start..span.end))
+        .map(|text| text.iter().collect());
+    written
+        .filter(|text| text.eq_ignore_ascii_case(&identifier.name))
+        .unwrap_or_else(|| identifier.name.clone())
+}
+
+/// The statement's kind, naming a generic CREATE or ALTER by its object as Polyglot's tree did.
+fn statement_kind(statement: &Expression) -> String {
+    let (kind, known): (&str, &[(&str, &str)]) = match statement {
+        Expression::CreateObject(node) => (&node.kind, &CREATE_OBJECT_KINDS),
+        Expression::AlterObject(node) => (&node.kind, &ALTER_OBJECT_KINDS),
+        _ => ("", &[]),
+    };
+    known
+        .iter()
+        .find(|(object, _)| object.eq_ignore_ascii_case(kind))
+        .map_or(statement.variant_name(), |(_, name)| name)
+        .to_owned()
 }
 
 /// The first located table or column inside `expression`, in source order.
