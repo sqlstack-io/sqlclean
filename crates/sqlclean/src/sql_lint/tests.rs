@@ -2,6 +2,8 @@
 mod authored_tokens;
 #[path = "tests/test_batch_lint.rs"]
 mod batch_lint;
+#[path = "tests/builtin_functions.rs"]
+mod builtin_functions;
 #[path = "tests/test_comment_formatter.rs"]
 mod comment_formatter;
 #[path = "tests/test_cross_joins.rs"]

@@ -8,9 +8,9 @@ use crate::sql_lint::main::engine::lint_json;
 use crate::sql_lint::main::formatter::format_json;
 use crate::sql_lint::models::FormatRequest;
 use crate::sql_lint::tests::test_types::CrossJoinTestCase;
-use crate::sql_tokens::constants::CALL_SYNTAX_FUNCTIONS;
-use crate::sql_tokens::main::builtin_function_names::builtin_function_names;
+use crate::sql_lint::tests::builtin_functions::{CALL_SYNTAX_FUNCTIONS, builtin_function_names};
 use crate::sql_tokens::main::canonical_tokens::canonical_tokens;
+use crate::sql_tokens::main::token_texts::token_texts;
 use crate::sql_tokens::main::query_fingerprint::query_fingerprint;
 
 /// The dependency sentinel the cross join cases name `order_policy`.
@@ -148,8 +148,15 @@ fn only_keyword_case_differs(sql: &str, printed: &str, dialect: &str) -> Result<
     let right_tokens = parser
         .tokenize(printed)
         .map_err(|error| error.to_string())?;
-    let left = canonical_tokens(sql, &left_tokens, &parser)?;
-    let right = canonical_tokens(printed, &right_tokens, &parser)?;
+    let name = parser.dialect_type().to_string();
+    let spans = |tokens: &[polyglot_sql::tokens::Token]| {
+        tokens
+            .iter()
+            .map(|token| token.span.start..token.span.end)
+            .collect::<Vec<_>>()
+    };
+    let left = canonical_tokens(token_texts(sql, spans(&left_tokens))?, &name);
+    let right = canonical_tokens(token_texts(printed, spans(&right_tokens))?, &name);
     Ok(left.len() == right.len()
         && left.iter().zip(&right).all(|(before, after)| {
             before == after

@@ -86,8 +86,8 @@ pub(crate) struct TokenTexts {
 impl TokenTexts {
     #[cfg(test)]
     pub(crate) fn read(sql: &str, tokens: &[Token], dialect: &Dialect) -> Result<Self, String> {
-        let texts = token_texts(sql, tokens)?;
-        let foldable = foldable_tokens(&texts, tokens, dialect);
+        let texts = token_texts(sql, spans(tokens))?;
+        let foldable = foldable_tokens(&texts, &dialect.dialect_type().to_string());
         Ok(Self { texts, foldable })
     }
 
@@ -340,7 +340,10 @@ pub(crate) fn verify_printed_tokens(
     dialect: &Dialect,
     recases: &BTreeMap<usize, KeywordRecase>,
 ) -> Result<(), String> {
-    let after_canonical = canonical_tokens(after, after_tokens, dialect)?;
+    let after_canonical = canonical_tokens(
+        token_texts(after, spans(after_tokens))?,
+        &dialect.dialect_type().to_string(),
+    );
     if before_texts.texts.len() != after_canonical.len() {
         return Err(TOKEN_PRESERVATION_FAILURE.to_string());
     }
@@ -354,7 +357,7 @@ pub(crate) fn verify_printed_tokens(
         };
         let texts: &Vec<String> = match after_texts {
             Some(ref texts) => texts,
-            None => after_texts.insert(token_texts(after, after_tokens)?),
+            None => after_texts.insert(token_texts(after, spans(after_tokens))?),
         };
         let printed: &str = &texts[index];
         if !recase.allows(&before_texts.texts[index], printed) {
@@ -383,6 +386,11 @@ impl KeywordRecase {
             && printed == printed.to_ascii_uppercase()
             && authored.eq_ignore_ascii_case(printed)
     }
+}
+
+/// The character span of every token, as `token_texts` reads them.
+fn spans(tokens: &[Token]) -> impl Iterator<Item = std::ops::Range<usize>> + '_ {
+    tokens.iter().map(|token| token.span.start..token.span.end)
 }
 
 pub(crate) fn tokenize(sql: &str, dialect: &Dialect) -> Result<Vec<Token>, String> {
@@ -420,12 +428,12 @@ fn comment_positions(sql: &str, tokens: &[Token]) -> Vec<(String, usize)> {
 
 /// Lexemes of `sql`; only authored lexemes carry the recase classification.
 fn lexemes(sql: &str, tokens: &[Token], dialect: Option<&Dialect>) -> Result<Vec<Lexeme>, String> {
-    let raws = token_texts(sql, tokens)?;
+    let raws = token_texts(sql, spans(tokens))?;
     let (foldable, recasable) = match dialect {
         Some(dialect) => {
             let uppers: Vec<String> = raws.iter().map(|raw| raw.to_ascii_uppercase()).collect();
             let names = name_positions(&uppers);
-            let foldable = foldable_tokens(&raws, tokens, dialect);
+            let foldable = foldable_tokens(&raws, &dialect.dialect_type().to_string());
             let recasable: Vec<bool> = raws
                 .iter()
                 .zip(names)
