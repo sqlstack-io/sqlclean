@@ -5,6 +5,8 @@ use std::sync::LazyLock;
 
 use polyglot_sql::DialectType;
 
+use crate::sql_tokens::models::KeywordList;
+
 static DUCKDB: LazyLock<HashSet<String>> =
     LazyLock::new(|| keyword_set(include_str!("../reserved_keywords/duckdb.txt")));
 static POSTGRES: LazyLock<HashSet<String>> =
@@ -30,6 +32,17 @@ pub(crate) fn is_reserved_keyword(dialect: DialectType, upper_word: &str) -> boo
         DialectType::TSQL => &TSQL,
         DialectType::Databricks => &DATABRICKS,
         _ => &GENERIC,
+    };
+    keywords.contains(upper_word)
+}
+
+/// Whether the upper-cased word is reserved in `list`, a SQLQuack fingerprint dialect's list.
+pub(crate) fn is_listed_keyword(list: KeywordList, upper_word: &str) -> bool {
+    let keywords: &HashSet<String> = match list {
+        KeywordList::DuckDB => &DUCKDB,
+        KeywordList::PostgreSQL => &POSTGRES,
+        KeywordList::Snowflake => &SNOWFLAKE,
+        KeywordList::Generic => &GENERIC,
     };
     keywords.contains(upper_word)
 }

@@ -8,6 +8,7 @@ use sqlquack_format::FormatOptions;
 use sqlquack_syntax::Dialect as SqlQuackDialect;
 
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
+use crate::sql_lint::_helpers::cte_macros::take_out_cte_macros;
 use crate::sql_lint::_helpers::formatter_syntax::{cte_macro_indices, protect_syntax};
 use crate::sql_lint::_helpers::printed_layout::{PrintedSql, WrapOptions, wrap_lines};
 use crate::sql_lint::_helpers::token_layout::{
@@ -140,15 +141,36 @@ fn format_with_sqlquack(
         },
         ..FormatOptions::new(dialect)
     };
-    let formatted =
-        sqlquack_format::format_sql(&request.sql, &options).map_err(|refusal| refusal.reason)?;
+    let sql = format_around_cte_macros(&request.sql, &options)?;
+    // SQLQuack checks its own layout; putting placeholders back is checked here.
+    if request.sql.contains(INTERPOLATION_PLACEHOLDER_PREFIX)
+        && sql != request.sql
+        && format_around_cte_macros(&sql, &options)? != sql
+    {
+        return Err(NOT_IDEMPOTENT_FAILURE.to_string());
+    }
     Ok(FormatResponse {
         version: LINT_API_VERSION,
-        changed: formatted.changed,
-        sql: formatted.sql,
+        changed: sql != request.sql,
+        sql,
         formatted: true,
         reason: None,
     })
+}
+
+/// SQLQuack's layout of `sql`, which it checks for token identity and idempotency.
+fn sqlquack_layout(sql: &str, options: &FormatOptions) -> Result<String, String> {
+    sqlquack_format::format_sql(sql, options)
+        .map(|formatted| formatted.sql)
+        .map_err(|refusal| refusal.reason)
+}
+
+/// Lay out `sql` with SQLQuack, taking CTE macro placeholders out first and putting them back.
+fn format_around_cte_macros(sql: &str, options: &FormatOptions) -> Result<String, String> {
+    match take_out_cte_macros(sql, options.dialect)? {
+        None => sqlquack_layout(sql, options),
+        Some(without) => without.put_back(&sqlquack_layout(&without.sql, options)?, options.dialect),
+    }
 }
 
 /// The printed output of [`format_layout`], its tokens, and the oracle it was printed against.

@@ -43,6 +43,7 @@ sqlclean = { path = "crates/sqlclean" }
 # SQLQuack's formatter, which lays out the dialects it parses natively without Polyglot.
 sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "f2985b374694f3da56c4f1e5b36fbc5d81e101ef" }
 sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "f2985b374694f3da56c4f1e5b36fbc5d81e101ef" }
+sqlquack-syntax-postgres = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "f2985b374694f3da56c4f1e5b36fbc5d81e101ef" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

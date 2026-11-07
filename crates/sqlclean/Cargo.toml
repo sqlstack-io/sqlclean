@@ -18,6 +18,7 @@ polyglot-sql.workspace = true
 polyglot-sql-function-catalogs.workspace = true
 sqlquack-format.workspace = true
 sqlquack-syntax.workspace = true
+sqlquack-syntax-postgres.workspace = true
 rayon.workspace = true
 rustc-hash.workspace = true
 serde.workspace = true
