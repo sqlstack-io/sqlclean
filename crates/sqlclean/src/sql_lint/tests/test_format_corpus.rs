@@ -18,8 +18,8 @@ fn given_dialect_corpus_when_formatting_then_output_layout_and_refusals_are_stab
         test_types::FormatCorpusTestCase {
             description: "Snowflake identity corpus",
             dialect: "snowflake",
-            expected_formatted: 427,
-            expected_refused: 8,
+            expected_formatted: 426,
+            expected_refused: 9,
         },
     ];
     let corpus: Vec<Value> =

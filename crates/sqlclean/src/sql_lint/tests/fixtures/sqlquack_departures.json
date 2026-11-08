@@ -120,6 +120,13 @@
  },
  {
   "dialect": "snowflake",
+  "sql": "SELECT * FROM t, UNNEST(x) WITH ORDINALITY",
+  "formatted": null,
+  "reason": "Snowflake has no UNNEST, so SQLQuack's parser refuses it",
+  "receipt": "sf.query.format-probe.k47586a1689b7"
+ },
+ {
+  "dialect": "snowflake",
   "sql": "WITH t AS (SELECT PARSE_JSON('{\"level1\": {\"level2\": {\"level3\": \"value\"}}}') AS data) SELECT data:     level1  : level2 : level3::VARIANT FROM t",
   "formatted": "WITH t AS (\n  SELECT PARSE_JSON('{\"level1\": {\"level2\": {\"level3\": \"value\"}}}') AS data\n)\n\nSELECT data:     level1  : level2 : level3::VARIANT\nFROM t",
   "reason": "Snowflake names an unaliased select item by its text, spaces included, so the item keeps its spacing; SQLClean respaced it",

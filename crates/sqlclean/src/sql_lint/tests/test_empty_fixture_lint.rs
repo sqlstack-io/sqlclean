@@ -22,7 +22,7 @@ fn given_empty_fixture_context_when_linting_projected_star_then_only_canonical_i
         },
         test_types::EmptyFixtureLintTestCase {
             description: "ordinary SQL has no intrinsic exemption",
-            sql: "SELECT * FROM __empty_fixture()",
+            sql: "SELECT * FROM TABLE(__empty_fixture())",
             in_fixture_harness: false,
             expected_diagnostic_count: 1,
         },
