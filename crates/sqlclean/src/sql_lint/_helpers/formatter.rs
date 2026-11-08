@@ -1,5 +1,5 @@
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use sqlquack_format::FormatOptions;
+use sqlquack_format::{FormatDialect, FormatOptions};
 use sqlquack_syntax::Dialect as SqlQuackDialect;
 
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
@@ -64,6 +64,14 @@ fn sqlquack_dialect(dialect: &str) -> Option<SqlQuackDialect> {
     }
 }
 
+/// SQLQuack's formatter dialect for a dialect it formats natively.
+fn format_dialect(dialect: SqlQuackDialect) -> FormatDialect {
+    match dialect {
+        SqlQuackDialect::DuckDB => FormatDialect::DuckDB,
+        _ => FormatDialect::Snowflake,
+    }
+}
+
 /// Lay out `request` with SQLQuack; this re-checks idempotency only where placeholders were put back.
 fn format_with_sqlquack(
     request: FormatRequest,
@@ -79,12 +87,12 @@ fn format_with_sqlquack(
                 ..Default::default()
             }),
         },
-        ..FormatOptions::new(dialect)
+        ..FormatOptions::new(format_dialect(dialect))
     };
-    let sql = format_around_cte_macros(&request.sql, &options)?;
+    let sql = format_around_cte_macros(&request.sql, dialect, &options)?;
     if request.sql.contains(INTERPOLATION_PLACEHOLDER_PREFIX)
         && sql != request.sql
-        && format_around_cte_macros(&sql, &options)? != sql
+        && format_around_cte_macros(&sql, dialect, &options)? != sql
     {
         return Err(NOT_IDEMPOTENT_FAILURE.to_string());
     }
@@ -106,11 +114,13 @@ fn sqlquack_layout(sql: &str, options: &FormatOptions) -> Result<String, String>
 }
 
 /// Lay out `sql` with SQLQuack, taking CTE macro placeholders out first and putting them back.
-fn format_around_cte_macros(sql: &str, options: &FormatOptions) -> Result<String, String> {
-    match take_out_cte_macros(sql, options.dialect)? {
+fn format_around_cte_macros(
+    sql: &str,
+    dialect: SqlQuackDialect,
+    options: &FormatOptions,
+) -> Result<String, String> {
+    match take_out_cte_macros(sql, dialect)? {
         None => sqlquack_layout(sql, options),
-        Some(without) => {
-            without.put_back(&sqlquack_layout(&without.sql, options)?, options.dialect)
-        }
+        Some(without) => without.put_back(&sqlquack_layout(&without.sql, options)?, dialect),
     }
 }
