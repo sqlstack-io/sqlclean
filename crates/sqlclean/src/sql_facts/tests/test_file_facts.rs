@@ -258,14 +258,15 @@ fn given_comma_and_nested_joins_when_collecting_postgres_facts_then_joins_read_a
                 )
             })
             .collect();
-        let expected: Vec<(&str, &str, bool, String)> = test_case
-            .expected_joins
+        let located: Vec<(&str, &str, bool, &str)> = joins
             .iter()
-            .map(|(kind, relation, condition, text)| {
-                (*kind, *relation, *condition, (*text).to_owned())
-            })
+            .map(|(kind, relation, condition, text)| (*kind, *relation, *condition, text.as_str()))
             .collect();
-        assert_eq!(joins, expected, "{}", test_case.description);
+        assert_eq!(
+            located, test_case.expected_joins,
+            "{}",
+            test_case.description
+        );
     }
     Ok(())
 }
