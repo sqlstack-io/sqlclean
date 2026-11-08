@@ -292,6 +292,56 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
             },
         ),
         RewriteTestCase(
+            description="format splits a T-SQL batch written without semicolons into statements",
+            config='dialect = "tsql"\n',
+            files={"models/q.sql": "select a from t\nupdate t set a = 2\n"},
+            arguments=("format",),
+            expected_exit=0,
+            expected_files={"models/q.sql": "SELECT a\nFROM t\n\nUPDATE t SET a = 2\n"},
+        ),
+        RewriteTestCase(
+            description="format lays out a T-SQL procedure's body under the mssql alias",
+            config='dialect = "mssql"\n',
+            files={
+                "models/p.sql": (
+                    "create procedure dbo.p @a int as begin set nocount on;"
+                    " if @a > 1 select a from t where a = @a end\n"
+                )
+            },
+            arguments=("format",),
+            expected_exit=0,
+            expected_files={
+                "models/p.sql": (
+                    "CREATE PROCEDURE dbo.p @a int\nAS\nBEGIN\n    SET nocount ON;\n"
+                    "    IF @a > 1\n        SELECT a\n        FROM t\n        WHERE a = @a\nEND\n"
+                )
+            },
+        ),
+        RewriteTestCase(
+            description="format leaves a Databricks file, which SQLQuack parses but does not format, unchanged",
+            config='dialect = "databricks"\n',
+            files={"models/q.sql": "select a from t\n"},
+            arguments=("format", "--check"),
+            expected_exit=0,
+            expected_files={"models/q.sql": "select a from t\n"},
+        ),
+        RewriteTestCase(
+            description="format lays out BigQuery and PostgreSQL files",
+            config='dialect = "bigquery"\n[[dialects]]\npaths = ["pg/**"]\ndialect = "postgresql"\n',
+            files={"models/q.sql": "select a from t\n", "pg/q.sql": "select a from t\n"},
+            arguments=("format",),
+            expected_exit=0,
+            expected_files={"models/q.sql": "SELECT a\nFROM t\n", "pg/q.sql": "SELECT a\nFROM t\n"},
+        ),
+        RewriteTestCase(
+            description="format reads the sqlserver alias as T-SQL",
+            config='dialect = "sqlserver"\n',
+            files={"models/q.sql": "select 1 select 2"},
+            arguments=("format",),
+            expected_exit=0,
+            expected_files={"models/q.sql": "SELECT 1\n\nSELECT 2\n"},
+        ),
+        RewriteTestCase(
             description="a file of only comments keeps its final newline",
             config=DUCKDB,
             files={"models/q.sql": "-- only a comment\n"},

@@ -123,12 +123,13 @@ SELECT [order id] FROM orders
 error[SQLCLEAN999]: SQL could not be parsed as duckdb: Parse error at line 1, column 17: Expected RBracket, got Var ('id') near [SELECT [order id] FROM orders]
 ```
 
-SQLClean reads SQL with SQLQuack's parsers. `check` and `fix` read `duckdb`, `generic`, `postgres`,
-`snowflake` and `sqlite` files, and `format` lays out `duckdb` and `snowflake` files; a `generic`,
-`postgres` or `sqlite` file is checked and fixed but left as written by `format`. A file in any
-other dialect, such as `mysql` or `tsql`, is not checked, fixed or formatted: `check` reports it once
-as a warning (in JSON, under `unavailable`), `format` leaves it unchanged with a warning, and it
-never fails a command or counts as a problem.
+SQLClean reads SQL with SQLQuack's parsers. `check` and `fix` read `bigquery`, `databricks`,
+`duckdb`, `generic`, `postgres`, `snowflake` and `sqlite` files, and `format` lays out `bigquery`,
+`duckdb`, `postgres`, `snowflake` and `tsql` files. A `databricks`, `generic` or `sqlite` file is
+checked and fixed but left as written by `format`; a `tsql` file is formatted, by `fix` too, but its
+Rules are not checked yet. A file in any other dialect, such as `mysql`, is not checked, fixed or
+formatted: `check` reports it once as a warning (in JSON, under `unavailable`), `format` leaves it
+unchanged with a warning, and it never fails a command or counts as a problem.
 
 ```text
 warning: SQL lint is unavailable for the mysql dialect: SQLQuack does not parse it yet

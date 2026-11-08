@@ -361,6 +361,11 @@ fn given_a_dialect_sqlquack_does_not_parse_when_collecting_facts_then_they_are_u
             dialect: "duckdb",
             expected_unavailable: None,
         },
+        UnavailableFactsTestCase {
+            description: "Databricks parses, though its parser refuses empty input, so its facts are available",
+            dialect: "databricks",
+            expected_unavailable: None,
+        },
     ];
     for test_case in &test_cases {
         let facts: FileFacts = file_facts("SELECT 1; SELECT 2", test_case.dialect)?;

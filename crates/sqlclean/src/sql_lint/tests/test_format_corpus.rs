@@ -22,6 +22,18 @@ fn given_dialect_corpus_when_formatting_then_output_layout_and_refusals_are_stab
             expected_refused: 9,
         },
         test_types::FormatCorpusTestCase {
+            description: "BigQuery identity corpus",
+            dialect: "bigquery",
+            expected_formatted: 161,
+            expected_refused: 7,
+        },
+        test_types::FormatCorpusTestCase {
+            description: "PostgreSQL identity corpus",
+            dialect: "postgres",
+            expected_formatted: 124,
+            expected_refused: 13,
+        },
+        test_types::FormatCorpusTestCase {
             description: "T-SQL identity corpus",
             dialect: "tsql",
             expected_formatted: 52,
@@ -46,23 +58,11 @@ fn given_dialect_corpus_when_formatting_then_output_layout_and_refusals_are_stab
 #[test]
 fn given_dialects_without_a_native_formatter_when_formatting_then_each_query_is_unavailable()
 -> Result<(), String> {
-    let test_cases = [
-        test_types::UnavailableCorpusTestCase {
-            description: "BigQuery corpus",
-            dialect: "bigquery",
-            expected_unavailable: 168,
-        },
-        test_types::UnavailableCorpusTestCase {
-            description: "Databricks corpus",
-            dialect: "databricks",
-            expected_unavailable: 62,
-        },
-        test_types::UnavailableCorpusTestCase {
-            description: "PostgreSQL corpus",
-            dialect: "postgres",
-            expected_unavailable: 137,
-        },
-    ];
+    let test_cases = [test_types::UnavailableCorpusTestCase {
+        description: "Databricks corpus",
+        dialect: "databricks",
+        expected_unavailable: 62,
+    }];
     let corpus: Vec<Value> =
         serde_json::from_str(FORMAT_CORPUS).map_err(|error| error.to_string())?;
     for test_case in &test_cases {
