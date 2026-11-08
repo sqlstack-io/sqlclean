@@ -3,7 +3,8 @@ use crate::sql_facts::main::statement_ends::statement_ends;
 use crate::sql_facts::models::{FileFacts, StatementFacts};
 use crate::sql_facts::tests::helpers::text;
 use crate::sql_facts::tests::test_types::{
-    ParseOutcomeTestCase, StatementEndsTestCase, StatementFactsTestCase, UnavailableFactsTestCase,
+    JoinFactsTestCase, ParseOutcomeTestCase, StatementEndsTestCase, StatementFactsTestCase,
+    UnavailableFactsTestCase,
 };
 
 const TWO_STATEMENTS: &str = "WITH recent AS (SELECT o.order_id, o.* FROM shop.orders AS o WHERE o.total > 10)\n\
@@ -203,6 +204,68 @@ FROM recent AS r LEFT JOIN customers AS c ON r.customer_id = c.customer_id",
             "{}: {columns:?}",
             test_case.description
         );
+    }
+    Ok(())
+}
+
+#[test]
+fn given_comma_and_nested_joins_when_collecting_postgres_facts_then_joins_read_as_polyglot_did()
+-> Result<(), String> {
+    let test_cases = [
+        JoinFactsTestCase {
+            description: "a comma relation after an explicit join is an implicit join",
+            sql: "SELECT * FROM a FULL JOIN b USING (x), c AS cc",
+            expected_joins: &[
+                ("FULL", "b", true, "FULL JOIN b USING (x)"),
+                ("IMPLICIT", "c", false, "c AS cc"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "a comma relation before the first join is not",
+            sql: "SELECT * FROM a, b JOIN c ON true",
+            expected_joins: &[("INNER", "c", true, "JOIN c ON true")],
+        },
+        JoinFactsTestCase {
+            description: "a join nested by its ON clauses reports both joins",
+            sql: "SELECT * FROM t2 LEFT JOIN t3 FULL JOIN t4 ON false ON false",
+            expected_joins: &[
+                ("LEFT", "t3", true, "LEFT JOIN t3"),
+                ("FULL", "t4", true, "FULL JOIN t4 ON false ON false"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "a parenthesized join group reports only the join to it",
+            sql: "SELECT * FROM t1 LEFT JOIN (t2 LEFT JOIN t3 ON true) ON true",
+            expected_joins: &[(
+                "LEFT",
+                "",
+                true,
+                "LEFT JOIN (t2 LEFT JOIN t3 ON true) ON true",
+            )],
+        },
+    ];
+    for test_case in &test_cases {
+        let facts: FileFacts = file_facts(test_case.sql, "postgres")?;
+        let joins: Vec<(&str, &str, bool, String)> = facts.statements[0]
+            .joins
+            .iter()
+            .map(|join| {
+                (
+                    join.kind.as_str(),
+                    join.relation.as_deref().unwrap_or(""),
+                    join.has_condition,
+                    text(test_case.sql, join.start, join.end),
+                )
+            })
+            .collect();
+        let expected: Vec<(&str, &str, bool, String)> = test_case
+            .expected_joins
+            .iter()
+            .map(|(kind, relation, condition, text)| {
+                (*kind, *relation, *condition, (*text).to_owned())
+            })
+            .collect();
+        assert_eq!(joins, expected, "{}", test_case.description);
     }
     Ok(())
 }

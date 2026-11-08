@@ -31,3 +31,9 @@ pub(crate) struct StatementEndsTestCase {
     pub(crate) sql: &'static str,
     pub(crate) expected_statements: Option<&'static [&'static str]>,
 }
+
+pub(crate) struct JoinFactsTestCase {
+    pub(crate) description: &'static str,
+    pub(crate) sql: &'static str,
+    pub(crate) expected_joins: &'static [(&'static str, &'static str, bool, &'static str)],
+}
