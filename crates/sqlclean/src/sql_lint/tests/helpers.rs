@@ -138,7 +138,7 @@ pub(crate) fn check_dialect_corpus(
 
 /// Whether `printed` has the fingerprint tokens of `sql` except for words upper-cased by format.
 fn only_keyword_case_differs(sql: &str, printed: &str, dialect: &str) -> Result<bool, String> {
-    let fingerprint = FingerprintDialect::from_name(dialect).map_err(|error| error.to_string())?;
+    let fingerprint = FingerprintDialect::from_name(dialect).unwrap_or(FingerprintDialect::Generic);
     let tokens = |sql: &str| canonical_tokens(sql, fingerprint).map_err(|error| error.to_string());
     let (left, right) = (tokens(sql)?, tokens(printed)?);
     Ok(left.len() == right.len()

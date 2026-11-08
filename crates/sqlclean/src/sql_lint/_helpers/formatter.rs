@@ -4,7 +4,9 @@ use sqlquack_syntax::Dialect as SqlQuackDialect;
 
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 use crate::sql_lint::_helpers::cte_macros::take_out_cte_macros;
-use crate::sql_lint::constants::{DUCKDB_DIALECT, LINT_API_VERSION, SNOWFLAKE_DIALECT};
+use crate::sql_lint::constants::{
+    DUCKDB_DIALECT, LINT_API_VERSION, SNOWFLAKE_DIALECT, TSQL_DIALECT,
+};
 use crate::sql_lint::models::{FormatRequest, FormatResponse};
 
 /// Spaces per indent step when a request does not choose.
@@ -41,7 +43,7 @@ fn format_sql(request: FormatRequest) -> FormatResponse {
         );
         return declined(request.sql, Some(reason), None);
     }
-    let Some(dialect) = sqlquack_dialect(&request.dialect) else {
+    let Some((dialect, macros)) = sqlquack_dialect(&request.dialect) else {
         let unavailable = format!(
             "SQL formatting is unavailable for the {} dialect: SQLQuack does not format it yet",
             request.dialect
@@ -49,33 +51,27 @@ fn format_sql(request: FormatRequest) -> FormatResponse {
         return declined(request.sql, None, Some(unavailable));
     };
     let original = request.sql.clone();
-    match format_with_sqlquack(request, dialect) {
+    match format_with_sqlquack(request, dialect, macros) {
         Ok(response) => response,
         Err(reason) => declined(original, Some(reason), None),
     }
 }
 
-/// The SQLQuack dialect that lays out `dialect`, for the dialects SQLQuack formats natively.
-fn sqlquack_dialect(dialect: &str) -> Option<SqlQuackDialect> {
+/// The SQLQuack dialect that lays out `dialect`, for the dialects SQLQuack formats natively, with the shared tokenizer's dialect that takes out CTE macros where it reads that dialect.
+fn sqlquack_dialect(dialect: &str) -> Option<(FormatDialect, Option<SqlQuackDialect>)> {
     match dialect.to_ascii_lowercase().as_str() {
-        SNOWFLAKE_DIALECT => Some(SqlQuackDialect::Snowflake),
-        DUCKDB_DIALECT => Some(SqlQuackDialect::DuckDB),
+        SNOWFLAKE_DIALECT => Some((FormatDialect::Snowflake, Some(SqlQuackDialect::Snowflake))),
+        DUCKDB_DIALECT => Some((FormatDialect::DuckDB, Some(SqlQuackDialect::DuckDB))),
+        TSQL_DIALECT => Some((FormatDialect::SqlServer, None)),
         _ => None,
-    }
-}
-
-/// SQLQuack's formatter dialect for a dialect it formats natively.
-fn format_dialect(dialect: SqlQuackDialect) -> FormatDialect {
-    match dialect {
-        SqlQuackDialect::DuckDB => FormatDialect::DuckDB,
-        _ => FormatDialect::Snowflake,
     }
 }
 
 /// Lay out `request` with SQLQuack; this re-checks idempotency only where placeholders were put back.
 fn format_with_sqlquack(
     request: FormatRequest,
-    dialect: SqlQuackDialect,
+    dialect: FormatDialect,
+    macros: Option<SqlQuackDialect>,
 ) -> Result<FormatResponse, String> {
     let options = FormatOptions {
         line_width: request.line_width,
@@ -87,12 +83,12 @@ fn format_with_sqlquack(
                 ..Default::default()
             }),
         },
-        ..FormatOptions::new(format_dialect(dialect))
+        ..FormatOptions::new(dialect)
     };
-    let sql = format_around_cte_macros(&request.sql, dialect, &options)?;
+    let sql = format_around_cte_macros(&request.sql, macros, &options)?;
     if request.sql.contains(INTERPOLATION_PLACEHOLDER_PREFIX)
         && sql != request.sql
-        && format_around_cte_macros(&sql, dialect, &options)? != sql
+        && format_around_cte_macros(&sql, macros, &options)? != sql
     {
         return Err(NOT_IDEMPOTENT_FAILURE.to_string());
     }
@@ -113,12 +109,15 @@ fn sqlquack_layout(sql: &str, options: &FormatOptions) -> Result<String, String>
         .map_err(|refusal| refusal.reason)
 }
 
-/// Lay out `sql` with SQLQuack, taking CTE macro placeholders out first and putting them back.
+/// Lay out `sql` with SQLQuack, taking CTE macro placeholders out first and putting them back where `macros` names the shared tokenizer's dialect; otherwise SQLQuack refuses a placeholder it cannot parse.
 fn format_around_cte_macros(
     sql: &str,
-    dialect: SqlQuackDialect,
+    macros: Option<SqlQuackDialect>,
     options: &FormatOptions,
 ) -> Result<String, String> {
+    let Some(dialect) = macros else {
+        return sqlquack_layout(sql, options);
+    };
     match take_out_cte_macros(sql, dialect)? {
         None => sqlquack_layout(sql, options),
         Some(without) => without.put_back(&sqlquack_layout(&without.sql, options)?, dialect),

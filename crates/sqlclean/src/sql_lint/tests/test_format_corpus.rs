@@ -21,6 +21,12 @@ fn given_dialect_corpus_when_formatting_then_output_layout_and_refusals_are_stab
             expected_formatted: 426,
             expected_refused: 9,
         },
+        test_types::FormatCorpusTestCase {
+            description: "T-SQL identity corpus",
+            dialect: "tsql",
+            expected_formatted: 52,
+            expected_refused: 23,
+        },
     ];
     let corpus: Vec<Value> =
         serde_json::from_str(FORMAT_CORPUS).map_err(|error| error.to_string())?;
@@ -55,11 +61,6 @@ fn given_dialects_without_a_native_formatter_when_formatting_then_each_query_is_
             description: "PostgreSQL corpus",
             dialect: "postgres",
             expected_unavailable: 137,
-        },
-        test_types::UnavailableCorpusTestCase {
-            description: "T-SQL corpus",
-            dialect: "tsql",
-            expected_unavailable: 75,
         },
     ];
     let corpus: Vec<Value> =
