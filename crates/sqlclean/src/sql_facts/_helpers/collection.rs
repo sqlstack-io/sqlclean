@@ -1,7 +1,7 @@
 //! Walk each parsed statement once and collect its structural facts.
 
 use sqlquack_syntax::expressions::names::models::{Column, Identifier, TableRef};
-use sqlquack_syntax::expressions::queries::models::{Cte, Join, With};
+use sqlquack_syntax::expressions::queries::models::{Cte, Join, JoinedTable, With};
 use sqlquack_syntax::tokens::models::{Span, Token, TokenType};
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
@@ -149,8 +149,12 @@ fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> Stateme
         joins: sorted(
             nodes
                 .iter()
-                .flat_map(|node| select_joins(node))
-                .filter_map(|join| join_node(join, tokens, characters))
+                .flat_map(|node| {
+                    node_joins(node, tokens)
+                        .into_iter()
+                        .filter_map(|join| join_node(join, tokens, characters))
+                        .chain(implicit_join_nodes(node, tokens, characters))
+                })
                 .collect(),
         ),
         stars: star_nodes(tokens),
@@ -198,11 +202,106 @@ fn with_ctes(node: &Expression) -> &[Cte] {
     with.map_or(&[], |with| with.ctes.as_slice())
 }
 
-fn select_joins(node: &Expression) -> &[Join] {
-    match node {
-        Expression::Select(select) => select.joins.as_slice(),
-        _ => &[],
+/// The joins of a query, with those of a join nested by its ON clauses, such as
+/// `t2 LEFT JOIN t3 FULL JOIN t4 ON ... ON ...`; Polyglot left a parenthesized join group unread.
+fn node_joins<'a>(node: &'a Expression, tokens: &[Token]) -> Vec<&'a Join> {
+    let Expression::Select(select) = node else {
+        return Vec::new();
+    };
+    let mut joins: Vec<&Join> = Vec::new();
+    let mut pending: Vec<&Join> = select.joins.iter().rev().collect();
+    while let Some(join) = pending.pop() {
+        joins.push(join);
+        if let Expression::JoinedTable(joined) = &join.this
+            && !parenthesized(joined, tokens)
+        {
+            pending.extend(joined.joins.iter().rev());
+        }
     }
+    joins
+}
+
+/// Whether a join group is written in parentheses, `JOIN (t2 LEFT JOIN t3 ON ...)`: the `(` after
+/// its JOIN keyword closes after everything the group names.
+fn parenthesized(joined: &JoinedTable, tokens: &[Token]) -> bool {
+    let spans: Vec<Span> = located_spans(&joined.left)
+        .chain(joined.joins.iter().flat_map(|join| {
+            located_spans(&join.this).chain(join.on.iter().flat_map(located_spans))
+        }))
+        .collect();
+    let (Some(first), Some(last)) = (
+        spans.iter().map(|span| span.start).min(),
+        spans.iter().map(|span| span.end).max(),
+    ) else {
+        return false;
+    };
+    let Some(keyword) = tokens
+        .iter()
+        .rposition(|token| token.span.end <= first && token.token_type == TokenType::Join)
+    else {
+        return false;
+    };
+    let Some(open) = tokens[keyword + 1..]
+        .iter()
+        .position(|token| token.token_type != TokenType::Lateral)
+        .map(|offset| keyword + 1 + offset)
+        .filter(|&open| tokens[open].token_type == TokenType::LParen)
+    else {
+        return false;
+    };
+    let mut depth: usize = 0;
+    for token in &tokens[open..] {
+        match token.token_type {
+            TokenType::LParen => depth += 1,
+            TokenType::RParen => {
+                depth -= 1;
+                if depth == 0 {
+                    return last <= token.span.start;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+/// The spans of the tables and columns `expression` names.
+fn located_spans(expression: &Expression) -> impl Iterator<Item = Span> + '_ {
+    expression.dfs().filter_map(|node| match node {
+        Expression::Table(table) => table.span.or(table.name.span),
+        Expression::Column(column) => column.span,
+        _ => None,
+    })
+}
+
+/// The comma relations after a query's first explicit join, which Polyglot read as IMPLICIT joins.
+fn implicit_join_nodes(node: &Expression, tokens: &[Token], characters: &[char]) -> Vec<JoinNode> {
+    let Expression::Select(select) = node else {
+        return Vec::new();
+    };
+    let (Some(from), Some(first_join)) = (
+        select.from.as_ref(),
+        select.joins.first().and_then(|join| first_span(&join.this)),
+    ) else {
+        return Vec::new();
+    };
+    from.expressions
+        .iter()
+        .filter_map(|relation| {
+            let span: Span = first_span(relation).filter(|span| span.start > first_join.start)?;
+            let (start, end) = join_clause_span(tokens, span.start)?;
+            Some(JoinNode {
+                start,
+                end,
+                kind: "IMPLICIT".to_owned(),
+                relation: match relation {
+                    Expression::Table(table) => Some(authored(&table.name, characters)),
+                    _ => None,
+                },
+                has_condition: false,
+            })
+        })
+        .collect()
 }
 
 /// The CTE located at its name; the parser leaves CTE names unlocated, so read `name AS (`.
@@ -259,6 +358,10 @@ fn table_node(node: &Expression, characters: &[char]) -> Option<TableNode> {
 fn join_node(join: &Join, tokens: &[Token], characters: &[char]) -> Option<JoinNode> {
     let relation: Option<&TableRef> = match &join.this {
         Expression::Table(table) => Some(table),
+        Expression::JoinedTable(joined) if !parenthesized(joined, tokens) => match &joined.left {
+            Expression::Table(table) => Some(table),
+            _ => None,
+        },
         _ => None,
     };
     let (start, end) = join_clause_span(tokens, first_span(&join.this)?.start)?;
