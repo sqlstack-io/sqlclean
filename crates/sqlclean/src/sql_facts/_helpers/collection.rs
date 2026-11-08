@@ -16,7 +16,7 @@ use crate::sql_facts::constants::{
 use crate::sql_facts::models::{
     ColumnNode, FileFacts, JoinNode, NamedNode, StatementFacts, TableNode,
 };
-use crate::sql_lint::constants::LINT_API_VERSION;
+use crate::sql_lint::constants::{LINT_API_VERSION, TSQL_DIALECTS};
 use crate::sql_lint::main::lint::lint;
 use crate::sql_lint::main::parse_sql::parse_sql;
 use crate::sql_lint::types::{LintRequest, LintResponse, ParsedSql};
@@ -60,6 +60,9 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
 }
 
 pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Option<Vec<usize>>, String> {
+    if TSQL_DIALECTS.contains(&dialect.to_ascii_lowercase().as_str()) {
+        return Ok(Some(sqlserver_statement_ends(sql)));
+    }
     if unavailable(dialect)?.is_some() {
         return Ok(None);
     }
@@ -67,6 +70,22 @@ pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Option<Vec<usiz
     Ok(Some(
         ranges.iter().map(|range| range.terminated_end).collect(),
     ))
+}
+
+/// Where each statement of the batch ends, in characters, as SQL Server's own parser reads it; the whole text when the parser refuses it, so formatting reports why.
+fn sqlserver_statement_ends(sql: &str) -> Vec<usize> {
+    let ranges = sqlquack_syntax_sqlserver::parse_strict(sql)
+        .map(|parsed| parsed.ranges)
+        .unwrap_or_default();
+    let ends: Vec<usize> = ranges
+        .iter()
+        .filter(|range| range.depth == 0)
+        .map(|range| sql[..range.end].chars().count())
+        .collect();
+    match ends.is_empty() {
+        true => vec![sql.chars().count()],
+        false => ends,
+    }
 }
 
 /// Why facts are unavailable for `dialect`: lint's own answer for a dialect SQLQuack does not parse yet.

@@ -5,7 +5,7 @@ use sqlquack_syntax::Dialect as SqlQuackDialect;
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 use crate::sql_lint::_helpers::cte_macros::take_out_cte_macros;
 use crate::sql_lint::constants::{
-    DUCKDB_DIALECT, LINT_API_VERSION, SNOWFLAKE_DIALECT, TSQL_DIALECT,
+    DUCKDB_DIALECT, LINT_API_VERSION, SNOWFLAKE_DIALECT, TSQL_DIALECTS,
 };
 use crate::sql_lint::models::{FormatRequest, FormatResponse};
 
@@ -62,7 +62,7 @@ fn sqlquack_dialect(dialect: &str) -> Option<(FormatDialect, Option<SqlQuackDial
     match dialect.to_ascii_lowercase().as_str() {
         SNOWFLAKE_DIALECT => Some((FormatDialect::Snowflake, Some(SqlQuackDialect::Snowflake))),
         DUCKDB_DIALECT => Some((FormatDialect::DuckDB, Some(SqlQuackDialect::DuckDB))),
-        TSQL_DIALECT => Some((FormatDialect::SqlServer, None)),
+        name if TSQL_DIALECTS.contains(&name) => Some((FormatDialect::SqlServer, None)),
         _ => None,
     }
 }
