@@ -146,17 +146,7 @@ fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> Stateme
                 .filter_map(|node| table_node(node, characters))
                 .collect(),
         ),
-        joins: sorted(
-            nodes
-                .iter()
-                .flat_map(|node| {
-                    node_joins(node, tokens)
-                        .into_iter()
-                        .filter_map(|join| join_node(join, tokens, characters))
-                        .chain(implicit_join_nodes(node, tokens, characters))
-                })
-                .collect(),
-        ),
+        joins: sorted(statement_joins(&nodes, tokens, characters)),
         stars: star_nodes(tokens),
         functions: function_nodes(tokens),
         columns: sorted(
@@ -202,8 +192,19 @@ fn with_ctes(node: &Expression) -> &[Cte] {
     with.map_or(&[], |with| with.ctes.as_slice())
 }
 
-/// The joins of a query, with those of a join nested by its ON clauses, such as
-/// `t2 LEFT JOIN t3 FULL JOIN t4 ON ... ON ...`; Polyglot left a parenthesized join group unread.
+/// The explicit and IMPLICIT joins of every query among `nodes`.
+fn statement_joins(nodes: &[&Expression], tokens: &[Token], characters: &[char]) -> Vec<JoinNode> {
+    let mut joins: Vec<JoinNode> = Vec::new();
+    for node in nodes {
+        for join in node_joins(node, tokens) {
+            joins.extend(join_node(join, tokens, characters));
+        }
+        joins.extend(implicit_join_nodes(node, tokens, characters));
+    }
+    joins
+}
+
+/// A query's joins, with those nested by ON clauses but not those inside a parenthesized group.
 fn node_joins<'a>(node: &'a Expression, tokens: &[Token]) -> Vec<&'a Join> {
     let Expression::Select(select) = node else {
         return Vec::new();
@@ -221,8 +222,7 @@ fn node_joins<'a>(node: &'a Expression, tokens: &[Token]) -> Vec<&'a Join> {
     joins
 }
 
-/// Whether a join group is written in parentheses, `JOIN (t2 LEFT JOIN t3 ON ...)`: the `(` after
-/// its JOIN keyword closes after everything the group names.
+/// Whether the `(` after a join group's JOIN keyword closes after everything the group names.
 fn parenthesized(joined: &JoinedTable, tokens: &[Token]) -> bool {
     let spans: Vec<Span> = located_spans(&joined.left)
         .chain(joined.joins.iter().flat_map(|join| {
@@ -285,23 +285,26 @@ fn implicit_join_nodes(node: &Expression, tokens: &[Token], characters: &[char])
     ) else {
         return Vec::new();
     };
-    from.expressions
-        .iter()
-        .filter_map(|relation| {
-            let span: Span = first_span(relation).filter(|span| span.start > first_join.start)?;
-            let (start, end) = join_clause_span(tokens, span.start)?;
-            Some(JoinNode {
-                start,
-                end,
-                kind: "IMPLICIT".to_owned(),
-                relation: match relation {
-                    Expression::Table(table) => Some(authored(&table.name, characters)),
-                    _ => None,
-                },
-                has_condition: false,
-            })
-        })
-        .collect()
+    let mut joins: Vec<JoinNode> = Vec::new();
+    for relation in &from.expressions {
+        let Some(span) = first_span(relation).filter(|span| span.start > first_join.start) else {
+            continue;
+        };
+        let Some((start, end)) = join_clause_span(tokens, span.start) else {
+            continue;
+        };
+        joins.push(JoinNode {
+            start,
+            end,
+            kind: "IMPLICIT".to_owned(),
+            relation: match relation {
+                Expression::Table(table) => Some(authored(&table.name, characters)),
+                _ => None,
+            },
+            has_condition: false,
+        });
+    }
+    joins
 }
 
 /// The CTE located at its name; the parser leaves CTE names unlocated, so read `name AS (`.
