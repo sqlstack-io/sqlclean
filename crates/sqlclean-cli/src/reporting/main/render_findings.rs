@@ -15,6 +15,6 @@ pub fn render_findings(
     match format {
         OutputFormat::Text => crate::reporting::_helpers::text::render(outcome, &located, texts),
         OutputFormat::Json => crate::reporting::_helpers::machine::render_json(outcome, &located),
-        OutputFormat::Sarif => crate::reporting::_helpers::machine::render_sarif(&located),
+        OutputFormat::Sarif => crate::reporting::_helpers::machine::render_sarif(outcome, &located),
     }
 }

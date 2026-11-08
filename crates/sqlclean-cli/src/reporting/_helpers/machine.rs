@@ -14,16 +14,18 @@ pub(crate) fn render_json(outcome: &CheckOutcome, located: &[LocatedFinding]) ->
     let report: Value = json!({
         "findings": located,
         "stale_exceptions": outcome.stale_exceptions,
+        "unavailable": outcome.unavailable,
         "summary": {
             "findings": located.len(),
             "fixable": located.iter().filter(|finding| finding.fix.is_some()).count(),
             "stale_exceptions": outcome.stale_exceptions.len(),
+            "unavailable": outcome.unavailable.len(),
         },
     });
     format!("{report:#}\n")
 }
 
-pub(crate) fn render_sarif(located: &[LocatedFinding]) -> String {
+pub(crate) fn render_sarif(outcome: &CheckOutcome, located: &[LocatedFinding]) -> String {
     let mut codes: Vec<&str> = located
         .iter()
         .map(|finding| finding.code.as_str())
@@ -62,6 +64,14 @@ pub(crate) fn render_sarif(located: &[LocatedFinding]) -> String {
                 "rules": codes.iter().map(|code| json!({ "id": code })).collect::<Vec<Value>>(),
             }},
             "results": results,
+            "invocations": [{
+                "executionSuccessful": true,
+                "toolExecutionNotifications": outcome.unavailable.iter().map(|file| json!({
+                    "level": "warning",
+                    "message": { "text": file.reason },
+                    "locations": [{ "physicalLocation": { "artifactLocation": { "uri": file.path } } }],
+                })).collect::<Vec<Value>>(),
+            }],
         }],
     });
     format!("{report:#}\n")

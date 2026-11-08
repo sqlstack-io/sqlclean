@@ -59,11 +59,20 @@ pub struct StaleException {
     pub relation: Option<String>,
 }
 
+/// A file not checked because SQLQuack does not parse its dialect yet; a notice, not a problem.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct UnavailableFile {
+    pub path: String,
+    pub reason: String,
+}
+
 /// Every finding of one check, sorted by path, position and code.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct CheckOutcome {
     pub findings: Vec<Finding>,
     pub stale_exceptions: Vec<StaleException>,
+    /// Files whose dialect has no SQLQuack parser, by path; they never fail the check.
+    pub unavailable: Vec<UnavailableFile>,
 }
 
 /// What a check evaluates beyond the configuration.

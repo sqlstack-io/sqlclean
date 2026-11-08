@@ -11,8 +11,8 @@ use crate::checking::_helpers::catalogue::{builtin_rules, custom_rules, custom_s
 use crate::checking::_helpers::custom::{CustomEvaluation, custom_findings};
 use crate::checking::_helpers::exemptions::apply_exemptions;
 use crate::checking::_helpers::selection::selected_codes;
-use crate::checking::constants::{CUSTOM_RULE_PREFIX, PARSE_ERROR_CODE};
-use crate::checking::models::{CheckOptions, CheckOutcome, Finding, RuleInfo};
+use crate::checking::constants::{CUSTOM_RULE_PREFIX, PARSE_ERROR_CODE, UNAVAILABLE_CODE};
+use crate::checking::models::{CheckOptions, CheckOutcome, Finding, RuleInfo, UnavailableFile};
 use crate::config::models::Config;
 use crate::discovery::models::SourceFile;
 
@@ -49,7 +49,7 @@ pub(crate) fn check_sources(
         .cloned()
         .collect();
     let selected: BTreeSet<String> = selected_codes(&all, select, &ignore)?;
-    let (mut findings, updated) = run_builtins(
+    let (builtin, updated) = run_builtins(
         &BuiltinRun {
             config,
             files,
@@ -59,10 +59,21 @@ pub(crate) fn check_sources(
         cache,
     );
     let mut cache: ResultCache = updated;
+    let (markers, mut findings): (Vec<Finding>, Vec<Finding>) = builtin
+        .into_iter()
+        .partition(|finding| finding.code == UNAVAILABLE_CODE);
+    let unavailable: Vec<UnavailableFile> = markers
+        .into_iter()
+        .map(|marker| UnavailableFile {
+            path: marker.path,
+            reason: marker.message,
+        })
+        .collect();
     let unparsed: HashSet<&str> = findings
         .iter()
         .filter(|finding| finding.code == PARSE_ERROR_CODE)
         .map(|finding| finding.path.as_str())
+        .chain(unavailable.iter().map(|file| file.path.as_str()))
         .collect();
     let parsed: Vec<&SourceFile> = files
         .iter()
@@ -97,6 +108,7 @@ pub(crate) fn check_sources(
     Ok(CheckOutcome {
         findings: kept,
         stale_exceptions,
+        unavailable,
     })
 }
 

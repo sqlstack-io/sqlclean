@@ -28,6 +28,9 @@ pub(crate) fn render(
             stale.rule, stale.path
         );
     }
+    for file in &outcome.unavailable {
+        let _ = writeln!(report, "warning: {}\n  --> {}\n", file.reason, file.path);
+    }
     let safe: usize = fix_count(located, FixSafety::Safe);
     let unsafe_only: usize = fix_count(located, FixSafety::Unsafe);
     let problems: usize = located.len() + outcome.stale_exceptions.len();

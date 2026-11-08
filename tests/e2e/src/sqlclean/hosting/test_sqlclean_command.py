@@ -22,6 +22,7 @@ from tests.e2e.src.sqlclean.hosting.helpers import run, write_project
 from tests.integration.src.sqlclean.rule_testing.helpers import SAMPLE_RULES
 
 DUCKDB: str = 'dialect = "duckdb"\n'
+MYSQL_FILES: str = DUCKDB + '[[dialects]]\npaths = ["mysql/**"]\ndialect = "mysql"\n'
 CROSS_JOIN_ONLY: str = DUCKDB + '[rules]\nselect = ["SQLCLEAN038"]\n'
 CUSTOM: str = (
     DUCKDB + '[rules]\nselect = ["XSQLCLEANNAME", "XSQLCLEANSTYLE"]\ncustom = ["sql_rules"]\n'
@@ -119,6 +120,18 @@ DEFAULT_AND_OPT_IN: str = "insert into orders select a.id from a where a.x = nul
             expected_codes=("SQLCLEAN038",),
         ),
         CheckTestCase(
+            description="a dialect SQLQuack does not parse is a notice that never fails the check",
+            config=MYSQL_FILES,
+            files={
+                "mysql/q.sql": "select a.id from a where a.x = null\n",
+                "models/q.sql": "SELECT 1\n",
+            },
+            arguments=(),
+            expected_exit=0,
+            expected_codes=(),
+            expected_unavailable=("mysql/q.sql",),
+        ),
+        CheckTestCase(
             description="unparseable SQL is reported as a finding",
             config=CROSS_JOIN_ONLY,
             files={"models/q.sql": "SELECT FROM WHERE (\n"},
@@ -155,6 +168,7 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
     assert (
         tuple(stale["relation"] for stale in report["stale_exceptions"]) == test_case.expected_stale
     )
+    assert tuple(file["path"] for file in report["unavailable"]) == test_case.expected_unavailable
 
 
 @pytest.mark.parametrize(
@@ -198,6 +212,22 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
             arguments=("fix", "--diff"),
             expected_exit=1,
             expected_files={"models/q.sql": "select a.id from a, b\n"},
+        ),
+        RewriteTestCase(
+            description="format leaves a dialect it cannot format unchanged and passes",
+            config=MYSQL_FILES,
+            files={"mysql/q.sql": "select 1;select 2\n"},
+            arguments=("format", "--check"),
+            expected_exit=0,
+            expected_files={"mysql/q.sql": "select 1;select 2\n"},
+        ),
+        RewriteTestCase(
+            description="fix leaves a dialect SQLQuack does not parse unchanged and passes",
+            config=MYSQL_FILES,
+            files={"mysql/q.sql": "select a.id from a, b\n"},
+            arguments=("fix",),
+            expected_exit=0,
+            expected_files={"mysql/q.sql": "select a.id from a, b\n"},
         ),
         RewriteTestCase(
             description="format --check fails without writing",
