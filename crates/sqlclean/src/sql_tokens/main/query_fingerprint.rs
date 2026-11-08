@@ -4,8 +4,7 @@ use sqlquack_fingerprint::FingerprintDialect;
 
 use crate::sql_tokens::constants::FINGERPRINT_DIALECT_ALIASES;
 
-/// Return SQLQuack's fingerprint of `sql` under `dialect_name`, the one SQLBuild stores; a dialect
-/// without its own SQLQuack tokenizer is fingerprinted with the generic tokens.
+/// SQLQuack's fingerprint of `sql`, as SQLBuild stores it; dialects without a tokenizer use generic tokens.
 pub fn query_fingerprint(sql: &str, dialect_name: &str) -> Result<String, String> {
     let name: &str = FINGERPRINT_DIALECT_ALIASES
         .iter()

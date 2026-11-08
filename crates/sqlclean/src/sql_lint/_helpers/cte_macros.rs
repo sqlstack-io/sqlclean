@@ -7,6 +7,8 @@ use sqlquack_syntax::{Dialect, LosslessToken, TokenKind};
 
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 
+/// The separator token taken out with a placeholder.
+const COMMA: &str = ",";
 const RESTORE_FAILURE: &str = "native formatter could not restore CTE macro placeholders";
 
 /// SQL with its CTE macro placeholders taken out, and the groups to put back.
@@ -106,7 +108,6 @@ impl WithoutCteMacros {
             let gap_end = significant
                 .get(group.anchor)
                 .map_or(formatted.len(), |&anchor| tokens[anchor].start);
-            // After the comments that stood before the group; the token check below confirms it.
             let insert_at = match group.comments_before.checked_sub(1) {
                 None => gap_start,
                 Some(last) => tokens
@@ -128,7 +129,7 @@ impl WithoutCteMacros {
             };
             restored.push_str(&formatted[cursor..insert_at]);
             for text in &group.texts {
-                if text != "," {
+                if text != COMMA {
                     restored.push_str(&separator);
                     separator = format!("\n\n{indent}");
                 }
@@ -142,7 +143,6 @@ impl WithoutCteMacros {
         restored.push_str(&formatted[cursor..]);
         let restored_tokens = sqlquack_syntax::tokenize(&restored, dialect)
             .map_err(|_| RESTORE_FAILURE.to_string())?;
-        // SQLQuack checked the recasing of the stripped SQL; here only the order and text matter.
         let restored_texts = token_texts(&restored, &restored_tokens);
         let same_tokens = restored_texts.len() == self.original.len()
             && restored_texts.iter().zip(&self.original).all(
@@ -215,8 +215,7 @@ fn macro_positions(sql: &str, tokens: &[LosslessToken], significant: &[usize]) -
     positions
 }
 
-/// The placeholders and the commas that go with them: each one's following comma, or, for a
-/// group that ends the CTE list, the comma before the group.
+/// The placeholders with each one's following comma, or the comma before a group ending the CTE list.
 fn removed_positions(
     tokens: &[LosslessToken],
     significant: &[usize],

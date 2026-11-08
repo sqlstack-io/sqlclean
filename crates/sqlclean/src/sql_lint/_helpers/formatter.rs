@@ -64,7 +64,7 @@ fn sqlquack_dialect(dialect: &str) -> Option<SqlQuackDialect> {
     }
 }
 
-/// Lay out `request` with SQLQuack's formatter, which checks token identity and idempotency itself.
+/// Lay out `request` with SQLQuack; this re-checks idempotency only where placeholders were put back.
 fn format_with_sqlquack(
     request: FormatRequest,
     dialect: SqlQuackDialect,
@@ -82,7 +82,6 @@ fn format_with_sqlquack(
         ..FormatOptions::new(dialect)
     };
     let sql = format_around_cte_macros(&request.sql, &options)?;
-    // SQLQuack checks its own layout; putting placeholders back is checked here.
     if request.sql.contains(INTERPOLATION_PLACEHOLDER_PREFIX)
         && sql != request.sql
         && format_around_cte_macros(&sql, &options)? != sql

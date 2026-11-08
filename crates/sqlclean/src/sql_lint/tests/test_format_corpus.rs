@@ -41,18 +41,35 @@ fn given_dialect_corpus_when_formatting_then_output_layout_and_refusals_are_stab
 fn given_dialects_without_a_native_formatter_when_formatting_then_each_query_is_unavailable()
 -> Result<(), String> {
     let test_cases = [
-        ("bigquery", 168),
-        ("databricks", 62),
-        ("postgres", 137),
-        ("tsql", 75),
+        test_types::UnavailableCorpusTestCase {
+            description: "BigQuery corpus",
+            dialect: "bigquery",
+            expected_unavailable: 168,
+        },
+        test_types::UnavailableCorpusTestCase {
+            description: "Databricks corpus",
+            dialect: "databricks",
+            expected_unavailable: 62,
+        },
+        test_types::UnavailableCorpusTestCase {
+            description: "PostgreSQL corpus",
+            dialect: "postgres",
+            expected_unavailable: 137,
+        },
+        test_types::UnavailableCorpusTestCase {
+            description: "T-SQL corpus",
+            dialect: "tsql",
+            expected_unavailable: 75,
+        },
     ];
     let corpus: Vec<Value> =
         serde_json::from_str(FORMAT_CORPUS).map_err(|error| error.to_string())?;
-    for (dialect, expected_unavailable) in test_cases {
+    for test_case in &test_cases {
         assert_eq!(
-            check_unavailable_corpus(&corpus, dialect)?,
-            expected_unavailable,
-            "{dialect}"
+            check_unavailable_corpus(&corpus, test_case.dialect)?,
+            test_case.expected_unavailable,
+            "{}",
+            test_case.description
         );
     }
     Ok(())

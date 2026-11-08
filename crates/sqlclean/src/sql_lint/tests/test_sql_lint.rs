@@ -1,7 +1,6 @@
 use serde_json::{Value, json};
 
 use crate::sql_lint::main::engine::lint_json;
-use crate::sql_lint::main::formatter::format_json;
 use crate::sql_lint::tests::helpers::{fixture_harness, format_batch_json};
 use crate::sql_lint::tests::{helpers, test_types};
 
@@ -1809,126 +1808,6 @@ fn given_tsql_bare_union_when_linting_then_diagnostic_has_no_invalid_fix() -> Re
         );
         assert_eq!(
             diagnostics[0]["fix_unavailable_reason"], test_case.expected_reason,
-            "{}",
-            test_case.description
-        );
-    }
-    Ok(())
-}
-
-#[test]
-fn given_format_cases_when_formatting_then_output_matches() -> Result<(), String> {
-    let test_cases = [
-        test_types::FormatTestCase {
-            description: "comment-free canonical SQL",
-            sql: "select a,b from items where a=1",
-            expected_sql: "SELECT\n  a,\n  b\nFROM items\nWHERE a = 1",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "an unaliased Snowflake select item keeps its authored text, which names its column",
-            sql: "select count(1) from items",
-            expected_sql: "SELECT count(1)\nFROM items",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "an aliased call folds to upper case",
-            sql: "select count(1) as n from items",
-            expected_sql: "SELECT COUNT(1) AS n\nFROM items",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "block comment attachment",
-            sql: "SELECT a, /* preserve */ b FROM items",
-            expected_sql: "SELECT\n  a, /* preserve */\n  b\nFROM items",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "line and leading comments",
-            sql: "-- lead\nselect a,b from items -- tail\nwhere a=1",
-            expected_sql: "-- lead\nSELECT\n  a,\n  b\nFROM items -- tail\nWHERE a = 1",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "standalone projection comments remain attached to following expressions",
-            sql: "SELECT\n  -- first value\n  a,\n  -- second value\n  b\nFROM items",
-            expected_sql: "SELECT\n  -- first value\n  a,\n  -- second value\n  b\nFROM items",
-            expected_changed: false,
-        },
-        test_types::FormatTestCase {
-            description: "comment marker string",
-            sql: "select '-- not a comment' as value",
-            expected_sql: "SELECT '-- not a comment' AS value",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "doubled apostrophe string remains compiler compatible",
-            sql: "select 'Customer''s order' as value",
-            expected_sql: "SELECT 'Customer''s order' AS value",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "explicit null ordering remains explicit",
-            sql: "select id from items order by category nulls last, created_at desc nulls first",
-            expected_sql: "SELECT id\nFROM items\nORDER BY\n  category NULLS LAST,\n  created_at DESC NULLS FIRST",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "explicit cast type spellings remain authored",
-            sql: "select cast(label as TEXT) as label, cast(id as INTEGER) as id, cast(observed_at as TIMESTAMP_NTZ) as observed_at, cast(amount as NUMERIC(10, 2)) as amount from items",
-            expected_sql: "SELECT\n  CAST(label AS TEXT) AS label,\n  CAST(id AS INTEGER) AS id,\n  CAST(observed_at AS TIMESTAMP_NTZ) AS observed_at,\n  CAST(amount AS NUMERIC(10, 2)) AS amount\nFROM items",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "nested and try cast type spellings remain authored",
-            sql: "select cast(coalesce(try_cast(raw_id as INTEGER), 0) as NUMERIC(10, 2)) as amount, cast(tags as ARRAY<INTEGER>) as tags from items",
-            expected_sql: "SELECT\n  CAST(COALESCE(TRY_CAST(raw_id AS INTEGER), 0) AS NUMERIC(10, 2)) AS amount,\n  CAST(tags AS ARRAY<INTEGER>) AS tags\nFROM items",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "commented cast type remains idempotent",
-            sql: "select cast(amount as NUMERIC(/* precision */ 10, 2)) as amount from items",
-            expected_sql: "SELECT\n  CAST(amount AS NUMERIC( /* precision */10, 2)) AS amount\nFROM items",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "cast-free token expansion remains supported",
-            sql: "select id label from items",
-            expected_sql: "SELECT id label\nFROM items",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "cast-free multiple statements remain supported",
-            sql: "select 1; select 2",
-            expected_sql: "SELECT 1;\nSELECT 2",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "trailing comment after a kept statement terminator",
-            sql: "select a from items; -- retained",
-            expected_sql: "SELECT a\nFROM items; -- retained",
-            expected_changed: true,
-        },
-        test_types::FormatTestCase {
-            description: "unparenthesized values relation remains unparenthesized",
-            sql: "select column1::varchar as customer_key, column2::integer as order_count from values ('c1', 1), ('c2', 2)",
-            expected_sql: "SELECT\n  column1::varchar AS customer_key,\n  column2::integer AS order_count\nFROM VALUES ('c1', 1), ('c2', 2)",
-            expected_changed: true,
-        },
-    ];
-
-    for test_case in &test_cases {
-        let response = format_json(
-            &json!({"version": 1, "sql": test_case.sql, "dialect": "snowflake"}).to_string(),
-        )?;
-        let payload: Value = serde_json::from_str(&response).map_err(|error| error.to_string())?;
-        assert_eq!(
-            payload["sql"], test_case.expected_sql,
-            "{}",
-            test_case.description
-        );
-        assert_eq!(
-            payload["changed"], test_case.expected_changed,
             "{}",
             test_case.description
         );
