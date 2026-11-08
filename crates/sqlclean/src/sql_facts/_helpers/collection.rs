@@ -10,7 +10,8 @@ use crate::sql_facts::_helpers::tokens::{
     function_nodes, join_clause_span, literal_nodes, star_nodes,
 };
 use crate::sql_facts::constants::{
-    ALTER_OBJECT_KINDS, CREATE_OBJECT_KINDS, DATE_PART_CALLS, DATE_PART_NAMES,
+    ALTER_OBJECT_KINDS, CREATE_OBJECT_KINDS, DATE_PART_CALLS, DATE_PART_NAMES, DROP_OBJECT_KINDS,
+    UTILITY_KINDS,
 };
 use crate::sql_facts::models::{
     ColumnNode, FileFacts, JoinNode, NamedNode, StatementFacts, TableNode,
@@ -333,11 +334,16 @@ fn authored(identifier: &Identifier, characters: &[char]) -> String {
         .unwrap_or_else(|| identifier.name.clone())
 }
 
-/// The statement's kind, naming a generic CREATE or ALTER by its object as Polyglot's tree did.
+/// The statement's kind, naming a generic CREATE, ALTER, DROP or utility statement as Polyglot's tree did.
 fn statement_kind(statement: &Expression) -> String {
     let (kind, known): (&str, &[(&str, &str)]) = match statement {
         Expression::CreateObject(node) => (&node.kind, &CREATE_OBJECT_KINDS),
         Expression::AlterObject(node) => (&node.kind, &ALTER_OBJECT_KINDS),
+        Expression::DropObject(node) => (&node.kind, &DROP_OBJECT_KINDS),
+        Expression::UtilityStatement(node) => (
+            node.kind.split(' ').next().unwrap_or_default(),
+            &UTILITY_KINDS,
+        ),
         _ => ("", &[]),
     };
     known
