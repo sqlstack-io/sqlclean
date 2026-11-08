@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/sqlstack-io/sqlclean/compare/v0.5.0...v0.6.0) (2026-11-08)
+
+
+### Features
+
+* format BigQuery, PostgreSQL and T-SQL with SQLQuack ([#42](https://github.com/sqlstack-io/sqlclean/issues/42)) ([a813f5f](https://github.com/sqlstack-io/sqlclean/commit/a813f5ff20eee85e9b7e63bfe0932f4d466dd934))
+
+
+### Documentation
+
+* say which dialects check, fix and format read ([#40](https://github.com/sqlstack-io/sqlclean/issues/40)) ([b504e28](https://github.com/sqlstack-io/sqlclean/commit/b504e28aa4d17ad3721b334850c860ea11c8431a))
+
 ## [0.5.0](https://github.com/sqlstack-io/sqlclean/compare/v0.4.3...v0.5.0) (2026-11-08)
 
 
