@@ -8,6 +8,7 @@ use ignore::WalkBuilder;
 
 use crate::config::models::Config;
 use crate::discovery::_helpers::matching::PathMatchers;
+use crate::discovery::constants::UTF8_BOM;
 use crate::discovery::models::SourceFile;
 
 pub(crate) fn discover_files(
@@ -56,11 +57,16 @@ fn read_source(
 ) -> Result<SourceFile, String> {
     let text: String =
         fs::read_to_string(&absolute).map_err(|error| format!("could not read {path}: {error}"))?;
+    let bom: bool = text.starts_with(UTF8_BOM);
     Ok(SourceFile {
         dialect: matchers.dialect(&path),
         path,
         absolute,
-        text,
+        bom,
+        text: match text.strip_prefix(UTF8_BOM).map(str::to_string) {
+            Some(sql) => sql,
+            None => text,
+        },
     })
 }
 

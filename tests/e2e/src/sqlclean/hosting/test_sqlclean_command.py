@@ -132,6 +132,14 @@ DEFAULT_AND_OPT_IN: str = "insert into orders select a.id from a where a.x = nul
             expected_unavailable=("mysql/q.sql",),
         ),
         CheckTestCase(
+            description="a file saved with a byte order mark is checked as its SQL",
+            config=CROSS_JOIN_ONLY,
+            files={"models/q.sql": "\ufeffSELECT a.id FROM a CROSS JOIN b\n"},
+            arguments=(),
+            expected_exit=1,
+            expected_codes=("SQLCLEAN038",),
+        ),
+        CheckTestCase(
             description="unparseable SQL is reported as a finding",
             config=CROSS_JOIN_ONLY,
             files={"models/q.sql": "SELECT FROM WHERE (\n"},
@@ -228,6 +236,24 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
             arguments=("fix",),
             expected_exit=0,
             expected_files={"mysql/q.sql": "select a.id from a, b\n"},
+        ),
+        RewriteTestCase(
+            description="format keeps a file's byte order mark",
+            config=DUCKDB,
+            files={"models/q.sql": "\ufeffselect 1;select 2"},
+            arguments=("format",),
+            expected_exit=0,
+            expected_files={"models/q.sql": "\ufeffSELECT 1;\n\nSELECT 2\n"},
+        ),
+        RewriteTestCase(
+            description="fix keeps a file's byte order mark",
+            config=DUCKDB + '[rules]\nselect = ["SQLCLEAN001", "SQLCLEAN002"]\n',
+            files={"models/q.sql": "\ufeff" + NULL_AND_COMMA},
+            arguments=("fix",),
+            expected_exit=1,
+            expected_files={
+                "models/q.sql": "\ufeffSELECT a.id\nFROM a\nCROSS JOIN b\nWHERE a.x = NULL\n"
+            },
         ),
         RewriteTestCase(
             description="format --check fails without writing",
