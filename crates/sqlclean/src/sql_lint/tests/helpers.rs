@@ -1,16 +1,11 @@
-use std::str::FromStr;
-
-use polyglot_sql::{Dialect, DialectType};
 use serde_json::{Map, Value, json};
+use sqlquack_fingerprint::{FingerprintDialect, canonical_tokens};
 
 use crate::sql_lint::_helpers::formatter::format_requests;
 use crate::sql_lint::main::engine::lint_json;
 use crate::sql_lint::main::formatter::format_json;
 use crate::sql_lint::models::FormatRequest;
 use crate::sql_lint::tests::test_types::CrossJoinTestCase;
-use crate::sql_tokens::constants::CALL_SYNTAX_FUNCTIONS;
-use crate::sql_tokens::main::builtin_function_names::builtin_function_names;
-use crate::sql_tokens::main::canonical_tokens::canonical_tokens;
 use crate::sql_tokens::main::query_fingerprint::query_fingerprint;
 
 /// The dependency sentinel the cross join cases name `order_policy`.
@@ -66,6 +61,23 @@ fn diagnostic_values(response: &str) -> Result<Vec<Value>, String> {
         .ok_or_else(|| "diagnostics should be an array".to_string())
 }
 
+/// Corpus queries SQLQuack's formatter lays out or refuses differently from SQLClean's Polyglot layout, each with its reason.
+const SQLQUACK_DEPARTURES: &str = include_str!("fixtures/sqlquack_departures.json");
+
+/// The expected layout of a corpus `entry`: SQLQuack's named departure when it has one, else the recorded layout.
+fn expected_layout(entry: &Value) -> Value {
+    let departures: Vec<Value> = serde_json::from_str(SQLQUACK_DEPARTURES).unwrap_or_default();
+    departures
+        .into_iter()
+        .find(|departure| {
+            departure["dialect"] == entry["dialect"] && departure["sql"] == entry["sql"]
+        })
+        .map_or_else(
+            || entry["formatted"].clone(),
+            |departure| departure["formatted"].clone(),
+        )
+}
+
 /// A narrow width so that wrapping is exercised on most corpus queries.
 const CORPUS_LINE_WIDTH: usize = 40;
 
@@ -84,7 +96,7 @@ pub(crate) fn check_dialect_corpus(
             .filter(|_| formatted)
             .cloned()
             .unwrap_or(Value::Null);
-        let expected = entry["formatted"].as_str().map_or(Value::Null, Value::from);
+        let expected = expected_layout(entry);
         assert_eq!(actual, expected, "{dialect}: {sql}");
         let printed = actual.as_str().unwrap_or(sql);
         assert!(
@@ -95,10 +107,7 @@ pub(crate) fn check_dialect_corpus(
             .as_str()
             .map(|previous| relaid_previous_layout(previous, dialect))
             .transpose()?;
-        let layouts = [
-            entry["formatted"].as_str().map(str::to_string),
-            previous_layout,
-        ];
+        let layouts = [expected.as_str().map(str::to_string), previous_layout];
         for stable in layouts.iter().flatten() {
             let stable = stable.as_str();
             let again = format_once(stable, dialect, None)?;
@@ -129,19 +138,30 @@ pub(crate) fn check_dialect_corpus(
 
 /// Whether `printed` has the fingerprint tokens of `sql` except for words upper-cased by format.
 fn only_keyword_case_differs(sql: &str, printed: &str, dialect: &str) -> Result<bool, String> {
-    let parser = Dialect::get(DialectType::from_str(dialect).map_err(|error| error.to_string())?);
-    let left_tokens = parser.tokenize(sql).map_err(|error| error.to_string())?;
-    let right_tokens = parser
-        .tokenize(printed)
-        .map_err(|error| error.to_string())?;
-    let left = canonical_tokens(sql, &left_tokens, &parser)?;
-    let right = canonical_tokens(printed, &right_tokens, &parser)?;
+    let fingerprint = FingerprintDialect::from_name(dialect).unwrap_or(FingerprintDialect::Generic);
+    let tokens = |sql: &str| canonical_tokens(sql, fingerprint).map_err(|error| error.to_string());
+    let (left, right) = (tokens(sql)?, tokens(printed)?);
     Ok(left.len() == right.len()
         && left.iter().zip(&right).all(|(before, after)| {
             before == after
-                || (before.text.eq_ignore_ascii_case(&after.text)
-                    && after.text == after.text.to_ascii_uppercase())
+                || (before.eq_ignore_ascii_case(after) && *after == after.to_ascii_uppercase())
         }))
+}
+
+/// Check every corpus query of one dialect is left as written and reported unavailable; return how many.
+pub(crate) fn check_unavailable_corpus(corpus: &[Value], dialect: &str) -> Result<usize, String> {
+    let mut count: usize = 0;
+    for entry in corpus.iter().filter(|entry| entry["dialect"] == dialect) {
+        let sql = entry["sql"].as_str().unwrap_or_default();
+        let response = format_once(sql, dialect, Some(CORPUS_LINE_WIDTH))?;
+        assert_eq!(response["sql"], sql, "{dialect}: {sql}");
+        assert_eq!(response["formatted"], false, "{dialect}: {sql}");
+        assert_eq!(response["changed"], false, "{dialect}: {sql}");
+        assert!(response.get("reason").is_none(), "{dialect}: {sql}");
+        assert!(response["unavailable"].is_string(), "{dialect}: {sql}");
+        count += 1;
+    }
+    Ok(count)
 }
 
 /// Re-format a layout of an earlier formatter release, which must keep its fingerprint.
@@ -170,19 +190,39 @@ fn format_once(sql: &str, dialect: &str, line_width: Option<usize>) -> Result<Va
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
-/// Call names the formatter treats as built-ins in `dialect`, plus keyword-like call names.
-const KEYWORD_LIKE_CALLS: [&str; 11] = [
+/// Common built-in call names, plus keyword-like ones, swept through every call shape.
+const CALL_NAMES: [&str; 31] = [
+    "abs",
+    "array_agg",
+    "avg",
+    "ceil",
+    "coalesce",
+    "concat",
+    "count",
+    "current_date",
+    "date",
+    "date_trunc",
+    "filter",
+    "floor",
+    "format",
+    "greatest",
     "if",
     "iff",
-    "left",
-    "right",
-    "replace",
     "insert",
-    "format",
-    "filter",
-    "date",
+    "least",
+    "left",
+    "length",
+    "lower",
+    "max",
+    "min",
+    "nullif",
+    "replace",
+    "right",
+    "round",
+    "sum",
     "time",
     "timestamp",
+    "upper",
 ];
 
 /// Return names no 2/1/0-argument call could format, and calls printed with misplaced spaces.
@@ -191,13 +231,7 @@ pub(crate) fn function_call_spacing(
     line_width: usize,
     argument: &str,
 ) -> Result<(Vec<String>, Vec<String>), String> {
-    let dialect_type = DialectType::from_str(dialect).map_err(|error| error.to_string())?;
-    let mut names: Vec<String> = builtin_function_names(dialect_type)
-        .into_iter()
-        .chain(KEYWORD_LIKE_CALLS.iter().map(|name| (*name).to_string()))
-        .filter(|name| name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
-        .filter(|name| !CALL_SYNTAX_FUNCTIONS.contains(&name.to_ascii_uppercase().as_str()))
-        .collect();
+    let mut names: Vec<String> = CALL_NAMES.iter().map(|name| (*name).to_string()).collect();
     names.sort_unstable();
     names.dedup();
     let mut misplaced: Vec<String> = Vec::new();

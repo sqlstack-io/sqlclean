@@ -1,6 +1,6 @@
 //! Authored spans of the top-level items of one select list.
 
-use polyglot_sql::tokens::{Token, TokenType};
+use sqlquack_syntax::tokens::models::{Token, TokenType};
 
 use crate::sql_tokens::constants::PROJECTION_ENDS;
 

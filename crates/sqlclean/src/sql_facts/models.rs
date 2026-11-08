@@ -6,6 +6,9 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct FileFacts {
     pub statements: Vec<StatementFacts>,
+    /// Why there are no facts: SQLQuack does not parse the dialect yet, as lint reports; absent otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unavailable: Option<String>,
 }
 
 /// One statement's source range, kind and the common structures it contains.

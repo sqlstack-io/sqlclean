@@ -12,6 +12,7 @@ use crate::fixing::_helpers::edit_selection::select_edits;
 use crate::fixing::constants::MAX_FIX_PASSES;
 use crate::fixing::models::FixOutcome;
 use crate::formatting::main::format_source::format_source;
+use crate::formatting::models::Formatted;
 use crate::positions::main::apply_edits::apply_edits;
 use crate::positions::models::Edit;
 
@@ -36,7 +37,8 @@ pub(crate) fn fix_sources(
     let mut format_refusals: Vec<(String, String)> = Vec::new();
     for file in &mut files {
         match format_source(&file.text, &file.dialect, config.line_width, config.indent) {
-            Ok(formatted) => file.text = formatted,
+            Ok(Formatted::Sql(formatted)) => file.text = formatted,
+            Ok(Formatted::Unavailable(_)) => {}
             Err(reason) => format_refusals.push((file.path.clone(), reason)),
         }
     }

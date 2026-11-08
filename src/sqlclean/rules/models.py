@@ -1,13 +1,8 @@
 """Structured values Rules receive and return."""
 
 from dataclasses import dataclass, field
-from functools import cached_property
-from importlib import import_module
-from types import ModuleType
 
 from sqlclean.rules.classes.rule_option import RuleOption
-from sqlclean.rules.constants import POLYGLOT_INSTALL_HINT, POLYGLOT_MODULE
-from sqlclean.rules.exceptions import RuleUsageError
 from sqlclean.rules.types import FixSafety, RuleCheck, RuleSubjectKind
 
 
@@ -142,21 +137,6 @@ class Statement:
     functions: tuple[FunctionCall, ...]
     columns: tuple[ColumnReference, ...]
     literals: tuple[Literal, ...]
-
-    def polyglot_ast(self) -> object:
-        """Return Polyglot's syntax tree of this statement, parsed on first use."""
-
-        return self._polyglot_ast
-
-    @cached_property
-    def _polyglot_ast(self) -> object:
-        try:
-            polyglot: ModuleType = import_module(POLYGLOT_MODULE)
-        except ImportError as error:
-            raise RuleUsageError(
-                f"polyglot_ast() needs the Polyglot SQL package: {POLYGLOT_INSTALL_HINT}"
-            ) from error
-        return polyglot.parse_one(self.text, dialect=self.dialect)
 
 
 @dataclass(frozen=True)

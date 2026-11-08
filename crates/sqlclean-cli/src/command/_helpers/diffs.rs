@@ -5,6 +5,7 @@ use std::io::Write;
 
 use similar::TextDiff;
 
+use crate::discovery::constants::UTF8_BOM;
 use crate::discovery::models::SourceFile;
 
 const CONTEXT_LINES: usize = 3;
@@ -19,7 +20,12 @@ pub(crate) fn print_diff(file: &SourceFile, changed: &str) {
     let _ = std::io::stdout().write_all(rendered.as_bytes());
 }
 
+/// Write `changed` over `file`, with the byte order mark it was read with.
 pub(crate) fn write_file(file: &SourceFile, changed: &str) -> Result<(), String> {
-    fs::write(&file.absolute, changed)
+    let text: String = match file.bom {
+        true => format!("{UTF8_BOM}{changed}"),
+        false => changed.to_string(),
+    };
+    fs::write(&file.absolute, text)
         .map_err(|error| format!("could not write {}: {error}", file.path))
 }

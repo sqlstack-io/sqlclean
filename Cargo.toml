@@ -21,17 +21,6 @@ include_dir = "0.7"
 ignore = "0.4"
 tempfile = "3"
 toml = "0.9"
-# The same Polyglot source and revision as SQLBuild, so a build that contains both compiles it once.
-polyglot-sql = { git = "https://github.com/sqlstack-io/polyglot.git", rev = "8767d688c5b504ad609645e27ab77a260d91c5a1", default-features = false, features = [
-    "ast-tools",
-    "builder",
-    "all-dialects",
-    "semantic",
-    "stacker",
-] }
-polyglot-sql-function-catalogs = { git = "https://github.com/sqlstack-io/polyglot.git", rev = "8767d688c5b504ad609645e27ab77a260d91c5a1", default-features = false, features = [
-    "dialect-duckdb",
-] }
 rayon = "1"
 regex = "1"
 rustc-hash = "2"
@@ -40,6 +29,11 @@ serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.10"
 similar = "2"
 sqlclean = { path = "crates/sqlclean" }
+# SQLQuack's formatter and lint engine, and the tokens and trees they read, which replace Polyglot.
+sqlquack-fingerprint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "edfa30b26a0bab86661f96490b86a4f24b92db0a" }
+sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "edfa30b26a0bab86661f96490b86a4f24b92db0a" }
+sqlquack-lint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "edfa30b26a0bab86661f96490b86a4f24b92db0a" }
+sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "edfa30b26a0bab86661f96490b86a4f24b92db0a" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

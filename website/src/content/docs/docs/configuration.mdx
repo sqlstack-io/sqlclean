@@ -112,6 +112,15 @@ SELECT [order id] FROM orders
 error[SQLCLEAN999]: SQL could not be parsed as duckdb: Parse error at line 1, column 17: Expected RBracket, got Var ('id') near [SELECT [order id] FROM orders]
 ```
 
+SQLClean reads SQL with SQLQuack's parsers. A file in a dialect SQLQuack does not parse yet, such
+as `mysql`, is not checked, fixed or formatted: `check` reports it once as a warning (in JSON, under
+`unavailable`), and it never fails a command or counts as a problem.
+
+```text
+warning: SQL lint is unavailable for the mysql dialect: SQLQuack does not parse it yet
+  --> reports/q.sql
+```
+
 Supported dialects, case-insensitive:
 
 | Dialect | Also accepted |

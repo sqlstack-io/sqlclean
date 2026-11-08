@@ -65,7 +65,7 @@ fn given_trailing_comments_after_the_last_token_when_formatting_then_no_newline_
         test_types::FormatTestCase {
             description: "line comments after the last token keep no trailing newline",
             sql: "select 1 as order_id from orders\n\n-- first note\n\n-- second note",
-            expected_sql: "SELECT 1 AS order_id\nFROM orders -- first note\n -- second note",
+            expected_sql: "SELECT 1 AS order_id\nFROM orders -- first note\n-- second note",
             expected_changed: true,
         },
         test_types::FormatTestCase {

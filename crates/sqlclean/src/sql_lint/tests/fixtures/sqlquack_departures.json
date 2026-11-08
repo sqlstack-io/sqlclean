@@ -1,0 +1,387 @@
+[
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT str[0:1]",
+  "formatted": "SELECT str[0:1]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x, y : COALESCE(x, y, 0) + 1)",
+  "formatted": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x, y: COALESCE(x, y, 0) + 1)",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT LIST_TRANSFORM(LIST_FILTER([0, 1, 2, 3, 4, 5], LAMBDA x : x % 2 = 0), LAMBDA y : y * y)",
+  "formatted": "SELECT LIST_TRANSFORM(LIST_FILTER([0, 1, 2, 3, 4, 5], LAMBDA x: x % 2 = 0), LAMBDA y: y * y)",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x : COALESCE(x, 0) + 1)",
+  "formatted": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x: COALESCE(x, 0) + 1)",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT LIST_TRANSFORM(nbr, LAMBDA x : x + 1) FROM article AS a",
+  "formatted": "SELECT LIST_TRANSFORM(nbr, LAMBDA x: x + 1)\nFROM article AS a",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT JSON_EXTRACT(c, '$[*].id')[0:2]",
+  "formatted": "SELECT JSON_EXTRACT(c, '$[*].id')[0:2]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT JSON_EXTRACT_STRING(c, '$[*].id')[0:2]",
+  "formatted": "SELECT JSON_EXTRACT_STRING(c, '$[*].id')[0:2]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT [1, 2, 3][1 + 1:LENGTH([1, 2, 3]) + -1]",
+  "formatted": "SELECT [1, 2, 3][1 + 1:LENGTH([1, 2, 3]) + -1]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT x::INT[3][3]",
+  "formatted": "SELECT x::INT[3][3]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT ARRAY[[[1]]]::INT[1][1][1]",
+  "formatted": "SELECT ARRAY[[[1]]]::INT[1][1][1]",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "WITH t1 AS (FROM (FROM t2 SELECT foo1, foo2)) FROM t1",
+  "formatted": "WITH t1 AS (\n  FROM (\n    FROM t2\n    SELECT\n      foo1,\n      foo2\n  )\n)\n\nFROM t1",
+  "reason": "SQLClean aligned against Polyglot's SELECT-first rewrite of the FROM-first query",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT e: 1 + 2, f: len('asdf'), s: (SELECT 42)",
+  "formatted": "SELECT\n  e:1 + 2,\n  f:len('asdf'),\n  s:(\n    SELECT 42\n  )",
+  "reason": "SQLClean aligned against Polyglot's path reading of the prefix alias and lost the line break after a comma",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT (@col) + 1 FROM t",
+  "formatted": "SELECT\n  (\n    @col\n  )\n  + 1\nFROM t",
+  "reason": "SQLClean aligned against Polyglot's ABS() rewrite of `@`",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT (@-1) + 1",
+  "formatted": "SELECT\n  (\n    @-1\n  )\n  + 1",
+  "reason": "SQLClean aligned against Polyglot's ABS() rewrite of `@`",
+  "receipt": null
+ },
+ {
+  "dialect": "duckdb",
+  "sql": "SELECT file[:256] FROM GLOB('*')",
+  "formatted": "SELECT file[:256]\nFROM GLOB('*')",
+  "reason": "SQLClean refused it: its Polyglot protection read a slice or lambda `:` as a path, or broke on a `::` array type",
+  "receipt": null
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "WITH t (SELECT 1 AS c) SELECT c FROM t",
+  "formatted": null,
+  "reason": "Snowflake rejects a CTE body without AS, so SQLQuack's parser refuses it",
+  "receipt": "sf.query.with.select.k8b29420d51a4"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT DATE_PART('month' FROM CAST('2024-04-08' AS DATE))",
+  "formatted": null,
+  "reason": "Snowflake rejects a quoted date part in the FROM form of DATE_PART, so SQLQuack's parser refuses it",
+  "receipt": "sf.functions.date-part.date-part-from.k10b598e047b5"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT * FROM t, UNNEST(x) WITH ORDINALITY",
+  "formatted": null,
+  "reason": "Snowflake has no UNNEST, so SQLQuack's parser refuses it",
+  "receipt": "sf.query.format-probe.k47586a1689b7"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "WITH t AS (SELECT PARSE_JSON('{\"level1\": {\"level2\": {\"level3\": \"value\"}}}') AS data) SELECT data:     level1  : level2 : level3::VARIANT FROM t",
+  "formatted": "WITH t AS (\n  SELECT PARSE_JSON('{\"level1\": {\"level2\": {\"level3\": \"value\"}}}') AS data\n)\n\nSELECT data:     level1  : level2 : level3::VARIANT\nFROM t",
+  "reason": "Snowflake names an unaliased select item by its text, spaces included, so the item keeps its spacing; SQLClean respaced it",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT RPAD(TO_BINARY('Hi', 'UTF8'), 10, TO_BINARY('_', 'UTF8'))",
+  "formatted": "SELECT\n  RPAD(TO_BINARY('Hi', 'UTF8'), 10, TO_BINARY('_', 'UTF8'))",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT TIMESTAMP_FROM_PARTS(CAST('2024-05-09' AS DATE), CAST('14:30:45' AS TIME))",
+  "formatted": "SELECT\n  TIMESTAMP_FROM_PARTS(CAST('2024-05-09' AS DATE), CAST('14:30:45' AS TIME))",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT ARRAYS_ZIP([1, 2, 3], ['a', 'b', 'c'], [10, 20, 30])",
+  "formatted": "SELECT\n  ARRAYS_ZIP([1, 2, 3], ['a', 'b', 'c'], [10, 20, 30])",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT AI_CLASSIFY('text', ['travel', 'cooking'], OBJECT_CONSTRUCT('output_mode', 'multi'))",
+  "formatted": "SELECT\n  AI_CLASSIFY('text', ['travel', 'cooking'], OBJECT_CONSTRUCT('output_mode', 'multi'))",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT {fn DAYNAME('2022-5-13')}",
+  "formatted": "SELECT {fn DAYNAME('2022-5-13')}",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean broke a line inside its `{fn ...}` escape",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT {fn LOG(5)}",
+  "formatted": "SELECT {fn LOG(5)}",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean broke a line inside its `{fn ...}` escape",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT {fn CEILING(5.3)}",
+  "formatted": "SELECT {fn CEILING(5.3)}",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean broke a line inside its `{fn ...}` escape",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT TIME_SLICE(CAST('2024-05-09 08:50:57.891' AS TIMESTAMP), 1, 'HOUR', 'start')",
+  "formatted": "SELECT\n  TIME_SLICE(CAST('2024-05-09 08:50:57.891' AS TIMESTAMP), 1, 'HOUR', 'start')",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT SEARCH(line, 'king', ANALYZER => 'UNICODE_ANALYZER', SEARCH_MODE => 'OR')",
+  "formatted": "SELECT\n  SEARCH(line, 'king', ANALYZER => 'UNICODE_ANALYZER', SEARCH_MODE => 'OR')",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "snowflake",
+  "sql": "SELECT SEARCH(line, 'king', SEARCH_MODE => 'AND', ANALYZER => 'PATTERN_ANALYZER')",
+  "formatted": "SELECT\n  SEARCH(line, 'king', SEARCH_MODE => 'AND', ANALYZER => 'PATTERN_ANALYZER')",
+  "reason": "Snowflake names an unaliased select item by its text, line breaks included, so the item stays on one line; SQLClean split its arguments",
+  "receipt": "cases/relational/unaliased_output_names.toml#unaliased_expressions"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT val FROM (VALUES ((TRUE), (FALSE), (NULL))) AS t(val)",
+  "formatted": "SELECT val\nFROM (\n  VALUES\n    ((\n  TRUE\n), (\n  FALSE\n), (\n  NULL\n))\n) AS t(val)",
+  "reason": "The shared layout of a parenthesised value in a VALUES row, the same as Snowflake's; SQLClean broke after the values instead",
+  "receipt": null
+ },
+ {
+  "dialect": "tsql",
+  "sql": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT COUNT(*) FROM (SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC) AS t",
+  "formatted": "WITH t1 AS (\n  SELECT 1 AS a\n),\n\nt2 AS (\n  SELECT 1 AS a\n)\n\nSELECT COUNT(*)\nFROM (\n  SELECT TOP 10 a\n  FROM t1\n  UNION ALL\n  SELECT TOP 10 a\n  FROM t2\n  ORDER BY\n    a DESC\n) AS t",
+  "reason": "A set operation's ORDER BY sits at the depth of its set operation with its items on the next line; SQLClean outdented it to the enclosing parenthesis and kept the items on its line",
+  "receipt": null
+ },
+ {
+  "dialect": "tsql",
+  "sql": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC",
+  "formatted": "WITH t1 AS (\n  SELECT 1 AS a\n),\n\nt2 AS (\n  SELECT 1 AS a\n)\n\nSELECT TOP 10 a\nFROM t1\nUNION ALL\nSELECT TOP 10 a\nFROM t2\nORDER BY\n  a DESC",
+  "reason": "A set operation's ORDER BY puts its items on the next line, as in every other dialect and SQL Server's own `ORDER BY\\n  1`; SQLClean kept them on the ORDER BY line",
+  "receipt": null
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT * FROM t TABLESAMPLE (10 PERCENT)",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a TABLESAMPLE clause opaque (gap `tablesample`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT * FROM t TABLESAMPLE (20 ROWS)",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a TABLESAMPLE clause opaque (gap `tablesample`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT * FROM t TABLESAMPLE (10 PERCENT) REPEATABLE (123)",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a TABLESAMPLE clause opaque (gap `tablesample`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT * FROM t WHERE NOT c",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `An expression of non-boolean type specified in a context where a condition is expected, near 'c'.` (4145); SQLQuack's parser refuses it (`An expression of non-boolean type specified in a context where a condition is expected.`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT * FROM t WITH (TABLOCK, INDEX(myindex))",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a table hint list opaque (gap `table_hint`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT Employee_ID, Department_ID FROM @MyTableVar",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `Must declare the table variable \"@MyTableVar\".` (1087); SQLQuack's parser keeps a table variable source opaque (gap `table_variable`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT x FROM @MyTableVar AS m JOIN Employee ON m.EmployeeID = Employee.EmployeeID",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `Must declare the table variable \"@MyTableVar\".` (1087); SQLQuack's parser keeps a table variable source opaque (gap `table_variable`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT * FROM t FOR XML PATH, BINARY BASE64, ELEMENTS XSINIL",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a FOR XML, FOR JSON or FOR BROWSE clause opaque (gap `for_xml_json`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT (SELECT TOP 5 a, b FROM t ORDER BY b DESC FOR JSON PATH) AS j FROM x",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a FOR XML, FOR JSON or FOR BROWSE clause opaque (gap `for_xml_json`) on FOR JSON in a scalar subquery, a parser false reject; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT j FROM (SELECT a AS j FROM t FOR JSON PATH) AS x",
+  "formatted": null,
+  "reason": "SQL Server rejects it at binding: `Invalid column name 'j'.` (207, then 8155), as a FOR JSON derived table needs a column list; SQLQuack's parser keeps a FOR XML, FOR JSON or FOR BROWSE clause opaque (gap `for_xml_json`), even with one; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT * FROM t FOR JSON PATH, ROOT('Root'), INCLUDE_NULL_VALUES",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a FOR XML, FOR JSON or FOR BROWSE clause opaque (gap `for_xml_json`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT * FROM t FOR BROWSE",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a FOR XML, FOR JSON or FOR BROWSE clause opaque (gap `for_xml_json`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT TOP 10 PERCENT",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `Incorrect syntax near 'PERCENT'.` (102); SQLQuack's parser refuses it (`Incorrect syntax near the end of the input.`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT TOP 10 PERCENT WITH TIES",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `Incorrect syntax near 'TIES'.` (102); SQLQuack's parser refuses it (`Incorrect syntax near the end of the input.`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME AS OF 'foo'",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a FOR SYSTEM_TIME clause opaque (gap `system_time`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME AS OF 'foo' AS alias",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a FOR SYSTEM_TIME clause opaque (gap `system_time`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME FROM c TO d",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `Incorrect syntax near 'c'.` (102); SQLQuack's parser keeps a FOR SYSTEM_TIME clause opaque (gap `system_time`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME BETWEEN c AND d",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `Incorrect syntax near 'c'.` (102); SQLQuack's parser keeps a FOR SYSTEM_TIME clause opaque (gap `system_time`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME CONTAINED IN (c, d)",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `Incorrect syntax near 'c'.` (102); SQLQuack's parser keeps a FOR SYSTEM_TIME clause opaque (gap `system_time`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME ALL AS alias",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a FOR SYSTEM_TIME clause opaque (gap `system_time`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT x FROM a INNER LOOP JOIN b ON b.id = a.id",
+  "formatted": null,
+  "reason": "SQL Server accepts it; SQLQuack's parser keeps a join hint opaque (gap `join_hint`), so the formatter refuses rather than guess; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT NEXT VALUE FOR db.schema.sequence_name OVER (ORDER BY foo), col",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `Incorrect syntax near the keyword 'schema'.` (156); SQLQuack's parser refuses it (`Incorrect syntax near 'schema'.`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "tsql",
+  "sql": "SELECT * FROM @x",
+  "formatted": null,
+  "reason": "SQL Server rejects it: `Must declare the table variable \"@x\".` (1087); SQLQuack's parser keeps a table variable source opaque (gap `table_variable`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ }
+]

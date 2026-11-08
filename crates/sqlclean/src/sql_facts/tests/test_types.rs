@@ -20,8 +20,20 @@ pub(crate) struct ParseOutcomeTestCase {
     pub(crate) expected_statements: Option<usize>,
 }
 
+pub(crate) struct UnavailableFactsTestCase {
+    pub(crate) description: &'static str,
+    pub(crate) dialect: &'static str,
+    pub(crate) expected_unavailable: Option<&'static str>,
+}
+
 pub(crate) struct StatementEndsTestCase {
     pub(crate) description: &'static str,
     pub(crate) sql: &'static str,
     pub(crate) expected_statements: Option<&'static [&'static str]>,
+}
+
+pub(crate) struct JoinFactsTestCase {
+    pub(crate) description: &'static str,
+    pub(crate) sql: &'static str,
+    pub(crate) expected_joins: &'static [(&'static str, &'static str, bool, &'static str)],
 }

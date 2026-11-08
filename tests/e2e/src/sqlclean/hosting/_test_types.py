@@ -16,6 +16,7 @@ class CheckTestCase:
     expected_exit: int
     expected_codes: tuple[str, ...]
     expected_stale: tuple[str, ...] = ()
+    expected_unavailable: tuple[str, ...] = ()
     command: str = "check"
 
 

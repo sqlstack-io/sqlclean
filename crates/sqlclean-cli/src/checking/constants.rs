@@ -3,6 +3,8 @@ pub const PARSE_ERROR_CODE: &str = "SQLCLEAN999";
 pub(crate) const PARSE_ERROR_MESSAGE: &str = "SQL could not be parsed";
 pub(crate) const PARSE_ERROR_REMEDIATION: &str =
     "Fix the syntax error, or set this file's dialect in sqlclean.toml.";
+/// Marks, in the built-in results and their cache, a file whose dialect SQLQuack does not parse.
+pub(crate) const UNAVAILABLE_CODE: &str = "SQLCLEAN998";
 pub(crate) const CROSS_JOIN_CODE: &str = "SQLCLEAN038";
 /// Custom Rule codes start with this prefix.
 pub const CUSTOM_RULE_PREFIX: &str = "XSQLCLEAN";

@@ -2,5 +2,5 @@
 
 /// The codes enabled when no Rule selection is given.
 pub fn default_rules() -> Vec<&'static str> {
-    crate::sql_lint::_helpers::engine::DEFAULT_RULES.to_vec()
+    sqlquack_lint::default_rules()
 }

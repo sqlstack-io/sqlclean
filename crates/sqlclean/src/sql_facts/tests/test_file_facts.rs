@@ -3,7 +3,8 @@ use crate::sql_facts::main::statement_ends::statement_ends;
 use crate::sql_facts::models::{FileFacts, StatementFacts};
 use crate::sql_facts::tests::helpers::text;
 use crate::sql_facts::tests::test_types::{
-    ParseOutcomeTestCase, StatementEndsTestCase, StatementFactsTestCase,
+    JoinFactsTestCase, ParseOutcomeTestCase, StatementEndsTestCase, StatementFactsTestCase,
+    UnavailableFactsTestCase,
 };
 
 const TWO_STATEMENTS: &str = "WITH recent AS (SELECT o.order_id, o.* FROM shop.orders AS o WHERE o.total > 10)\n\
@@ -208,6 +209,69 @@ FROM recent AS r LEFT JOIN customers AS c ON r.customer_id = c.customer_id",
 }
 
 #[test]
+fn given_comma_and_nested_joins_when_collecting_postgres_facts_then_joins_read_as_polyglot_did()
+-> Result<(), String> {
+    let test_cases = [
+        JoinFactsTestCase {
+            description: "a comma relation after an explicit join is an implicit join",
+            sql: "SELECT * FROM a FULL JOIN b USING (x), c AS cc",
+            expected_joins: &[
+                ("FULL", "b", true, "FULL JOIN b USING (x)"),
+                ("IMPLICIT", "c", false, "c AS cc"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "a comma relation before the first join is not",
+            sql: "SELECT * FROM a, b JOIN c ON true",
+            expected_joins: &[("INNER", "c", true, "JOIN c ON true")],
+        },
+        JoinFactsTestCase {
+            description: "a join nested by its ON clauses reports both joins",
+            sql: "SELECT * FROM t2 LEFT JOIN t3 FULL JOIN t4 ON false ON false",
+            expected_joins: &[
+                ("LEFT", "t3", true, "LEFT JOIN t3"),
+                ("FULL", "t4", true, "FULL JOIN t4 ON false ON false"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "a parenthesized join group reports only the join to it",
+            sql: "SELECT * FROM t1 LEFT JOIN (t2 LEFT JOIN t3 ON true) ON true",
+            expected_joins: &[(
+                "LEFT",
+                "",
+                true,
+                "LEFT JOIN (t2 LEFT JOIN t3 ON true) ON true",
+            )],
+        },
+    ];
+    for test_case in &test_cases {
+        let facts: FileFacts = file_facts(test_case.sql, "postgres")?;
+        let joins: Vec<(&str, &str, bool, String)> = facts.statements[0]
+            .joins
+            .iter()
+            .map(|join| {
+                (
+                    join.kind.as_str(),
+                    join.relation.as_deref().unwrap_or(""),
+                    join.has_condition,
+                    text(test_case.sql, join.start, join.end),
+                )
+            })
+            .collect();
+        let located: Vec<(&str, &str, bool, &str)> = joins
+            .iter()
+            .map(|(kind, relation, condition, text)| (*kind, *relation, *condition, text.as_str()))
+            .collect();
+        assert_eq!(
+            located, test_case.expected_joins,
+            "{}",
+            test_case.description
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn given_sql_text_when_collecting_facts_then_only_unparseable_sql_is_an_error() {
     let test_cases = [
         ParseOutcomeTestCase {
@@ -260,14 +324,15 @@ fn given_sql_text_when_finding_statement_ends_then_each_ends_after_its_terminato
     for test_case in &test_cases {
         let characters: Vec<char> = test_case.sql.chars().collect();
         let statements: Option<Vec<String>> = statement_ends(test_case.sql, "duckdb")
+            .ok()
+            .flatten()
             .map(|ends| {
                 let starts = std::iter::once(0).chain(ends.iter().copied());
                 starts
                     .zip(ends.iter().copied())
                     .map(|(start, end)| characters[start..end].iter().collect())
                     .collect()
-            })
-            .ok();
+            });
         let texts: Option<Vec<&str>> = statements
             .as_ref()
             .map(|statements| statements.iter().map(String::as_str).collect());
@@ -278,4 +343,43 @@ fn given_sql_text_when_finding_statement_ends_then_each_ends_after_its_terminato
             test_case.description
         );
     }
+}
+
+#[test]
+fn given_a_dialect_sqlquack_does_not_parse_when_collecting_facts_then_they_are_unavailable_not_empty()
+-> Result<(), String> {
+    let test_cases = [
+        UnavailableFactsTestCase {
+            description: "MySQL has no SQLQuack parser, so its facts are unavailable",
+            dialect: "mysql",
+            expected_unavailable: Some(
+                "SQL facts are unavailable for the mysql dialect: SQLQuack does not parse it yet",
+            ),
+        },
+        UnavailableFactsTestCase {
+            description: "DuckDB parses, so its facts are available",
+            dialect: "duckdb",
+            expected_unavailable: None,
+        },
+    ];
+    for test_case in &test_cases {
+        let facts: FileFacts = file_facts("SELECT 1; SELECT 2", test_case.dialect)?;
+        let ends: Option<Vec<usize>> = statement_ends("SELECT 1; SELECT 2", test_case.dialect)?;
+        assert_eq!(
+            facts.unavailable.as_deref(),
+            test_case.expected_unavailable,
+            "{}",
+            test_case.description
+        );
+        assert_eq!(
+            (facts.statements.len(), ends.map(|ends| ends.len())),
+            match test_case.expected_unavailable {
+                Some(_) => (0, None),
+                None => (2, Some(2)),
+            },
+            "{}",
+            test_case.description
+        );
+    }
+    Ok(())
 }

@@ -1,5 +1,6 @@
-use serde_json::Value;
+use serde_json::{Value, json};
 
+use crate::sql_lint::main::formatter::format_json;
 use crate::sql_lint::tests::helpers::format_at_width;
 use crate::sql_lint::tests::test_types;
 use crate::sql_tokens::main::query_fingerprint::query_fingerprint;
@@ -30,20 +31,6 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             expected_sql: "SELECT *\nFROM VALUES ('a', 'A'), ('b', 'B')",
         },
         test_types::LayoutRuleTestCase {
-            description: "a long parenthesized PostgreSQL VALUES moves under its parenthesis",
-            dialect: "postgres",
-            sql: "SELECT order_id, status FROM (VALUES (1, 'paid and shipped to customer'), (2, 'cancelled by customer')) AS orders(order_id, status)",
-            line_width: 60,
-            expected_sql: "SELECT\n  order_id,\n  status\nFROM (\n  VALUES\n    (1, 'paid and shipped to customer'),\n    (2, 'cancelled by customer')\n) AS orders(order_id, status)",
-        },
-        test_types::LayoutRuleTestCase {
-            description: "a long T-SQL VALUES relation keeps rows whole",
-            dialect: "tsql",
-            sql: "SELECT order_id FROM (VALUES (1, 'paid and shipped to customer'), (2, 'cancelled by customer')) AS orders(order_id, status)",
-            line_width: 60,
-            expected_sql: "SELECT order_id\nFROM (\n  VALUES\n    (1, 'paid and shipped to customer'),\n    (2, 'cancelled by customer')\n) AS orders(order_id, status)",
-        },
-        test_types::LayoutRuleTestCase {
             description: "DuckDB INSERT VALUES rows stay whole when a row is over the width",
             dialect: "duckdb",
             sql: "INSERT INTO orders VALUES (1, 'paid and shipped to the customer by priority courier'), (2, 'open')",
@@ -63,27 +50,6 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             sql: "SELECT COALESCE(first_order_amount, second_order_amount)::DECIMAL(18, 4) AS amount FROM orders",
             line_width: 50,
             expected_sql: "SELECT\n  COALESCE(\n    first_order_amount,\n    second_order_amount\n  )::DECIMAL(18, 4) AS amount\nFROM orders",
-        },
-        test_types::LayoutRuleTestCase {
-            description: "a BigQuery NUMERIC(38, 9) cast keeps its parameters",
-            dialect: "bigquery",
-            sql: "SELECT CAST(COALESCE(first_order_amount, second_order_amount) AS NUMERIC(38, 9)) AS amount FROM orders",
-            line_width: 50,
-            expected_sql: "SELECT\n  CAST(\n    COALESCE(\n      first_order_amount,\n      second_order_amount\n    ) AS NUMERIC(38, 9)\n  ) AS amount\nFROM orders",
-        },
-        test_types::LayoutRuleTestCase {
-            description: "a T-SQL VARCHAR(MAX) cast keeps its parameter",
-            dialect: "tsql",
-            sql: "SELECT CAST(COALESCE(first_order_note, second_order_note) AS VARCHAR(MAX)) AS note FROM orders",
-            line_width: 50,
-            expected_sql: "SELECT\n  CAST(\n    COALESCE(\n      first_order_note,\n      second_order_note\n    ) AS VARCHAR(MAX)\n  ) AS note\nFROM orders",
-        },
-        test_types::LayoutRuleTestCase {
-            description: "a Databricks DECIMAL(10, 2) cast keeps its parameters",
-            dialect: "databricks",
-            sql: "SELECT CAST(COALESCE(first_order_amount, second_order_amount) AS DECIMAL(10, 2)) AS amount FROM orders",
-            line_width: 50,
-            expected_sql: "SELECT\n  CAST(\n    COALESCE(\n      first_order_amount,\n      second_order_amount\n    ) AS DECIMAL(10, 2)\n  ) AS amount\nFROM orders",
         },
         test_types::LayoutRuleTestCase {
             description: "a long Snowflake DECODE puts each pair and the default on its own line",
@@ -121,13 +87,6 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             expected_sql: "SELECT\n  CASE\n    WHEN status = 'paid'\n    THEN 'customer paid in full'\n    WHEN status = 'open'\n    THEN 'customer has not paid yet'\n    ELSE 'other'\n  END\n  || CASE WHEN rush THEN '!' ELSE '' END AS label\nFROM orders",
         },
         test_types::LayoutRuleTestCase {
-            description: "AND after a multi-line subquery starts the next line",
-            dialect: "postgres",
-            sql: "SELECT order_id FROM orders WHERE customer_id IN (SELECT customer_id FROM customers WHERE region = 'north') AND EXISTS (SELECT 1 FROM shipments)",
-            line_width: 100,
-            expected_sql: "SELECT order_id\nFROM orders\nWHERE\n  customer_id IN (\n    SELECT customer_id\n    FROM customers\n    WHERE region = 'north'\n  )\n  AND EXISTS(\n    SELECT 1\n    FROM shipments\n  )",
-        },
-        test_types::LayoutRuleTestCase {
             description: "BETWEEN bounds keep their AND",
             dialect: "snowflake",
             sql: "SELECT order_id FROM orders WHERE amount BETWEEN 1 AND 9",
@@ -149,27 +108,6 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             expected_sql: "WITH orders AS (\n  SELECT *\n  FROM raw_orders\n), -- raw\n\npaid AS (\n  SELECT *\n  FROM orders\n)\n\nSELECT *\nFROM paid",
         },
         test_types::LayoutRuleTestCase {
-            description: "a nested WITH is separated at its own indentation",
-            dialect: "postgres",
-            sql: "SELECT * FROM (WITH a AS MATERIALIZED (SELECT 1 AS x), b AS (SELECT x FROM a) SELECT x FROM b) AS nested",
-            line_width: 100,
-            expected_sql: "SELECT *\nFROM (\n  WITH a AS MATERIALIZED (\n    SELECT 1 AS x\n  ),\n\n  b AS (\n    SELECT x\n    FROM a\n  )\n\n  SELECT x\n  FROM b\n) AS nested",
-        },
-        test_types::LayoutRuleTestCase {
-            description: "BigQuery recursive CTEs with column lists are separated",
-            dialect: "bigquery",
-            sql: "WITH RECURSIVE numbers (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM numbers WHERE n < 3), doubled AS (SELECT n * 2 AS n FROM numbers) SELECT n FROM doubled",
-            line_width: 100,
-            expected_sql: "WITH RECURSIVE numbers (n) AS (\n  SELECT 1\n  UNION ALL\n  SELECT n + 1\n  FROM numbers\n  WHERE n < 3\n),\n\ndoubled AS (\n  SELECT n * 2 AS n\n  FROM numbers\n)\n\nSELECT n\nFROM doubled",
-        },
-        test_types::LayoutRuleTestCase {
-            description: "a T-SQL WITH is separated before INSERT",
-            dialect: "tsql",
-            sql: "WITH paid AS (SELECT order_id FROM orders) INSERT INTO paid_orders SELECT order_id FROM paid",
-            line_width: 100,
-            expected_sql: "WITH paid AS (\n  SELECT order_id\n  FROM orders\n)\n\nINSERT INTO paid_orders\nSELECT order_id\nFROM paid",
-        },
-        test_types::LayoutRuleTestCase {
             description: "a CTE macro placeholder is separated like a CTE",
             dialect: "duckdb",
             sql: "WITH __sqlclean_interpolation_0__, paid AS (SELECT * FROM orders) SELECT * FROM paid",
@@ -181,7 +119,7 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             dialect: "duckdb",
             sql: "WITH a AS (SELECT 1 AS x), __sqlclean_interpolation_0__ __sqlclean_interpolation_1__ paid AS (SELECT * FROM a) SELECT * FROM paid",
             line_width: 100,
-            expected_sql: "WITH a AS (\n  SELECT 1 AS x\n),\n\n__sqlclean_interpolation_0__\n\n__sqlclean_interpolation_1__\npaid AS (\n  SELECT *\n  FROM a\n)\nSELECT *\nFROM paid",
+            expected_sql: "WITH a AS (\n  SELECT 1 AS x\n),\n\n__sqlclean_interpolation_0__\n\n__sqlclean_interpolation_1__\n\npaid AS (\n  SELECT *\n  FROM a\n)\n\nSELECT *\nFROM paid",
         },
         test_types::LayoutRuleTestCase {
             description: "an alias and comma that push a call over the width break the call",
@@ -233,27 +171,6 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             expected_sql: "SELECT DISTINCT order_id\nFROM orders\nWHERE\n  amount > 0\n  AND status = 'paid'\nUNION ALL\nSELECT\n  order_id,\n  customer_id\nFROM returns",
         },
         test_types::LayoutRuleTestCase {
-            description: "T-SQL TOP, HAVING and Snowflake-style single items share lines",
-            dialect: "tsql",
-            sql: "SELECT TOP 10 COUNT(*) AS n FROM orders GROUP BY customer_id HAVING COUNT(*) > 1",
-            line_width: 100,
-            expected_sql: "SELECT TOP 10 COUNT(*) AS n\nFROM orders\nGROUP BY\n  customer_id\nHAVING COUNT(*) > 1",
-        },
-        test_types::LayoutRuleTestCase {
-            description: "QUALIFY with one condition shares its line",
-            dialect: "databricks",
-            sql: "SELECT order_id, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ordered_at) AS rn FROM orders QUALIFY rn = 1",
-            line_width: 100,
-            expected_sql: "SELECT\n  order_id,\n  ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ordered_at) AS rn\nFROM orders\nQUALIFY rn = 1",
-        },
-        test_types::LayoutRuleTestCase {
-            description: "a single item that does not fit stays under SELECT",
-            dialect: "bigquery",
-            sql: "SELECT COALESCE(first_order_amount, second_order_amount, third_order_amount) AS amount FROM orders WHERE first_order_amount + second_order_amount + third_order_amount > 100",
-            line_width: 60,
-            expected_sql: "SELECT\n  COALESCE(\n    first_order_amount,\n    second_order_amount,\n    third_order_amount\n  ) AS amount\nFROM orders\nWHERE\n  first_order_amount\n    + second_order_amount\n    + third_order_amount > 100",
-        },
-        test_types::LayoutRuleTestCase {
             description: "a short CASE item shares the SELECT line",
             dialect: "duckdb",
             sql: "SELECT CASE WHEN amount > 0 THEN 'paid' ELSE 'open' END AS status FROM orders",
@@ -289,6 +206,126 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             test_case.line_width,
         )?;
         assert_eq!(again["changed"], false, "{}", test_case.description);
+    }
+    Ok(())
+}
+
+#[test]
+fn given_format_cases_when_formatting_then_output_matches() -> Result<(), String> {
+    let test_cases = [
+        test_types::FormatTestCase {
+            description: "comment-free canonical SQL",
+            sql: "select a,b from items where a=1",
+            expected_sql: "SELECT\n  a,\n  b\nFROM items\nWHERE a = 1",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "an unaliased Snowflake select item keeps its authored text, which names its column",
+            sql: "select count(1) from items",
+            expected_sql: "SELECT count(1)\nFROM items",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "an aliased call folds to upper case",
+            sql: "select count(1) as n from items",
+            expected_sql: "SELECT COUNT(1) AS n\nFROM items",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "block comment attachment",
+            sql: "SELECT a, /* preserve */ b FROM items",
+            expected_sql: "SELECT\n  a, /* preserve */\n  b\nFROM items",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "line and leading comments",
+            sql: "-- lead\nselect a,b from items -- tail\nwhere a=1",
+            expected_sql: "-- lead\nSELECT\n  a,\n  b\nFROM items -- tail\nWHERE a = 1",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "standalone projection comments remain attached to following expressions",
+            sql: "SELECT\n  -- first value\n  a,\n  -- second value\n  b\nFROM items",
+            expected_sql: "SELECT\n  -- first value\n  a,\n  -- second value\n  b\nFROM items",
+            expected_changed: false,
+        },
+        test_types::FormatTestCase {
+            description: "comment marker string",
+            sql: "select '-- not a comment' as value",
+            expected_sql: "SELECT '-- not a comment' AS value",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "doubled apostrophe string remains compiler compatible",
+            sql: "select 'Customer''s order' as value",
+            expected_sql: "SELECT 'Customer''s order' AS value",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "explicit null ordering remains explicit",
+            sql: "select id from items order by category nulls last, created_at desc nulls first",
+            expected_sql: "SELECT id\nFROM items\nORDER BY\n  category NULLS LAST,\n  created_at DESC NULLS FIRST",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "explicit cast type spellings remain authored",
+            sql: "select cast(label as TEXT) as label, cast(id as INTEGER) as id, cast(observed_at as TIMESTAMP_NTZ) as observed_at, cast(amount as NUMERIC(10, 2)) as amount from items",
+            expected_sql: "SELECT\n  CAST(label AS TEXT) AS label,\n  CAST(id AS INTEGER) AS id,\n  CAST(observed_at AS TIMESTAMP_NTZ) AS observed_at,\n  CAST(amount AS NUMERIC(10, 2)) AS amount\nFROM items",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "nested and try cast type spellings remain authored",
+            sql: "select cast(coalesce(try_cast(raw_id as INTEGER), 0) as NUMERIC(10, 2)) as amount, cast(tags as ARRAY<INTEGER>) as tags from items",
+            expected_sql: "SELECT\n  CAST(COALESCE(TRY_CAST(raw_id AS INTEGER), 0) AS NUMERIC(10, 2)) AS amount,\n  CAST(tags AS ARRAY<INTEGER>) AS tags\nFROM items",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "commented cast type remains idempotent",
+            sql: "select cast(amount as NUMERIC(/* precision */ 10, 2)) as amount from items",
+            expected_sql: "SELECT\n  CAST(amount AS NUMERIC( /* precision */10, 2)) AS amount\nFROM items",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "cast-free token expansion remains supported",
+            sql: "select id label from items",
+            expected_sql: "SELECT id label\nFROM items",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "cast-free multiple statements remain supported",
+            sql: "select 1; select 2",
+            expected_sql: "SELECT 1;\nSELECT 2",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "trailing comment after a kept statement terminator",
+            sql: "select a from items; -- retained",
+            expected_sql: "SELECT a\nFROM items; -- retained",
+            expected_changed: true,
+        },
+        test_types::FormatTestCase {
+            description: "unparenthesized values relation remains unparenthesized",
+            sql: "select column1::varchar as customer_key, column2::integer as order_count from values ('c1', 1), ('c2', 2)",
+            expected_sql: "SELECT\n  column1::varchar AS customer_key,\n  column2::integer AS order_count\nFROM VALUES ('c1', 1), ('c2', 2)",
+            expected_changed: true,
+        },
+    ];
+
+    for test_case in &test_cases {
+        let response = format_json(
+            &json!({"version": 1, "sql": test_case.sql, "dialect": "snowflake"}).to_string(),
+        )?;
+        let payload: Value = serde_json::from_str(&response).map_err(|error| error.to_string())?;
+        assert_eq!(
+            payload["sql"], test_case.expected_sql,
+            "{}",
+            test_case.description
+        );
+        assert_eq!(
+            payload["changed"], test_case.expected_changed,
+            "{}",
+            test_case.description
+        );
     }
     Ok(())
 }

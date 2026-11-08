@@ -400,36 +400,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
-name = "polyglot-sql"
-version = "0.13.9"
-source = "git+https://github.com/sqlstack-io/polyglot.git?rev=8767d688c5b504ad609645e27ab77a260d91c5a1#8767d688c5b504ad609645e27ab77a260d91c5a1"
-dependencies = [
- "polyglot-sql-ast-derive",
- "polyglot-sql-function-catalogs",
- "regex",
- "serde",
- "serde_json",
- "stacker",
- "thiserror",
- "unicode-segmentation",
-]
-
-[[package]]
-name = "polyglot-sql-ast-derive"
-version = "0.13.9"
-source = "git+https://github.com/sqlstack-io/polyglot.git?rev=8767d688c5b504ad609645e27ab77a260d91c5a1#8767d688c5b504ad609645e27ab77a260d91c5a1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
-name = "polyglot-sql-function-catalogs"
-version = "0.13.9"
-source = "git+https://github.com/sqlstack-io/polyglot.git?rev=8767d688c5b504ad609645e27ab77a260d91c5a1#8767d688c5b504ad609645e27ab77a260d91c5a1"
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -481,18 +451,6 @@ checksum = "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
-]
-
-[[package]]
-name = "regex"
-version = "1.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f020237b6c8eed93db2e2cb53c00c60a8e1bc73da7d073199a1180401450218d"
-dependencies = [
- "aho-corasick",
- "memchr",
- "regex-automata",
- "regex-syntax",
 ]
 
 [[package]]
@@ -621,13 +579,15 @@ checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 name = "sqlclean"
 version = "0.4.3"
 dependencies = [
- "polyglot-sql",
- "polyglot-sql-function-catalogs",
  "rayon",
  "rustc-hash",
  "serde",
  "serde_json",
  "sha2",
+ "sqlquack-fingerprint",
+ "sqlquack-format",
+ "sqlquack-lint",
+ "sqlquack-syntax",
 ]
 
 [[package]]
@@ -646,6 +606,80 @@ dependencies = [
  "sqlclean",
  "tempfile",
  "toml",
+]
+
+[[package]]
+name = "sqlquack-fingerprint"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=edfa30b26a0bab86661f96490b86a4f24b92db0a#edfa30b26a0bab86661f96490b86a4f24b92db0a"
+dependencies = [
+ "sha2",
+ "sqlquack-syntax",
+ "sqlquack-syntax-postgres",
+]
+
+[[package]]
+name = "sqlquack-format"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=edfa30b26a0bab86661f96490b86a4f24b92db0a#edfa30b26a0bab86661f96490b86a4f24b92db0a"
+dependencies = [
+ "serde_json",
+ "sqlquack-syntax",
+ "sqlquack-syntax-sqlserver",
+]
+
+[[package]]
+name = "sqlquack-lint"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=edfa30b26a0bab86661f96490b86a4f24b92db0a#edfa30b26a0bab86661f96490b86a4f24b92db0a"
+dependencies = [
+ "rayon",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "sqlquack-syntax",
+ "sqlquack-syntax-postgres",
+]
+
+[[package]]
+name = "sqlquack-syntax"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=edfa30b26a0bab86661f96490b86a4f24b92db0a#edfa30b26a0bab86661f96490b86a4f24b92db0a"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sqlquack-syntax-derive",
+ "stacker",
+ "thiserror",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "sqlquack-syntax-derive"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=edfa30b26a0bab86661f96490b86a4f24b92db0a#edfa30b26a0bab86661f96490b86a4f24b92db0a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "sqlquack-syntax-postgres"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=edfa30b26a0bab86661f96490b86a4f24b92db0a#edfa30b26a0bab86661f96490b86a4f24b92db0a"
+dependencies = [
+ "sqlquack-syntax",
+ "stacker",
+]
+
+[[package]]
+name = "sqlquack-syntax-sqlserver"
+version = "0.2.0"
+source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=edfa30b26a0bab86661f96490b86a4f24b92db0a#edfa30b26a0bab86661f96490b86a4f24b92db0a"
+dependencies = [
+ "sqlquack-syntax",
+ "stacker",
 ]
 
 [[package]]

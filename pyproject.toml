@@ -25,11 +25,6 @@ dependencies = [
   "sqlclean-cli==0.4.3", # x-release-please-version
 ]
 
-[project.optional-dependencies]
-ast = [
-  "polyglot-sql-chio==0.13.10",
-]
-
 [project.urls]
 Homepage = "https://github.com/sqlstack-io/sqlclean"
 Issues = "https://github.com/sqlstack-io/sqlclean/issues"
@@ -42,7 +37,6 @@ packages = ["src/sqlclean"]
 dev = [
   "commitizen>=4.9.1",
   "fensu>=0.28.0",
-  "polyglot-sql-chio==0.13.10", # optional AST API
   "pre-commit>=4.3.0",
   "pytest>=8.4.2",
   "pytest-xdist>=3.8.0",

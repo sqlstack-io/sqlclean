@@ -119,33 +119,11 @@ pub(crate) struct FormatCorpusTestCase {
     pub expected_refused: usize,
 }
 
-pub(crate) struct DialectFormatTestCase {
-    pub description: &'static str,
-    pub dialect: &'static str,
-    pub sql: &'static str,
-    pub expected_sql: &'static str,
-}
-
-pub(crate) struct TokenInvariantTestCase {
-    pub description: &'static str,
-    pub before: &'static str,
-    pub after: &'static str,
-    pub recases: &'static [(usize, &'static str, bool)],
-    pub expected_error: Option<&'static str>,
-}
-
 pub(crate) struct FormatTestCase {
     pub description: &'static str,
     pub sql: &'static str,
     pub expected_sql: &'static str,
     pub expected_changed: bool,
-}
-
-pub(crate) struct ReprintTestCase {
-    pub description: &'static str,
-    pub sql: &'static str,
-    pub expected_changed: bool,
-    pub expected_reprints: usize,
 }
 
 pub(crate) struct InvalidRuleTestCase {
@@ -179,4 +157,10 @@ pub(crate) struct CrossJoinSubjectTestCase {
     pub description: &'static str,
     pub message: &'static str,
     pub expected_subject: Option<(&'static str, Option<&'static str>)>,
+}
+
+pub(crate) struct UnavailableCorpusTestCase {
+    pub description: &'static str,
+    pub dialect: &'static str,
+    pub expected_unavailable: usize,
 }

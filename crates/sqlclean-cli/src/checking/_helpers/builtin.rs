@@ -5,10 +5,11 @@ use std::collections::BTreeSet;
 use sqlclean::sql_lint::constants::LINT_API_VERSION;
 use sqlclean::sql_lint::main::fill_finding_path::fill_finding_path;
 use sqlclean::sql_lint::main::lint::lint;
-use sqlclean::sql_lint::models::{LintDiagnostic, LintRequest};
+use sqlclean::sql_lint::types::{LintDiagnostic, LintRequest};
 
 use crate::checking::constants::{
-    PARSE_ERROR_CODE, PARSE_ERROR_MESSAGE, PARSE_ERROR_REMEDIATION, UNSAFE_FIX_BUILTIN_RULES,
+    PARSE_ERROR_CODE, PARSE_ERROR_MESSAGE, PARSE_ERROR_REMEDIATION, UNAVAILABLE_CODE,
+    UNSAFE_FIX_BUILTIN_RULES,
 };
 use crate::checking::models::{Finding, FixSafety};
 use crate::config::constants::CONFIG_FILE_NAME;
@@ -16,7 +17,7 @@ use crate::config::models::Thresholds;
 use crate::discovery::models::SourceFile;
 use crate::positions::models::Edit;
 
-/// The built-in findings of `file`, or one parse-error finding when the engine rejects it.
+/// The built-in findings of `file`, or its one parse-error finding or unavailable-dialect marker.
 pub(crate) fn builtin_findings(
     file: &SourceFile,
     codes: &BTreeSet<String>,
@@ -33,6 +34,16 @@ pub(crate) fn builtin_findings(
         ..LintRequest::default()
     };
     match lint(request) {
+        Ok(response) if response.unavailable.is_some() => vec![Finding {
+            code: UNAVAILABLE_CODE.to_owned(),
+            path: file.path.clone(),
+            start: 0,
+            end: 0,
+            message: response.unavailable.unwrap_or_default(),
+            remediation: String::new(),
+            edits: Vec::new(),
+            fix: None,
+        }],
         Ok(response) => response
             .diagnostics
             .into_iter()

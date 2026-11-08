@@ -1,20 +1,33 @@
 //! Walk each parsed statement once and collect its structural facts.
 
-use polyglot_sql::expressions::{Column, Cte, Join, TableRef, With};
-use polyglot_sql::tokens::{Span, Token, TokenType};
-use polyglot_sql::{Expression, ExpressionWalk};
+use sqlquack_syntax::expressions::names::models::{Column, Identifier, TableRef};
+use sqlquack_syntax::expressions::queries::models::{Cte, Join, JoinedTable, With};
+use sqlquack_syntax::tokens::models::{Span, Token, TokenType};
+use sqlquack_syntax::{Expression, ExpressionWalk};
 
 use crate::sql_facts::_helpers::statements::{StatementTokens, statement_token_ranges};
 use crate::sql_facts::_helpers::tokens::{
     function_nodes, join_clause_span, literal_nodes, star_nodes,
 };
+use crate::sql_facts::constants::{
+    ALTER_OBJECT_KINDS, CREATE_OBJECT_KINDS, DATE_PART_CALLS, DATE_PART_NAMES, DROP_OBJECT_KINDS,
+    UTILITY_KINDS,
+};
 use crate::sql_facts::models::{
     ColumnNode, FileFacts, JoinNode, NamedNode, StatementFacts, TableNode,
 };
+use crate::sql_lint::constants::LINT_API_VERSION;
+use crate::sql_lint::main::lint::lint;
 use crate::sql_lint::main::parse_sql::parse_sql;
-use crate::sql_lint::models::ParsedSql;
+use crate::sql_lint::types::{LintRequest, LintResponse, ParsedSql};
 
 pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> {
+    if let Some(reason) = unavailable(dialect)? {
+        return Ok(FileFacts {
+            statements: Vec::new(),
+            unavailable: Some(reason),
+        });
+    }
     let (
         ParsedSql {
             tokens, statements, ..
@@ -22,6 +35,7 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
         ranges,
     ) = parsed_statements(sql, dialect)?;
     let characters: Vec<char> = sql.chars().collect();
+    let snowflake: bool = dialect.eq_ignore_ascii_case("snowflake");
     let facts: Vec<StatementFacts> = statements
         .iter()
         .zip(ranges)
@@ -33,17 +47,41 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
                     statement,
                     tokens: &tokens[range.first..=range.last],
                     terminated_end: range.terminated_end,
+                    snowflake,
                 },
                 &characters,
             )
         })
         .collect();
-    Ok(FileFacts { statements: facts })
+    Ok(FileFacts {
+        statements: facts,
+        unavailable: None,
+    })
 }
 
-pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Vec<usize>, String> {
+pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Option<Vec<usize>>, String> {
+    if unavailable(dialect)?.is_some() {
+        return Ok(None);
+    }
     let (_, ranges) = parsed_statements(sql, dialect)?;
-    Ok(ranges.iter().map(|range| range.terminated_end).collect())
+    Ok(Some(
+        ranges.iter().map(|range| range.terminated_end).collect(),
+    ))
+}
+
+/// Why facts are unavailable for `dialect`: lint's own answer for a dialect SQLQuack does not parse yet.
+fn unavailable(dialect: &str) -> Result<Option<String>, String> {
+    let probe: LintResponse = lint(LintRequest {
+        version: LINT_API_VERSION,
+        dialect: dialect.to_owned(),
+        enabled_rules: Some(Vec::new()),
+        ..LintRequest::default()
+    })?;
+    Ok(probe.unavailable.map(|_| {
+        format!(
+            "SQL facts are unavailable for the {dialect} dialect: SQLQuack does not parse it yet"
+        )
+    }))
 }
 
 /// Parse `sql` and split its tokens into one range per parsed statement.
@@ -69,6 +107,8 @@ struct StatementSource<'a> {
     statement: &'a Expression,
     tokens: &'a [Token],
     terminated_end: usize,
+    /// Whether the dialect is Snowflake, whose date functions take a bare date part.
+    snowflake: bool,
 }
 
 fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> StatementFacts {
@@ -77,11 +117,19 @@ fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> Stateme
         statement,
         tokens,
         terminated_end,
+        snowflake,
     } = *source;
     let nodes: Vec<&Expression> = statement_nodes(statement);
+    let date_parts: Vec<&Expression> = match snowflake {
+        true => nodes
+            .iter()
+            .filter_map(|node| date_part_argument(node))
+            .collect(),
+        false => Vec::new(),
+    };
     StatementFacts {
         index,
-        kind: statement.variant_name().to_owned(),
+        kind: statement_kind(statement),
         start: tokens.first().map_or(0, |token| token.span.start),
         end: tokens.last().map_or(0, |token| token.span.end),
         terminated_end,
@@ -89,20 +137,25 @@ fn statement_facts(source: &StatementSource<'_>, characters: &[char]) -> Stateme
             nodes
                 .iter()
                 .flat_map(|node| with_ctes(node))
-                .filter_map(|cte| cte_node(cte, tokens))
+                .filter_map(|cte| cte_node(cte, tokens, characters))
                 .collect(),
         ),
-        tables: sorted(nodes.iter().filter_map(|node| table_node(node)).collect()),
-        joins: sorted(
+        tables: sorted(
             nodes
                 .iter()
-                .flat_map(|node| select_joins(node))
-                .filter_map(|join| join_node(join, tokens))
+                .filter_map(|node| table_node(node, characters))
                 .collect(),
         ),
+        joins: sorted(statement_joins(&nodes, tokens, characters)),
         stars: star_nodes(tokens),
         functions: function_nodes(tokens),
-        columns: sorted(nodes.iter().filter_map(|node| column_node(node)).collect()),
+        columns: sorted(
+            nodes
+                .iter()
+                .filter(|node| !is_date_part(node, &date_parts))
+                .filter_map(|node| column_node(node, characters))
+                .collect(),
+        ),
         literals: literal_nodes(tokens, characters),
     }
 }
@@ -139,15 +192,123 @@ fn with_ctes(node: &Expression) -> &[Cte] {
     with.map_or(&[], |with| with.ctes.as_slice())
 }
 
-fn select_joins(node: &Expression) -> &[Join] {
-    match node {
-        Expression::Select(select) => select.joins.as_slice(),
-        _ => &[],
+/// The explicit and IMPLICIT joins of every query among `nodes`.
+fn statement_joins(nodes: &[&Expression], tokens: &[Token], characters: &[char]) -> Vec<JoinNode> {
+    let mut joins: Vec<JoinNode> = Vec::new();
+    for node in nodes {
+        for join in node_joins(node, tokens) {
+            joins.extend(join_node(join, tokens, characters));
+        }
+        joins.extend(implicit_join_nodes(node, tokens, characters));
     }
+    joins
+}
+
+/// A query's joins, with those nested by ON clauses but not those inside a parenthesized group.
+fn node_joins<'a>(node: &'a Expression, tokens: &[Token]) -> Vec<&'a Join> {
+    let Expression::Select(select) = node else {
+        return Vec::new();
+    };
+    let mut joins: Vec<&Join> = Vec::new();
+    let mut pending: Vec<&Join> = select.joins.iter().rev().collect();
+    while let Some(join) = pending.pop() {
+        joins.push(join);
+        if let Expression::JoinedTable(joined) = &join.this
+            && !parenthesized(joined, tokens)
+        {
+            pending.extend(joined.joins.iter().rev());
+        }
+    }
+    joins
+}
+
+/// Whether the `(` after a join group's JOIN keyword closes after everything the group names.
+fn parenthesized(joined: &JoinedTable, tokens: &[Token]) -> bool {
+    let spans: Vec<Span> = located_spans(&joined.left)
+        .chain(joined.joins.iter().flat_map(|join| {
+            located_spans(&join.this).chain(join.on.iter().flat_map(located_spans))
+        }))
+        .collect();
+    let (Some(first), Some(last)) = (
+        spans.iter().map(|span| span.start).min(),
+        spans.iter().map(|span| span.end).max(),
+    ) else {
+        return false;
+    };
+    let Some(keyword) = tokens
+        .iter()
+        .rposition(|token| token.span.end <= first && token.token_type == TokenType::Join)
+    else {
+        return false;
+    };
+    let Some(open) = tokens[keyword + 1..]
+        .iter()
+        .position(|token| token.token_type != TokenType::Lateral)
+        .map(|offset| keyword + 1 + offset)
+        .filter(|&open| tokens[open].token_type == TokenType::LParen)
+    else {
+        return false;
+    };
+    let mut depth: usize = 0;
+    for token in &tokens[open..] {
+        match token.token_type {
+            TokenType::LParen => depth += 1,
+            TokenType::RParen => {
+                depth -= 1;
+                if depth == 0 {
+                    return last <= token.span.start;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+/// The spans of the tables and columns `expression` names.
+fn located_spans(expression: &Expression) -> impl Iterator<Item = Span> + '_ {
+    expression.dfs().filter_map(|node| match node {
+        Expression::Table(table) => table.span.or(table.name.span),
+        Expression::Column(column) => column.span,
+        _ => None,
+    })
+}
+
+/// The comma relations after a query's first explicit join, which Polyglot read as IMPLICIT joins.
+fn implicit_join_nodes(node: &Expression, tokens: &[Token], characters: &[char]) -> Vec<JoinNode> {
+    let Expression::Select(select) = node else {
+        return Vec::new();
+    };
+    let (Some(from), Some(first_join)) = (
+        select.from.as_ref(),
+        select.joins.first().and_then(|join| first_span(&join.this)),
+    ) else {
+        return Vec::new();
+    };
+    let mut joins: Vec<JoinNode> = Vec::new();
+    for relation in &from.expressions {
+        let Some(span) = first_span(relation).filter(|span| span.start > first_join.start) else {
+            continue;
+        };
+        let Some((start, end)) = join_clause_span(tokens, span.start) else {
+            continue;
+        };
+        joins.push(JoinNode {
+            start,
+            end,
+            kind: "IMPLICIT".to_owned(),
+            relation: match relation {
+                Expression::Table(table) => Some(authored(&table.name, characters)),
+                _ => None,
+            },
+            has_condition: false,
+        });
+    }
+    joins
 }
 
 /// The CTE located at its name; the parser leaves CTE names unlocated, so read `name AS (`.
-fn cte_node(cte: &Cte, tokens: &[Token]) -> Option<NamedNode> {
+fn cte_node(cte: &Cte, tokens: &[Token], characters: &[char]) -> Option<NamedNode> {
     let span: Span = cte.alias.span.or_else(|| {
         tokens
             .windows(2)
@@ -161,13 +322,13 @@ fn cte_node(cte: &Cte, tokens: &[Token]) -> Option<NamedNode> {
             .map(|pair| pair[0].span)
     })?;
     Some(NamedNode {
-        name: cte.alias.name.clone(),
+        name: authored(&cte.alias, characters),
         start: span.start,
         end: span.end,
     })
 }
 
-fn table_node(node: &Expression) -> Option<TableNode> {
+fn table_node(node: &Expression, characters: &[char]) -> Option<TableNode> {
     let Expression::Table(table) = node else {
         return None;
     };
@@ -181,22 +342,29 @@ fn table_node(node: &Expression) -> Option<TableNode> {
     let qualified_name: String = [&table.catalog, &table.schema]
         .into_iter()
         .flatten()
-        .map(|part| part.name.as_str())
-        .chain([table.name.name.as_str()])
-        .collect::<Vec<&str>>()
+        .chain([&table.name])
+        .map(|part| authored(part, characters))
+        .collect::<Vec<String>>()
         .join(".");
     Some(TableNode {
         start,
         end: span.end,
-        name: table.name.name.clone(),
+        name: authored(&table.name, characters),
         qualified_name,
-        alias: table.alias.as_ref().map(|alias| alias.name.clone()),
+        alias: table
+            .alias
+            .as_ref()
+            .map(|alias| authored(alias, characters)),
     })
 }
 
-fn join_node(join: &Join, tokens: &[Token]) -> Option<JoinNode> {
+fn join_node(join: &Join, tokens: &[Token], characters: &[char]) -> Option<JoinNode> {
     let relation: Option<&TableRef> = match &join.this {
         Expression::Table(table) => Some(table),
+        Expression::JoinedTable(joined) if !parenthesized(joined, tokens) => match &joined.left {
+            Expression::Table(table) => Some(table),
+            _ => None,
+        },
         _ => None,
     };
     let (start, end) = join_clause_span(tokens, first_span(&join.this)?.start)?;
@@ -204,23 +372,91 @@ fn join_node(join: &Join, tokens: &[Token]) -> Option<JoinNode> {
         start,
         end,
         kind: format!("{:?}", join.kind).to_ascii_uppercase(),
-        relation: relation.map(|table| table.name.name.clone()),
+        relation: relation.map(|table| authored(&table.name, characters)),
         has_condition: join.on.is_some() || !join.using.is_empty(),
     })
 }
 
-fn column_node(node: &Expression) -> Option<ColumnNode> {
+/// A Snowflake date call's bare date part, such as `day` in `DATEPART(day, ts)`: a unit, as Polyglot read it.
+fn date_part_argument(node: &Expression) -> Option<&Expression> {
+    let Expression::Function(function) = node else {
+        return None;
+    };
+    let (_, position, any_name) = DATE_PART_CALLS
+        .iter()
+        .find(|(name, _, _)| name.eq_ignore_ascii_case(&function.name))?;
+    function
+        .args
+        .get(*position)
+        .filter(|argument| reads_as_unit(argument, *any_name))
+}
+
+/// Whether `argument` is a bare name that reads as a date part: any name, or only a known unit.
+fn reads_as_unit(argument: &Expression, any_name: bool) -> bool {
+    match argument {
+        Expression::Column(column) if column.table.is_none() && !column.name.quoted => {
+            any_name || DATE_PART_NAMES.contains(&column.name.name.to_ascii_uppercase().as_str())
+        }
+        _ => false,
+    }
+}
+
+/// Whether `node` is one of the date parts found in its statement.
+fn is_date_part(node: &Expression, date_parts: &[&Expression]) -> bool {
+    date_parts.iter().any(|part| std::ptr::eq(*part, node))
+}
+
+fn column_node(node: &Expression, characters: &[char]) -> Option<ColumnNode> {
     let Expression::Column(column) = node else {
         return None;
     };
     let column: &Column = column;
     let span: Span = column.span.or(column.name.span)?;
+    let start: usize = column
+        .table
+        .as_ref()
+        .and_then(|table| table.span)
+        .map_or(span.start, |table| table.start.min(span.start));
     Some(ColumnNode {
-        start: span.start,
+        start,
         end: span.end,
-        name: column.name.name.clone(),
-        qualifier: column.table.as_ref().map(|table| table.name.clone()),
+        name: authored(&column.name, characters),
+        qualifier: column
+            .table
+            .as_ref()
+            .map(|table| authored(table, characters)),
     })
+}
+
+/// A name as written: a parser that folds unquoted names keeps the folded name, so read the source.
+fn authored(identifier: &Identifier, characters: &[char]) -> String {
+    let written: Option<String> = identifier
+        .span
+        .filter(|_| !identifier.quoted)
+        .and_then(|span| characters.get(span.start..span.end))
+        .map(|text| text.iter().collect());
+    written
+        .filter(|text| text.eq_ignore_ascii_case(&identifier.name))
+        .unwrap_or_else(|| identifier.name.clone())
+}
+
+/// The statement's kind, naming a generic CREATE, ALTER, DROP or utility statement as Polyglot's tree did.
+fn statement_kind(statement: &Expression) -> String {
+    let (kind, known): (&str, &[(&str, &str)]) = match statement {
+        Expression::CreateObject(node) => (&node.kind, &CREATE_OBJECT_KINDS),
+        Expression::AlterObject(node) => (&node.kind, &ALTER_OBJECT_KINDS),
+        Expression::DropObject(node) => (&node.kind, &DROP_OBJECT_KINDS),
+        Expression::UtilityStatement(node) => (
+            node.kind.split(' ').next().unwrap_or_default(),
+            &UTILITY_KINDS,
+        ),
+        _ => ("", &[]),
+    };
+    known
+        .iter()
+        .find(|(object, _)| object.eq_ignore_ascii_case(kind))
+        .map_or(statement.variant_name(), |(_, name)| name)
+        .to_owned()
 }
 
 /// The first located table or column inside `expression`, in source order.
