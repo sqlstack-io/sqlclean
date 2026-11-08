@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/sqlstack-io/sqlclean/compare/v0.4.3...v0.5.0) (2026-11-08)
+
+
+### Features
+
+* format and lint with SQLQuack instead of Polyglot ([#38](https://github.com/sqlstack-io/sqlclean/issues/38)) ([6c0d395](https://github.com/sqlstack-io/sqlclean/commit/6c0d395890b24b36e8f3f233ea550fafb14ee07b))
+
+
+### Documentation
+
+* simplify introductory custom Python Rule examples ([#34](https://github.com/sqlstack-io/sqlclean/issues/34)) ([14f613c](https://github.com/sqlstack-io/sqlclean/commit/14f613c8464ccc176261fc60fb06727f25066db0))
+
 ## [0.4.3](https://github.com/sqlstack-io/sqlclean/compare/v0.4.2...v0.4.3) (2026-11-02)
 
 
