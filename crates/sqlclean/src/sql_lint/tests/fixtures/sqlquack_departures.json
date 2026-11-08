@@ -383,5 +383,215 @@
   "formatted": null,
   "reason": "SQL Server rejects it: `Must declare the table variable \"@x\".` (1087); SQLQuack's parser keeps a table variable source opaque (gap `table_variable`); SQLClean formatted it",
   "receipt": "crates/sqlquack-format/src/format/tests/fixtures/sqlserver_receipts.jsonl"
+ },
+ {
+  "dialect": "bigquery",
+  "sql": "SELECT * FROM x.*",
+  "formatted": null,
+  "reason": "BigQuery rejects it: `Syntax error: Unexpected \"*\" at [1:17]`; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/bigquery_receipts.jsonl"
+ },
+ {
+  "dialect": "bigquery",
+  "sql": "SELECT * FROM x.y*",
+  "formatted": null,
+  "reason": "BigQuery rejects it: a wildcard table needs backquotes (`Syntax error: Expected end of input but got \"*\" at [1:18]`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/bigquery_receipts.jsonl"
+ },
+ {
+  "dialect": "bigquery",
+  "sql": "SELECT 1 AS hash",
+  "formatted": null,
+  "reason": "BigQuery rejects it: HASH is a reserved keyword (`Syntax error: Unexpected keyword HASH at [1:13]`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/bigquery_receipts.jsonl"
+ },
+ {
+  "dialect": "bigquery",
+  "sql": "SELECT 1 AS at",
+  "formatted": null,
+  "reason": "BigQuery rejects it: AT is a reserved keyword (`Syntax error: Unexpected keyword AT at [1:13]`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/bigquery_receipts.jsonl"
+ },
+ {
+  "dialect": "bigquery",
+  "sql": "WITH cte(c) AS (SELECT * FROM t) SELECT * FROM cte",
+  "formatted": null,
+  "reason": "BigQuery rejects it: GoogleSQL has no CTE column list (`Syntax error: Expected \")\" but got identifier \"c\" at [1:10]`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/bigquery_receipts.jsonl"
+ },
+ {
+  "dialect": "bigquery",
+  "sql": "SELECT * FROM t AS t(c1, c2)",
+  "formatted": null,
+  "reason": "BigQuery rejects it: GoogleSQL has no alias column list (`Syntax error: Expected end of input but got \"(\" at [1:21]`); SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/bigquery_receipts.jsonl"
+ },
+ {
+  "dialect": "bigquery",
+  "sql": "SELECT ARRAY(SELECT AS STRUCT 1 a, 2 b)",
+  "formatted": "SELECT\n  ARRAY(\n    SELECT AS STRUCT\n      1 a,\n      2 b\n  )",
+  "reason": "SQLClean's Polyglot printer left a subquery call argument on the call's line; SQLQuack lays it out as any other subquery, as for PostgreSQL's ARRAY(SELECT ...)",
+  "receipt": null
+ },
+ {
+  "dialect": "bigquery",
+  "sql": "SELECT STRUCT<STRING>((SELECT 'foo')).*",
+  "formatted": "SELECT\n  STRUCT<STRING> ((\n    SELECT 'foo'\n  )).*",
+  "reason": "SQLClean's Polyglot printer put a space before `.*`; SQLQuack keeps the field access touching its operand",
+  "receipt": null
+ },
+ {
+  "dialect": "bigquery",
+  "sql": "select array_contains([1, 2, 3], 1)",
+  "formatted": "SELECT ARRAY_CONTAINS([1, 2, 3], 1)",
+  "reason": "SQLQuack upper-cases a called function name, as in every dialect, and BigQuery function names are case-insensitive; SQLClean kept the authored case",
+  "receipt": null
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT id, name FROM xml_data AS t, XMLTABLE('/root/user' PASSING t.xml COLUMNS id INT PATH '@id', name TEXT PATH 'name/text()') AS x",
+  "formatted": "SELECT\n  id,\n  name\nFROM xml_data AS t, XMLTABLE(\n  '/root/user' PASSING t.xml COLUMNS id INT PATH '@id',\n  name TEXT PATH 'name/text()'\n) AS x",
+  "reason": "SQLClean's Polyglot printer put XMLTABLE's PASSING and COLUMNS on lines of their own; SQLQuack lays XMLTABLE out as any call, splitting its arguments at commas, and PostgreSQL 18.6 returns the same columns and rows for both",
+  "receipt": null
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT id, value FROM xml_content AS t, XMLTABLE(XMLNAMESPACES('http://example.com/ns1' AS ns1, 'http://example.com/ns2' AS ns2), '/root/data' PASSING t.xml COLUMNS id INT PATH '@ns1:id', value TEXT PATH 'ns2:value/text()') AS x",
+  "formatted": "SELECT\n  id,\n  value\nFROM xml_content AS t, XMLTABLE(\n  XMLNAMESPACES('http://example.com/ns1' AS ns1, 'http://example.com/ns2' AS ns2),\n  '/root/data' PASSING t.xml COLUMNS id INT PATH '@ns1:id',\n  value TEXT PATH 'ns2:value/text()'\n) AS x",
+  "reason": "SQLClean refused it; PostgreSQL 18.6 parses it, and SQLQuack's parser does too",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 parses it, then stops at binding with 42P01"
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT * FROM ROWS FROM (FUNC1(col1) AS alias1(\"col1\" TEXT), FUNC2(col2) AS alias2(\"col2\" INT)) WITH ORDINALITY",
+  "formatted": null,
+  "reason": "PostgreSQL 18.6 rejects a table alias on a ROWS FROM function, and SQLQuack's parser refuses it too; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 rejects it, 42601 at 41: syntax error at or near \"alias1\""
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT * FROM table1, ROWS FROM (FUNC1(col1) AS alias1(\"col1\" TEXT)) WITH ORDINALITY AS alias3(\"col3\" INT, \"col4\" TEXT)",
+  "formatted": null,
+  "reason": "PostgreSQL 18.6 rejects a table alias on a ROWS FROM function, and SQLQuack's parser refuses it too; SQLClean formatted it",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 rejects it, 42601 at 49: syntax error at or near \"alias1\""
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT to_timestamp(123)::time without time zone",
+  "formatted": "SELECT TO_TIMESTAMP(123)::time without time zone",
+  "reason": "SQLQuack upper-cases a called function name, as in every dialect, and PostgreSQL folds an unquoted function name to lower case; SQLClean kept the authored case",
+  "receipt": null
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT ARRAY(SELECT 1)",
+  "formatted": "SELECT\n  ARRAY(\n    SELECT 1\n  )",
+  "reason": "SQLClean aligned against Polyglot's layout, which broke the subquery after SELECT",
+  "receipt": null
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT ~x",
+  "formatted": null,
+  "reason": "the spacing guard refuses a space between tokens written touching here; left for a later guard pass",
+  "receipt": null
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT date_col - INTERVAL '30' DAY FROM t",
+  "formatted": "SELECT date_col - INTERVAL '30' DAY\nFROM t",
+  "reason": "SQLClean refused it; PostgreSQL 18.6 parses it, and SQLQuack's parser does too",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 parses it, then stops at binding with 42P01"
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT date_col - INTERVAL '1' HOUR AS one_hour_later",
+  "formatted": "SELECT date_col - INTERVAL '1' HOUR AS one_hour_later",
+  "reason": "SQLClean refused it; PostgreSQL 18.6 parses it, and SQLQuack's parser does too",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 parses it, then stops at binding with 42703"
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT date_add(current_date, interval '7' day)",
+  "formatted": "SELECT DATE_ADD(CURRENT_DATE, INTERVAL '7' DAY)",
+  "reason": "SQLClean refused it; PostgreSQL 18.6 parses it, and SQLQuack's parser does too; SQLQuack upper-cases the called name, as in every dialect, and PostgreSQL folds an unquoted function name",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 parses it and runs it"
+ },
+ {
+  "dialect": "postgres",
+  "sql": "select count() OVER(partition by a order by a range offset preceding exclude current row)",
+  "formatted": null,
+  "reason": "PostgreSQL 18.6 rejects it as a syntax error, and the native parser agrees",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 rejects it, 42601 at 53: syntax error at or near \"offset\""
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT JSON_ARRAY_ELEMENTS((foo->'sections')::JSON) AS sections",
+  "formatted": null,
+  "reason": "the spacing guard refuses a space between tokens written touching here; left for a later guard pass",
+  "receipt": null
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT * FROM t1*",
+  "formatted": null,
+  "reason": "the spacing guard refuses a space between tokens written touching here; left for a later guard pass",
+  "receipt": null
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT js, js IS JSON ARRAY WITH UNIQUE KEYS AS \"array w. UK?\", js IS JSON ARRAY WITHOUT UNIQUE KEYS AS \"array w/o UK?\", js IS JSON ARRAY UNIQUE KEYS AS \"array w UK 2?\" FROM t",
+  "formatted": null,
+  "reason": "PostgreSQL 18.6 rejects it as a syntax error, and the native parser agrees",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 rejects it, 42601 at 146: syntax error at or near \"KEYS\""
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT * FROM foo WHERE id = %s",
+  "formatted": null,
+  "reason": "PostgreSQL 18.6 rejects it as a syntax error, and the native parser agrees",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 rejects it, 42601 at 30: syntax error at or near \"%\""
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT * FROM foo WHERE id = %(id_param)s",
+  "formatted": null,
+  "reason": "PostgreSQL 18.6 rejects it as a syntax error, and the native parser agrees",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 rejects it, 42601 at 30: syntax error at or near \"%\""
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT * FROM foo WHERE id = ?",
+  "formatted": null,
+  "reason": "PostgreSQL 18.6 rejects it as a syntax error, and the native parser agrees",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 rejects it, 42601 at 31: syntax error at end of input"
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT MLEAST(VARIADIC ARRAY[]::numeric[])",
+  "formatted": "SELECT MLEAST(VARIADIC ARRAY[]::numeric[])",
+  "reason": "SQLClean refused it; PostgreSQL 18.6 parses it, and SQLQuack's parser does too",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 parses it, then stops at binding with 42883"
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT a, LOGICAL_OR(b) FROM table GROUP BY a",
+  "formatted": null,
+  "reason": "PostgreSQL 18.6 rejects it as a syntax error, and the native parser agrees",
+  "receipt": "crates/sqlquack-format/src/format/tests/fixtures/pg18.6_receipts.jsonl: PostgreSQL 18.6 rejects it, 42601 at 30: syntax error at or near \"table\""
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT U&'d!0061t!+000061' UESCAPE '!' AS label",
+  "formatted": null,
+  "reason": "PostgreSQL's scanner reads `U&'...' UESCAPE '!'` as one string, which the shared tokenizer splits",
+  "receipt": null
+ },
+ {
+  "dialect": "postgres",
+  "sql": "SELECT a <<->> b",
+  "formatted": null,
+  "reason": "PostgreSQL's scanner reads `<<->>` as one operator, which the shared tokenizer splits",
+  "receipt": null
  }
 ]

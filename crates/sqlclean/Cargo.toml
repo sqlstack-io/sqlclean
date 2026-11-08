@@ -18,6 +18,7 @@ sqlquack-fingerprint.workspace = true
 sqlquack-format.workspace = true
 sqlquack-lint.workspace = true
 sqlquack-syntax.workspace = true
+sqlquack-syntax-sqlserver.workspace = true
 rayon.workspace = true
 rustc-hash.workspace = true
 serde.workspace = true

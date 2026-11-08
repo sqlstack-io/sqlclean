@@ -132,3 +132,5 @@ pub(crate) const UTILITY_KINDS: [(&str, &str); 11] = [
     ("REFRESH", "refresh"),
     ("SHOW", "show"),
 ];
+/// The SQL linted to ask whether SQLQuack parses a dialect; some parsers refuse empty input.
+pub(crate) const AVAILABILITY_PROBE: &str = "SELECT 1";
