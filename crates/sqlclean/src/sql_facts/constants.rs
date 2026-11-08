@@ -103,3 +103,32 @@ pub(crate) const ALTER_OBJECT_KINDS: [(&str, &str); 4] = [
     ("SEQUENCE", "alter_sequence"),
     ("VIEW", "alter_view"),
 ];
+/// DROP statements the native PostgreSQL tree keeps as a generic object, by object kind, and their kind.
+pub(crate) const DROP_OBJECT_KINDS: [(&str, &str); 12] = [
+    ("TABLE", "drop_table"),
+    ("VIEW", "drop_view"),
+    ("MATERIALIZED VIEW", "drop_view"),
+    ("INDEX", "drop_index"),
+    ("FUNCTION", "drop_function"),
+    ("PROCEDURE", "drop_procedure"),
+    ("SCHEMA", "drop_schema"),
+    ("SEQUENCE", "drop_sequence"),
+    ("TRIGGER", "drop_trigger"),
+    ("TYPE", "drop_type"),
+    ("DOMAIN", "drop_type"),
+    ("DATABASE", "drop_database"),
+];
+/// Utility statements of the native PostgreSQL tree, by their first keyword, and their kind.
+pub(crate) const UTILITY_KINDS: [(&str, &str); 11] = [
+    ("EXPLAIN", "describe"),
+    ("SET", "set_statement"),
+    ("BEGIN", "transaction"),
+    ("START", "transaction"),
+    ("COMMIT", "commit"),
+    ("END", "commit"),
+    ("ROLLBACK", "rollback"),
+    ("ANALYZE", "analyze"),
+    ("DECLARE", "declare"),
+    ("REFRESH", "refresh"),
+    ("SHOW", "show"),
+];
