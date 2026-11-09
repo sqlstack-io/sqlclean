@@ -38,7 +38,7 @@ pub(super) fn take_out_cte_macros(
     if !sql.contains(INTERPOLATION_PLACEHOLDER_PREFIX) {
         return Ok(None);
     }
-    let Ok(tokens) = sqlquack_syntax::tokenize(sql, dialect) else {
+    let Ok(tokens) = sqlquack_parse::tokenize(sql, dialect) else {
         return Ok(None);
     };
     let significant: Vec<usize> = (0..tokens.len())
@@ -109,7 +109,7 @@ pub(super) fn take_out_cte_macros(
 impl WithoutCteMacros {
     /// Put the placeholders back into `formatted`, the laid-out stripped SQL, each on its own line.
     pub(super) fn put_back(&self, formatted: &str, dialect: Dialect) -> Result<String, String> {
-        let tokens = sqlquack_syntax::tokenize(formatted, dialect)
+        let tokens = sqlquack_parse::tokenize(formatted, dialect)
             .map_err(|_| RESTORE_FAILURE.to_string())?;
         let significant: Vec<usize> = (0..tokens.len())
             .filter(|&index| matches!(tokens[index].kind, TokenKind::Significant(_)))
@@ -177,7 +177,7 @@ pub(super) fn wrap_query_placeholders(
     if !sql.contains(INTERPOLATION_PLACEHOLDER_PREFIX) {
         return None;
     }
-    let Ok(tokens) = sqlquack_syntax::tokenize(sql, dialect) else {
+    let Ok(tokens) = sqlquack_parse::tokenize(sql, dialect) else {
         return None;
     };
     let significant: Vec<&LosslessToken> = tokens
@@ -219,7 +219,7 @@ pub(super) fn wrap_query_placeholders(
 impl WrappedQueryPlaceholders {
     /// Take the `SELECT` written before each wrapped placeholder back out of `formatted`.
     pub(super) fn restore(&self, formatted: &str, dialect: Dialect) -> Result<String, String> {
-        let tokens = sqlquack_syntax::tokenize(formatted, dialect)
+        let tokens = sqlquack_parse::tokenize(formatted, dialect)
             .map_err(|_| RESTORE_FAILURE.to_string())?;
         let significant: Vec<&LosslessToken> = tokens
             .iter()
@@ -253,7 +253,7 @@ fn restored_with_tokens(
     dialect: Dialect,
 ) -> Result<String, String> {
     let restored_tokens =
-        sqlquack_syntax::tokenize(&restored, dialect).map_err(|_| RESTORE_FAILURE.to_string())?;
+        sqlquack_parse::tokenize(&restored, dialect).map_err(|_| RESTORE_FAILURE.to_string())?;
     let restored_texts = token_texts(&restored, &restored_tokens);
     let same_tokens = restored_texts.len() == original.len()
         && restored_texts.iter().zip(original).all(

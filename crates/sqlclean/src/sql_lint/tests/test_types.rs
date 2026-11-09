@@ -164,3 +164,10 @@ pub(crate) struct UnavailableCorpusTestCase {
     pub dialect: &'static str,
     pub expected_unavailable: usize,
 }
+
+pub(crate) struct DialectReadersTestCase {
+    pub description: &'static str,
+    pub dialect: &'static str,
+    pub expected_linted: bool,
+    pub expected_formatted: bool,
+}
