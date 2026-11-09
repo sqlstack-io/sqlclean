@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.4](https://github.com/sqlstack-io/sqlclean/compare/v0.6.3...v0.6.4) (2026-11-09)
+
+
+### Bug Fixes
+
+* **deps:** pin SQLQuack f9e4ae6e; Databricks and SQLite fingerprints of queries with columns named ANY, SOME, ORDER, FOR or WITH change once, as those names now keep their case ([#53](https://github.com/sqlstack-io/sqlclean/issues/53)) ([72feaf3](https://github.com/sqlstack-io/sqlclean/commit/72feaf309bcae7caf24a0c4f35df9c3dc1f6dd4b))
+
+
+### Documentation
+
+* say the formatter runs on SQLQuack, not Polyglot ([#51](https://github.com/sqlstack-io/sqlclean/issues/51)) ([172ae7d](https://github.com/sqlstack-io/sqlclean/commit/172ae7d2cdc09fe4df349f8205abfc032986a700))
+
 ## [0.6.3](https://github.com/sqlstack-io/sqlclean/compare/v0.6.2...v0.6.3) (2026-11-09)
 
 
