@@ -122,6 +122,13 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             expected_sql: "WITH a AS (\n  SELECT 1 AS x\n),\n\n__sqlclean_interpolation_0__\n\n__sqlclean_interpolation_1__\n\npaid AS (\n  SELECT *\n  FROM a\n)\n\nSELECT *\nFROM paid",
         },
         test_types::LayoutRuleTestCase {
+            description: "CTE macro placeholders keep their place among the comments between them",
+            dialect: "duckdb",
+            sql: "WITH base AS (SELECT 1 AS order_id),\n-- First order stage.\n__sqlclean_interpolation_0__,\n-- Second order stage.\n__sqlclean_interpolation_1__,\n__sqlclean_interpolation_2__,\n-- Publish order identifiers.\nfinal AS (SELECT order_id FROM third_orders)\nSELECT * FROM final",
+            line_width: 100,
+            expected_sql: "WITH base AS (\n  SELECT 1 AS order_id\n),\n\n-- First order stage.\n__sqlclean_interpolation_0__,\n\n-- Second order stage.\n__sqlclean_interpolation_1__,\n\n__sqlclean_interpolation_2__,\n\n-- Publish order identifiers.\nfinal AS (\n  SELECT order_id\n  FROM third_orders\n)\n\nSELECT *\nFROM final",
+        },
+        test_types::LayoutRuleTestCase {
             description: "a placeholder standing for a CTE's whole query keeps its place",
             dialect: "snowflake",
             sql: "WITH headers AS (__sqlclean_interpolation_0__), paid AS (SELECT * FROM headers) SELECT * FROM paid",

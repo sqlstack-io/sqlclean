@@ -21,7 +21,7 @@ pub(super) struct WithoutCteMacros {
     original: Vec<(bool, String)>,
 }
 
-/// Placeholders, with the commas taken out with them, that stood before one significant token.
+/// Placeholders, with the commas taken out with them, that stood before one significant token with no comment between them; a comment between placeholders stays in the stripped SQL, and the placeholders after it make the next group.
 struct MacroGroup {
     /// The index, among the significant tokens of the stripped SQL, of the token they preceded.
     anchor: usize,
@@ -63,13 +63,27 @@ pub(super) fn take_out_cte_macros(
         let previous_end = position
             .checked_sub(1)
             .map_or(0, |previous| tokens[significant[previous]].end);
-        let comments_before = tokens[..significant[position]]
-            .iter()
-            .filter(|token| token.start >= previous_end && is_comment(token))
-            .count();
+        let comments_until = |end: usize| {
+            tokens
+                .iter()
+                .filter(|token| {
+                    token.start >= previous_end && token.end <= end && is_comment(token)
+                })
+                .count()
+        };
+        let mut comments_before = comments_until(tokens[significant[position]].start);
         let mut texts: Vec<String> = Vec::new();
         while removed.contains(&position) {
             let index = significant[position];
+            let comments = comments_until(tokens[index].start);
+            if comments > comments_before && tokens[index].text(sql) != COMMA {
+                groups.push(MacroGroup {
+                    anchor: kept,
+                    comments_before,
+                    texts: std::mem::take(&mut texts),
+                });
+                comments_before = comments;
+            }
             stripped.push_str(&sql[cursor..tokens[index].start]);
             texts.push(tokens[index].text(sql).to_string());
             cursor = tokens
