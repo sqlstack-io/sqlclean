@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.5](https://github.com/sqlstack-io/sqlclean/compare/v0.6.4...v0.6.5) (2026-11-09)
+
+
+### Bug Fixes
+
+* **deps:** pin SQLQuack f53c6a07, the new root of SQLQuack main ([#55](https://github.com/sqlstack-io/sqlclean/issues/55)) ([46bbaaa](https://github.com/sqlstack-io/sqlclean/commit/46bbaaaea76fc99042b15537615fc67432540291))
+
 ## [0.6.4](https://github.com/sqlstack-io/sqlclean/compare/v0.6.3...v0.6.4) (2026-11-09)
 
 
