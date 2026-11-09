@@ -318,12 +318,12 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
             },
         ),
         RewriteTestCase(
-            description="format leaves a Databricks file, which SQLQuack parses but does not format, unchanged",
+            description="format lays out a Databricks file",
             config='dialect = "databricks"\n',
             files={"models/q.sql": "select a from t\n"},
-            arguments=("format", "--check"),
+            arguments=("format",),
             expected_exit=0,
-            expected_files={"models/q.sql": "select a from t\n"},
+            expected_files={"models/q.sql": "SELECT a\nFROM t\n"},
         ),
         RewriteTestCase(
             description="format lays out BigQuery and PostgreSQL files",
