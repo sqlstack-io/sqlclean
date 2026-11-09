@@ -3,6 +3,7 @@ use serde_json::{Value, json};
 use crate::sql_lint::main::engine::lint_json;
 use crate::sql_lint::tests::helpers::{fixture_harness, format_batch_json};
 use crate::sql_lint::tests::{helpers, test_types};
+use crate::sql_tokens::main::query_fingerprint::query_fingerprint;
 
 #[test]
 fn given_production_function_depth_when_linting_then_bounded_parser_accepts_it() {
@@ -1874,6 +1875,110 @@ fn given_unknown_rule_when_linting_then_request_is_rejected() -> Result<(), Stri
         assert!(
             error.contains(test_case.expected_message),
             "{}",
+            test_case.description
+        );
+    }
+    Ok(())
+}
+
+/// SQLQuack builds each dialect only with its feature, so every dialect the configuration page names is checked, formatted and fingerprinted as it says, and never refused as not built.
+#[test]
+fn given_each_documented_dialect_when_reading_sql_then_sqlquack_was_built_for_it()
+-> Result<(), String> {
+    let sql = "select a from t where a = 1";
+    let test_cases = [
+        test_types::DialectReadersTestCase {
+            description: "bigquery is checked and formatted",
+            dialect: "bigquery",
+            expected_linted: true,
+            expected_formatted: true,
+        },
+        test_types::DialectReadersTestCase {
+            description: "databricks is checked, and reported unavailable to be formatted",
+            dialect: "databricks",
+            expected_linted: true,
+            expected_formatted: false,
+        },
+        test_types::DialectReadersTestCase {
+            description: "duckdb is checked and formatted",
+            dialect: "duckdb",
+            expected_linted: true,
+            expected_formatted: true,
+        },
+        test_types::DialectReadersTestCase {
+            description: "generic is checked, and reported unavailable to be formatted",
+            dialect: "generic",
+            expected_linted: true,
+            expected_formatted: false,
+        },
+        test_types::DialectReadersTestCase {
+            description: "postgres is checked and formatted",
+            dialect: "postgres",
+            expected_linted: true,
+            expected_formatted: true,
+        },
+        test_types::DialectReadersTestCase {
+            description: "postgresql is checked and formatted",
+            dialect: "postgresql",
+            expected_linted: true,
+            expected_formatted: true,
+        },
+        test_types::DialectReadersTestCase {
+            description: "snowflake is checked and formatted",
+            dialect: "snowflake",
+            expected_linted: true,
+            expected_formatted: true,
+        },
+        test_types::DialectReadersTestCase {
+            description: "sqlite is checked, and reported unavailable to be formatted",
+            dialect: "sqlite",
+            expected_linted: true,
+            expected_formatted: false,
+        },
+        test_types::DialectReadersTestCase {
+            description: "tsql is formatted, and reported unavailable to be checked",
+            dialect: "tsql",
+            expected_linted: false,
+            expected_formatted: true,
+        },
+        test_types::DialectReadersTestCase {
+            description: "mssql is formatted, and reported unavailable to be checked",
+            dialect: "mssql",
+            expected_linted: false,
+            expected_formatted: true,
+        },
+        test_types::DialectReadersTestCase {
+            description: "sqlserver is formatted, and reported unavailable to be checked",
+            dialect: "sqlserver",
+            expected_linted: false,
+            expected_formatted: true,
+        },
+    ];
+    for test_case in &test_cases {
+        let linted: Value = serde_json::from_str(&lint_json(
+            &json!({"version": 1, "sql": sql, "dialect": test_case.dialect}).to_string(),
+        )?)
+        .map_err(|error| error.to_string())?;
+        let formatted = helpers::format_at_width(sql, test_case.dialect, 100)?;
+        let fingerprint = query_fingerprint(sql, test_case.dialect);
+        assert_eq!(
+            linted["unavailable"].is_null() && linted["diagnostics"] == json!([]),
+            test_case.expected_linted,
+            "{}: {linted}",
+            test_case.description
+        );
+        assert_eq!(
+            (
+                formatted["formatted"] == true,
+                formatted["unavailable"].is_null()
+            ),
+            (test_case.expected_formatted, test_case.expected_formatted),
+            "{}: {formatted}",
+            test_case.description
+        );
+        assert!(
+            fingerprint.is_ok(),
+            "{}: {fingerprint:?}",
             test_case.description
         );
     }
