@@ -30,11 +30,11 @@ sha2 = "0.10"
 similar = "2"
 sqlclean = { path = "crates/sqlclean" }
 # SQLQuack's formatter and lint engine, and the tokens and trees they read, which replace Polyglot.
-sqlquack-fingerprint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "33e4384967e31d44c2d453640c45ccd222320c93" }
-sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "33e4384967e31d44c2d453640c45ccd222320c93" }
-sqlquack-lint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "33e4384967e31d44c2d453640c45ccd222320c93" }
-sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "33e4384967e31d44c2d453640c45ccd222320c93" }
-sqlquack-syntax-sqlserver = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "33e4384967e31d44c2d453640c45ccd222320c93" }
+sqlquack-fingerprint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "395ced6dbd4b3a484c0755fc62d6648ed608f83a" }
+sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "395ced6dbd4b3a484c0755fc62d6648ed608f83a" }
+sqlquack-lint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "395ced6dbd4b3a484c0755fc62d6648ed608f83a" }
+sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "395ced6dbd4b3a484c0755fc62d6648ed608f83a" }
+sqlquack-syntax-sqlserver = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "395ced6dbd4b3a484c0755fc62d6648ed608f83a" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
