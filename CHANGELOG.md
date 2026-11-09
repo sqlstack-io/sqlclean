@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.3](https://github.com/sqlstack-io/sqlclean/compare/v0.6.2...v0.6.3) (2026-11-09)
+
+
+### Build System
+
+* **deps:** pin SQLQuack 353861ea, after its layout refactor ([#48](https://github.com/sqlstack-io/sqlclean/issues/48)) ([ff5ea5a](https://github.com/sqlstack-io/sqlclean/commit/ff5ea5ab469580873a9e22da70df615765748ea4))
+
 ## [0.6.2](https://github.com/sqlstack-io/sqlclean/compare/v0.6.1...v0.6.2) (2026-11-09)
 
 
