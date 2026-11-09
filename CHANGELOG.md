@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.1](https://github.com/sqlstack-io/sqlclean/compare/v0.6.0...v0.6.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* fingerprint BigQuery and SQL Server with their own tokenizers, so keyword case no longer changes them; their fingerprints change once ([a3c081f](https://github.com/sqlstack-io/sqlclean/commit/a3c081f829a439b54eacab94f00d41a5baf816bc))
+* **format:** lay out a placeholder that stands for a CTE's whole query ([a3c081f](https://github.com/sqlstack-io/sqlclean/commit/a3c081f829a439b54eacab94f00d41a5baf816bc))
+* **format:** lay out Snowflake paths after a qualified column spelled like a keyword, such as `s.body:ts` ([a3c081f](https://github.com/sqlstack-io/sqlclean/commit/a3c081f829a439b54eacab94f00d41a5baf816bc))
+* **format:** lay out T-SQL variable assignments, named EXEC arguments and DECLARE defaults ([a3c081f](https://github.com/sqlstack-io/sqlclean/commit/a3c081f829a439b54eacab94f00d41a5baf816bc))
+
+
+### Build System
+
+* **deps:** pin SQLQuack 804864d2 ([a3c081f](https://github.com/sqlstack-io/sqlclean/commit/a3c081f829a439b54eacab94f00d41a5baf816bc))
+
 ## [0.6.0](https://github.com/sqlstack-io/sqlclean/compare/v0.5.0...v0.6.0) (2026-11-08)
 
 
