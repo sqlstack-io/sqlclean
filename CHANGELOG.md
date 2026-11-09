@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/sqlstack-io/sqlclean/compare/v0.6.1...v0.6.2) (2026-11-09)
+
+
+### Bug Fixes
+
+* **format:** lay out CTE macros with comments between them ([#46](https://github.com/sqlstack-io/sqlclean/issues/46)) ([34d709f](https://github.com/sqlstack-io/sqlclean/commit/34d709f1aaab2d43225c67bdc6374ce876414440))
+
 ## [0.6.1](https://github.com/sqlstack-io/sqlclean/compare/v0.6.0...v0.6.1) (2026-11-09)
 
 
