@@ -1,4 +1,4 @@
-//! SQLClean's engine: lint and quality Rules, statement facts and the formatter, over SQLQuack for lint and facts; the formatter still reads Polyglot.
+//! SQLClean's engine: lint and quality Rules, statement facts and the formatter, all over SQLQuack.
 
 #![forbid(unsafe_code)]
 

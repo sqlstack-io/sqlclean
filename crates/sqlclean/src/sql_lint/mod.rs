@@ -1,4 +1,4 @@
-//! SQL lint Rules and the deterministic formatter; lint runs on SQLQuack, the formatter still on Polyglot.
+//! SQL lint Rules and the deterministic formatter, both on SQLQuack.
 
 pub mod _helpers;
 pub mod constants;
