@@ -48,11 +48,14 @@ fn given_sqlbuild_golden_queries_when_fingerprinting_then_hashes_match_sqlbuild(
             sql: "SELECT /*+ BROADCAST(o) */ o.id FROM `catalog`.`orders` AS o",
             expected_fingerprint: "7cd96f42bcb764136a7f423181302ba13cead02bb6cfb7382502a3a2aa4107c3",
         },
+        // D651, D695: SQL Server is tokenized natively, so a bracketed name such as `[o]` is one
+        // token. This is SQLBuild 0.204.0's digest; SQLClean 0.5.0 and 0.6.0 gave the generic
+        // tokens' f1525ee2… instead.
         test_types::FingerprintGoldenTestCase {
-            description: "SQL Server bracket identifiers, as generic tokens",
+            description: "SQL Server bracket identifiers, as SQL Server tokens",
             dialect: "sqlserver",
             sql: "SELECT TOP 10 [o].[id], N'order' AS kind FROM [dbo].[orders] AS o",
-            expected_fingerprint: "f1525ee25924f9402677bc2cbd96f7066745948da73671d13fac2b8da03cbf0c",
+            expected_fingerprint: "f4fac3edb7682bbeddf4f73cc199493d45f1419bc8e2cd1d972fead2d67e6b71",
         },
     ];
     for test_case in &test_cases {
