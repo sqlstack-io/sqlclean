@@ -159,12 +159,6 @@ pub(crate) struct CrossJoinSubjectTestCase {
     pub expected_subject: Option<(&'static str, Option<&'static str>)>,
 }
 
-pub(crate) struct UnavailableCorpusTestCase {
-    pub description: &'static str,
-    pub dialect: &'static str,
-    pub expected_unavailable: usize,
-}
-
 pub(crate) struct DialectReadersTestCase {
     pub description: &'static str,
     pub dialect: &'static str,
