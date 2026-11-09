@@ -31,7 +31,7 @@ similar = "2"
 sqlclean = { path = "crates/sqlclean" }
 # SQLQuack's formatter and lint engine, and the tokens and trees they read, which replace Polyglot.
 sqlquack-fingerprint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "f9e4ae6e9689010ab9a7dd9e698567182ea9eb3f", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlite", "sqlserver"] }
-sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "f9e4ae6e9689010ab9a7dd9e698567182ea9eb3f", features = ["bigquery", "duckdb", "postgres", "snowflake", "sqlserver"] }
+sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "f9e4ae6e9689010ab9a7dd9e698567182ea9eb3f", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlserver"] }
 sqlquack-lint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "f9e4ae6e9689010ab9a7dd9e698567182ea9eb3f", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlite"] }
 sqlquack-parse = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "f9e4ae6e9689010ab9a7dd9e698567182ea9eb3f" }
 sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "f9e4ae6e9689010ab9a7dd9e698567182ea9eb3f" }
