@@ -10,6 +10,8 @@ use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 /// The separator token taken out with a placeholder.
 const COMMA: &str = ",";
 const RESTORE_FAILURE: &str = "native formatter could not restore CTE macro placeholders";
+/// What is written before a placeholder standing for a whole query, so it parses as one.
+const QUERY_WRAPPER: &str = "SELECT ";
 
 /// SQL with its CTE macro placeholders taken out, and the groups to put back.
 pub(super) struct WithoutCteMacros {
@@ -141,25 +143,119 @@ impl WithoutCteMacros {
             cursor = lead_end;
         }
         restored.push_str(&formatted[cursor..]);
-        let restored_tokens = sqlquack_syntax::tokenize(&restored, dialect)
-            .map_err(|_| RESTORE_FAILURE.to_string())?;
-        let restored_texts = token_texts(&restored, &restored_tokens);
-        let same_tokens = restored_texts.len() == self.original.len()
-            && restored_texts.iter().zip(&self.original).all(
-                |((comment, text), (original_comment, original))| {
-                    comment == original_comment
-                        && if *comment {
-                            text == original
-                        } else {
-                            text.eq_ignore_ascii_case(original)
-                        }
-                },
-            );
-        if !same_tokens {
-            return Err(RESTORE_FAILURE.to_string());
-        }
-        Ok(restored)
+        restored_with_tokens(restored, &self.original, dialect)
     }
+}
+
+/// SQL whose placeholders standing for a whole parenthesised query were written as `SELECT <placeholder>`.
+pub(super) struct WrappedQueryPlaceholders {
+    pub sql: String,
+    placeholders: Vec<String>,
+    /// The significant and comment texts of the original SQL, in order.
+    original: Vec<(bool, String)>,
+}
+
+/// Write `SELECT ` before each placeholder that is the whole query in `AS (<placeholder>)`, such as a CTE whose body a macro writes, which SQLQuack cannot parse as a query; `None` when there are none.
+pub(super) fn wrap_query_placeholders(
+    sql: &str,
+    dialect: Dialect,
+) -> Option<WrappedQueryPlaceholders> {
+    if !sql.contains(INTERPOLATION_PLACEHOLDER_PREFIX) {
+        return None;
+    }
+    let Ok(tokens) = sqlquack_syntax::tokenize(sql, dialect) else {
+        return None;
+    };
+    let significant: Vec<&LosslessToken> = tokens
+        .iter()
+        .filter(|token| matches!(token.kind, TokenKind::Significant(_)))
+        .collect();
+    let is = |position: usize, kind: TokenType| {
+        significant
+            .get(position)
+            .is_some_and(|token| token.kind == TokenKind::Significant(kind))
+    };
+    let mut wrapped = String::with_capacity(sql.len() + QUERY_WRAPPER.len());
+    let mut placeholders: Vec<String> = Vec::new();
+    let mut cursor = 0_usize;
+    for (position, token) in significant.iter().enumerate().skip(2) {
+        let text = token.text(sql);
+        if text.starts_with(INTERPOLATION_PLACEHOLDER_PREFIX)
+            && is(position - 2, TokenType::As)
+            && is(position - 1, TokenType::LParen)
+            && is(position + 1, TokenType::RParen)
+        {
+            wrapped.push_str(&sql[cursor..token.start]);
+            wrapped.push_str(QUERY_WRAPPER);
+            cursor = token.start;
+            placeholders.push(text.to_string());
+        }
+    }
+    if placeholders.is_empty() {
+        return None;
+    }
+    wrapped.push_str(&sql[cursor..]);
+    Some(WrappedQueryPlaceholders {
+        sql: wrapped,
+        placeholders,
+        original: token_texts(sql, &tokens),
+    })
+}
+
+impl WrappedQueryPlaceholders {
+    /// Take the `SELECT` written before each wrapped placeholder back out of `formatted`.
+    pub(super) fn unwrap(&self, formatted: &str, dialect: Dialect) -> Result<String, String> {
+        let tokens = sqlquack_syntax::tokenize(formatted, dialect)
+            .map_err(|_| RESTORE_FAILURE.to_string())?;
+        let significant: Vec<&LosslessToken> = tokens
+            .iter()
+            .filter(|token| matches!(token.kind, TokenKind::Significant(_)))
+            .collect();
+        let mut restored = String::with_capacity(formatted.len());
+        let mut cursor = 0_usize;
+        for pair in significant.windows(2) {
+            let [select, placeholder] = pair else {
+                continue;
+            };
+            if select.kind == TokenKind::Significant(TokenType::Select)
+                && self
+                    .placeholders
+                    .iter()
+                    .any(|wrapped| wrapped == placeholder.text(formatted))
+            {
+                restored.push_str(&formatted[cursor..select.start]);
+                cursor = placeholder.start;
+            }
+        }
+        restored.push_str(&formatted[cursor..]);
+        restored_with_tokens(restored, &self.original, dialect)
+    }
+}
+
+/// `restored`, when its significant and comment tokens are `original`'s, keywords compared without case.
+fn restored_with_tokens(
+    restored: String,
+    original: &[(bool, String)],
+    dialect: Dialect,
+) -> Result<String, String> {
+    let restored_tokens =
+        sqlquack_syntax::tokenize(&restored, dialect).map_err(|_| RESTORE_FAILURE.to_string())?;
+    let restored_texts = token_texts(&restored, &restored_tokens);
+    let same_tokens = restored_texts.len() == original.len()
+        && restored_texts.iter().zip(original).all(
+            |((comment, text), (original_comment, original))| {
+                comment == original_comment
+                    && if *comment {
+                        text == original
+                    } else {
+                        text.eq_ignore_ascii_case(original)
+                    }
+            },
+        );
+    if !same_tokens {
+        return Err(RESTORE_FAILURE.to_string());
+    }
+    Ok(restored)
 }
 
 /// Positions, among significant tokens, of placeholders that stand where a CTE would.

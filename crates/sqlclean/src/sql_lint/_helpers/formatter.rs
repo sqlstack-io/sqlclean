@@ -3,7 +3,7 @@ use sqlquack_format::{FormatDialect, FormatOptions};
 use sqlquack_syntax::Dialect as SqlQuackDialect;
 
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
-use crate::sql_lint::_helpers::cte_macros::take_out_cte_macros;
+use crate::sql_lint::_helpers::cte_macros::{take_out_cte_macros, wrap_query_placeholders};
 use crate::sql_lint::constants::{
     BIGQUERY_DIALECT, DUCKDB_DIALECT, LINT_API_VERSION, POSTGRES_DIALECTS, SNOWFLAKE_DIALECT,
     TSQL_DIALECTS,
@@ -114,7 +114,7 @@ fn sqlquack_layout(sql: &str, options: &FormatOptions) -> Result<String, String>
         .map_err(|refusal| refusal.reason)
 }
 
-/// Lay out `sql` with SQLQuack, taking CTE macro placeholders out first and putting them back where `macros` names the shared tokenizer's dialect; otherwise SQLQuack refuses a placeholder it cannot parse.
+/// Lay out `sql` with SQLQuack, first making placeholders it cannot parse parseable and then restoring them, where `macros` names the shared tokenizer's dialect: a placeholder standing for a whole query is wrapped as `SELECT <placeholder>`, and CTE macro placeholders are taken out.
 fn format_around_cte_macros(
     sql: &str,
     macros: Option<SqlQuackDialect>,
@@ -123,6 +123,21 @@ fn format_around_cte_macros(
     let Some(dialect) = macros else {
         return sqlquack_layout(sql, options);
     };
+    match wrap_query_placeholders(sql, dialect) {
+        None => format_around_cte_lists(sql, dialect, options),
+        Some(wrapped) => wrapped.unwrap(
+            &format_around_cte_lists(&wrapped.sql, dialect, options)?,
+            dialect,
+        ),
+    }
+}
+
+/// Lay out `sql` with SQLQuack, taking CTE macro placeholders out first and putting them back.
+fn format_around_cte_lists(
+    sql: &str,
+    dialect: SqlQuackDialect,
+    options: &FormatOptions,
+) -> Result<String, String> {
     match take_out_cte_macros(sql, dialect)? {
         None => sqlquack_layout(sql, options),
         Some(without) => without.put_back(&sqlquack_layout(&without.sql, options)?, dialect),
