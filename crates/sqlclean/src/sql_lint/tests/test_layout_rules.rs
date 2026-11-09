@@ -122,6 +122,27 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             expected_sql: "WITH a AS (\n  SELECT 1 AS x\n),\n\n__sqlclean_interpolation_0__\n\n__sqlclean_interpolation_1__\n\npaid AS (\n  SELECT *\n  FROM a\n)\n\nSELECT *\nFROM paid",
         },
         test_types::LayoutRuleTestCase {
+            description: "a placeholder standing for a CTE's whole query keeps its place",
+            dialect: "snowflake",
+            sql: "WITH headers AS (__sqlclean_interpolation_0__), paid AS (SELECT * FROM headers) SELECT * FROM paid",
+            line_width: 100,
+            expected_sql: "WITH headers AS (\n  __sqlclean_interpolation_0__\n),\n\npaid AS (\n  SELECT *\n  FROM headers\n)\n\nSELECT *\nFROM paid",
+        },
+        test_types::LayoutRuleTestCase {
+            description: "a query placeholder in a test's input CTE keeps its place before the ceremonial select",
+            dialect: "snowflake",
+            sql: "WITH __ref__orders AS (\n  __sqlclean_interpolation_0__\n),\n\n__expected__paid AS (SELECT 1 AS id)\nSELECT 1",
+            line_width: 100,
+            expected_sql: "WITH __ref__orders AS (\n  __sqlclean_interpolation_0__\n),\n\n__expected__paid AS (\n  SELECT 1 AS id\n)\n\nSELECT 1",
+        },
+        test_types::LayoutRuleTestCase {
+            description: "an authored SELECT before a placeholder in a CTE is kept",
+            dialect: "snowflake",
+            sql: "WITH a AS (SELECT __sqlclean_interpolation_0__), b AS (__sqlclean_interpolation_1__) SELECT * FROM a",
+            line_width: 100,
+            expected_sql: "WITH a AS (\n  SELECT __sqlclean_interpolation_0__\n),\n\nb AS (\n  __sqlclean_interpolation_1__\n)\n\nSELECT *\nFROM a",
+        },
+        test_types::LayoutRuleTestCase {
             description: "an alias and comma that push a call over the width break the call",
             dialect: "snowflake",
             sql: "SELECT ARRAY_CONTAINS('web'::VARIANT, COALESCE(o.order_channels, ARRAY_CONSTRUCT())) AS has_web_channel, o.order_id FROM orders o",
