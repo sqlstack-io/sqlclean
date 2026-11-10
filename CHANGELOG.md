@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/sqlstack-io/sqlclean/compare/v0.7.0...v0.8.0) (2026-11-10)
+
+
+### Features
+
+* **format:** lay out SQL Server table hints, table samples, table variables, FOR XML, FOR JSON, FOR SYSTEM_TIME and join hints ([#59](https://github.com/sqlstack-io/sqlclean/issues/59)) ([b781945](https://github.com/sqlstack-io/sqlclean/commit/b781945551fabda4d6fda30da9932d2475231ffa))
+
 ## [0.7.0](https://github.com/sqlstack-io/sqlclean/compare/v0.6.5...v0.7.0) (2026-11-10)
 
 
