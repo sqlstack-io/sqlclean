@@ -42,8 +42,8 @@ fn given_dialect_corpus_when_formatting_then_output_layout_and_refusals_are_stab
         test_types::FormatCorpusTestCase {
             description: "T-SQL identity corpus",
             dialect: "tsql",
-            expected_formatted: 52,
-            expected_refused: 23,
+            expected_formatted: 68,
+            expected_refused: 7,
         },
     ];
     let corpus: Vec<Value> =
