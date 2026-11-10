@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/sqlstack-io/sqlclean/compare/v0.8.0...v0.8.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **deps:** pin SQLQuack 2096c698, its parser and analysis speed-ups ([#61](https://github.com/sqlstack-io/sqlclean/issues/61)) ([6d3360f](https://github.com/sqlstack-io/sqlclean/commit/6d3360fbb756c5c884b9a8abd6ef3f6774f178d8))
+
 ## [0.8.0](https://github.com/sqlstack-io/sqlclean/compare/v0.7.0...v0.8.0) (2026-11-10)
 
 
