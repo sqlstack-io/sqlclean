@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/sqlstack-io/sqlclean/compare/v0.6.5...v0.7.0) (2026-11-10)
+
+
+### Features
+
+* format Databricks with SQLQuack ([#57](https://github.com/sqlstack-io/sqlclean/issues/57)) ([e027a95](https://github.com/sqlstack-io/sqlclean/commit/e027a9560e5992776eef2af85073d75c60933e42))
+
 ## [0.6.5](https://github.com/sqlstack-io/sqlclean/compare/v0.6.4...v0.6.5) (2026-11-09)
 
 
