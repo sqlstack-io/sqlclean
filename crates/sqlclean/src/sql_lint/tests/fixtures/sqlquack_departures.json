@@ -593,5 +593,19 @@
   "formatted": null,
   "reason": "PostgreSQL's scanner reads `<<->>` as one operator, which the shared tokenizer splits",
   "receipt": null
+ },
+ {
+  "dialect": "databricks",
+  "sql": "SELECT ${x} FROM ${y} WHERE ${z} > 1",
+  "formatted": null,
+  "reason": "`${x}` is a variable substitution that Databricks replaces before parsing, so its grammar has no such token and the native parser rejects it; SQLClean formatted it",
+  "receipt": null
+ },
+ {
+  "dialect": "databricks",
+  "sql": "WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT get_json_object(c, '$.x-y') FROM t",
+  "formatted": "WITH t AS (\n  SELECT '{\"x-y\": \"z\"}' AS c\n)\n\nSELECT GET_JSON_OBJECT(c, '$.x-y')\nFROM t",
+  "reason": "SQLClean kept the call's authored case because its Polyglot oracle rewrites the JSON path `'$.x-y'` as `'$[\"x-y\"]'`, as SQLGlot does; SQLQuack upper-cases a called name in every dialect",
+  "receipt": null
  }
 ]

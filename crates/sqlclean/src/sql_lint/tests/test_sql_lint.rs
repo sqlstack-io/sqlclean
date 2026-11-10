@@ -1894,10 +1894,10 @@ fn given_each_documented_dialect_when_reading_sql_then_sqlquack_was_built_for_it
             expected_formatted: true,
         },
         test_types::DialectReadersTestCase {
-            description: "databricks is checked, and reported unavailable to be formatted",
+            description: "databricks is checked and formatted",
             dialect: "databricks",
             expected_linted: true,
-            expected_formatted: false,
+            expected_formatted: true,
         },
         test_types::DialectReadersTestCase {
             description: "duckdb is checked and formatted",

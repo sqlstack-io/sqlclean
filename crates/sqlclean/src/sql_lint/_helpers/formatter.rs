@@ -5,8 +5,8 @@ use sqlquack_syntax::Dialect as SqlQuackDialect;
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 use crate::sql_lint::_helpers::cte_macros::{take_out_cte_macros, wrap_query_placeholders};
 use crate::sql_lint::constants::{
-    BIGQUERY_DIALECT, DUCKDB_DIALECT, LINT_API_VERSION, POSTGRES_DIALECTS, SNOWFLAKE_DIALECT,
-    TSQL_DIALECTS,
+    BIGQUERY_DIALECT, DATABRICKS_DIALECT, DUCKDB_DIALECT, LINT_API_VERSION, POSTGRES_DIALECTS,
+    SNOWFLAKE_DIALECT, TSQL_DIALECTS,
 };
 use crate::sql_lint::models::{FormatRequest, FormatResponse};
 
@@ -64,6 +64,7 @@ fn sqlquack_dialect(dialect: &str) -> Option<(FormatDialect, Option<SqlQuackDial
         SNOWFLAKE_DIALECT => Some((FormatDialect::Snowflake, Some(SqlQuackDialect::Snowflake))),
         DUCKDB_DIALECT => Some((FormatDialect::DuckDB, Some(SqlQuackDialect::DuckDB))),
         BIGQUERY_DIALECT => Some((FormatDialect::BigQuery, None)),
+        DATABRICKS_DIALECT => Some((FormatDialect::Databricks, None)),
         name if POSTGRES_DIALECTS.contains(&name) => {
             Some((FormatDialect::PostgreSQL, Some(SqlQuackDialect::PostgreSQL)))
         }

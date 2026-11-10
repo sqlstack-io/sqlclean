@@ -145,22 +145,6 @@ fn only_keyword_case_differs(sql: &str, printed: &str, dialect: &str) -> Result<
     })
 }
 
-/// Check every corpus query of one dialect is left as written and reported unavailable; return how many.
-pub(crate) fn check_unavailable_corpus(corpus: &[Value], dialect: &str) -> Result<usize, String> {
-    let mut count: usize = 0;
-    for entry in corpus.iter().filter(|entry| entry["dialect"] == dialect) {
-        let sql = entry["sql"].as_str().unwrap_or_default();
-        let response = format_once(sql, dialect, Some(CORPUS_LINE_WIDTH))?;
-        assert_eq!(response["sql"], sql, "{dialect}: {sql}");
-        assert_eq!(response["formatted"], false, "{dialect}: {sql}");
-        assert_eq!(response["changed"], false, "{dialect}: {sql}");
-        assert!(response.get("reason").is_none(), "{dialect}: {sql}");
-        assert!(response["unavailable"].is_string(), "{dialect}: {sql}");
-        count += 1;
-    }
-    Ok(count)
-}
-
 /// Re-format a layout of an earlier formatter release, which must keep its fingerprint.
 fn relaid_previous_layout(previous: &str, dialect: &str) -> Result<String, String> {
     let relaid = format_once(previous, dialect, None)?;
