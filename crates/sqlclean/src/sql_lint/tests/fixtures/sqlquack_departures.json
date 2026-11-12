@@ -318,7 +318,7 @@
   "dialect": "bigquery",
   "sql": "SELECT STRUCT<STRING>((SELECT 'foo')).*",
   "formatted": "SELECT\n  STRUCT<STRING> (\n    (\n      SELECT 'foo'\n    )\n  ).*",
-  "reason": "SQLClean's Polyglot printer put a space before `.*`; SQLQuack keeps the field access touching its operand",
+  "reason": "SQLClean's Polyglot printer put a space before `.*` and hugged the inner parenthesis; SQLQuack keeps the field access touching its operand and puts the multi-line parenthesised group on its own lines",
   "receipt": null
  },
  {
