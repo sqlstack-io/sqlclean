@@ -175,7 +175,7 @@ fn given_clause_layout_rules_when_formatting_then_each_rule_applies_idempotently
             dialect: "snowflake",
             sql: "SELECT customer_id, LISTAGG(DISTINCT LOWER(product_category_name), ', ') WITHIN GROUP (ORDER BY product_category_name) AS categories FROM orders GROUP BY customer_id",
             line_width: 80,
-            expected_sql: "SELECT\n  customer_id,\n  LISTAGG(\n    DISTINCT LOWER(product_category_name),\n    ', '\n  ) WITHIN GROUP (ORDER BY product_category_name) AS categories\nFROM orders\nGROUP BY\n  customer_id",
+            expected_sql: "SELECT\n  customer_id,\n  LISTAGG(\n    DISTINCT LOWER(product_category_name),\n    ', '\n  ) WITHIN GROUP (ORDER BY product_category_name) AS categories\nFROM orders\nGROUP BY customer_id",
         },
         test_types::LayoutRuleTestCase {
             description: "a window that continues on later lines breaks at its clauses",
