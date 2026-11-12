@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/sqlstack-io/sqlclean/compare/v0.8.3...v0.9.0) (2026-11-12)
+
+
+### Features
+
+* **format:** lay out clauses, parenthesised groups and windows as SQLQuack 0.6.0 does ([#67](https://github.com/sqlstack-io/sqlclean/issues/67)) ([293cacd](https://github.com/sqlstack-io/sqlclean/commit/293cacdffe8876cef23a792924ee0c01329d4a96))
+
 ## [0.8.3](https://github.com/sqlstack-io/sqlclean/compare/v0.8.2...v0.8.3) (2026-11-11)
 
 
