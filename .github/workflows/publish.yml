@@ -118,10 +118,21 @@ jobs:
       - name: Assert native CLI wheel is interpreter-agnostic
         shell: bash
         run: bash .github/scripts/assert_cli_wheel_tags.sh dist
-      - uses: actions/upload-artifact@v5
+      # A transient artifact-service error would otherwise skip the release, so the upload
+      # retries once, replacing any artifact the failed attempt left behind.
+      - id: upload-wheel
+        uses: actions/upload-artifact@v5
+        continue-on-error: true
         with:
           name: wheel-${{ matrix.platform.name }}
           path: dist
+      - name: Retry the wheel upload
+        uses: actions/upload-artifact@v5
+        if: steps.upload-wheel.outcome == 'failure'
+        with:
+          name: wheel-${{ matrix.platform.name }}
+          path: dist
+          overwrite: true
 
   sdist:
     name: Build sdists and Python wheel
@@ -146,10 +157,21 @@ jobs:
           command: sdist
           args: --out ../../dist
           working-directory: packages/sqlclean-cli
-      - uses: actions/upload-artifact@v5
+      # A transient artifact-service error would otherwise skip the release, so the upload
+      # retries once, replacing any artifact the failed attempt left behind.
+      - id: upload-sdist
+        uses: actions/upload-artifact@v5
+        continue-on-error: true
         with:
           name: sdist
           path: dist
+      - name: Retry the sdist upload
+        uses: actions/upload-artifact@v5
+        if: steps.upload-sdist.outcome == 'failure'
+        with:
+          name: sdist
+          path: dist
+          overwrite: true
 
   pypi:
     name: Publish to PyPI
