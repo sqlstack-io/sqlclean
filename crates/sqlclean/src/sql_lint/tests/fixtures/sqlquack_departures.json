@@ -212,15 +212,8 @@
  {
   "dialect": "tsql",
   "sql": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT COUNT(*) FROM (SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC) AS t",
-  "formatted": "WITH t1 AS (\n  SELECT 1 AS a\n),\n\nt2 AS (\n  SELECT 1 AS a\n)\n\nSELECT COUNT(*)\nFROM (\n  SELECT TOP 10 a\n  FROM t1\n  UNION ALL\n  SELECT TOP 10 a\n  FROM t2\n  ORDER BY\n    a DESC\n) AS t",
-  "reason": "A set operation's ORDER BY sits at the depth of its set operation with its items on the next line; SQLClean outdented it to the enclosing parenthesis and kept the items on its line",
-  "receipt": null
- },
- {
-  "dialect": "tsql",
-  "sql": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC",
-  "formatted": "WITH t1 AS (\n  SELECT 1 AS a\n),\n\nt2 AS (\n  SELECT 1 AS a\n)\n\nSELECT TOP 10 a\nFROM t1\nUNION ALL\nSELECT TOP 10 a\nFROM t2\nORDER BY\n  a DESC",
-  "reason": "A set operation's ORDER BY puts its items on the next line, as in every other dialect and SQL Server's own `ORDER BY\\n  1`; SQLClean kept them on the ORDER BY line",
+  "formatted": "WITH t1 AS (\n  SELECT 1 AS a\n),\n\nt2 AS (\n  SELECT 1 AS a\n)\n\nSELECT COUNT(*)\nFROM (\n  SELECT TOP 10 a\n  FROM t1\n  UNION ALL\n  SELECT TOP 10 a\n  FROM t2\n  ORDER BY a DESC\n) AS t",
+  "reason": "A set operation's ORDER BY sits at the depth of its set operation; SQLClean outdented it to the enclosing parenthesis",
   "receipt": null
  },
  {
@@ -324,8 +317,8 @@
  {
   "dialect": "bigquery",
   "sql": "SELECT STRUCT<STRING>((SELECT 'foo')).*",
-  "formatted": "SELECT\n  STRUCT<STRING> ((\n    SELECT 'foo'\n  )).*",
-  "reason": "SQLClean's Polyglot printer put a space before `.*`; SQLQuack keeps the field access touching its operand",
+  "formatted": "SELECT\n  STRUCT<STRING> (\n    (\n      SELECT 'foo'\n    )\n  ).*",
+  "reason": "SQLClean's Polyglot printer put a space before `.*` and hugged the inner parenthesis; SQLQuack keeps the field access touching its operand and puts the multi-line parenthesised group on its own lines",
   "receipt": null
  },
  {

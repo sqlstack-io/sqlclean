@@ -22,7 +22,7 @@ fn given_mixed_values_relations_when_formatting_then_each_authored_form_is_prese
         test_types::FormatTestCase {
             description: "mixed values relations inside joined subquery preserve authored forms",
             sql: "SELECT base.id FROM items AS base JOIN (SELECT * FROM (VALUES (1)) AS first_values(id) UNION ALL SELECT * FROM VALUES (2)) AS mixed ON base.id = mixed.id",
-            expected_sql: "SELECT base.id\nFROM items AS base\nJOIN (\n  SELECT *\n  FROM (VALUES (1)) AS first_values(id)\n  UNION ALL\n  SELECT *\n  FROM VALUES (2)\n) AS mixed\n  ON base.id = mixed.id",
+            expected_sql: "SELECT base.id\nFROM items AS base\nJOIN (\n  SELECT *\n  FROM (VALUES (1)) AS first_values(id)\n  UNION ALL\n  SELECT *\n  FROM VALUES (2)\n) AS mixed ON base.id = mixed.id",
             expected_changed: true,
         },
         test_types::FormatTestCase {
