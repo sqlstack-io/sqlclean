@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.6](https://github.com/sqlstack-io/sqlclean/compare/v0.9.5...v0.9.6) (2026-11-13)
+
+
+### Bug Fixes
+
+* **deps:** pin SQLQuack 0.12.1 ([#83](https://github.com/sqlstack-io/sqlclean/issues/83)) ([e568c9b](https://github.com/sqlstack-io/sqlclean/commit/e568c9b629e0b1479946fe2a2e43311c4400e0dc))
+
 ## [0.9.5](https://github.com/sqlstack-io/sqlclean/compare/v0.9.4...v0.9.5) (2026-11-13)
 
 
