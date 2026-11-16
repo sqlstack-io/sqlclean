@@ -14,7 +14,7 @@ The SQLClean website: the homepage at `/` and the documentation at `/docs/`, bui
 - `recordings/`: the VHS tapes behind the README demo; see `recordings/README.md`.
 
 The footer's SQLStack symbols (`public/assets/sqlstack.png` and `sqlstack-dark.png`) are unchanged
-copies from [`sqlstack-io/sqlstack` at `9b37b9e`](https://github.com/sqlstack-io/sqlstack/tree/9b37b9e128d36930e1fe0c5880606525100b228b/assets/icons).
+copies from [`sqlstack-io/sqlstack` at `c62035d`](https://github.com/sqlstack-io/sqlstack/tree/c62035df57c7ff6d1f4d8f990f857d096fefaeea/assets/icons).
 
 Search uses Pagefind, and `llms.txt`, `llms-small.txt` and `llms-full.txt` are generated at build
 time. The Website workflow builds the site and checks its links on every change; it does not deploy.
