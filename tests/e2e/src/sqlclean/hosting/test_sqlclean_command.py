@@ -214,7 +214,10 @@ def test_given_deeply_nested_calls_when_checking_then_the_configured_depth_bound
     write_project(
         tmp_path,
         config=test_case.config,
-        files={"models/q.sql": f"SELECT {nested} AS n FROM {test_case.relation}\n", **test_case.files},
+        files={
+            "models/q.sql": f"SELECT {nested} AS n FROM {test_case.relation}\n",
+            **test_case.files,
+        },
     )
 
     completed: subprocess.CompletedProcess[str] = run(
