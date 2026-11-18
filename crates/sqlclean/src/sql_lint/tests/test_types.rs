@@ -88,6 +88,13 @@ pub(crate) struct DialectLintRuleTestCase {
     pub expected_reason: &'static str,
 }
 
+pub(crate) struct NamedWindowRankingTestCase {
+    pub description: &'static str,
+    pub sql: &'static str,
+    pub rule: &'static str,
+    pub expected_anchors: &'static [&'static str],
+}
+
 pub(crate) struct LineWrapTestCase {
     pub description: &'static str,
     pub sql: &'static str,

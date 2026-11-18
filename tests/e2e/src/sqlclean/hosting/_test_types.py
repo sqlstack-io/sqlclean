@@ -22,12 +22,14 @@ class CheckTestCase:
 
 @dataclass(frozen=True)
 class CallDepthTestCase:
-    """A configuration and the findings checking 300 nested function calls must give."""
+    """A configuration and the findings checking 300 nested function calls in relation must give."""
 
     description: str
     config: str
     expected_codes: tuple[str, ...]
     expected_message: str
+    relation: str = "a"
+    files: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

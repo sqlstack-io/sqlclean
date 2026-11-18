@@ -12,7 +12,7 @@ so use it to see what a Rule will read before writing one.
 ## Usage
 
 ```bash
-sqlclean facts [--dialect <DIALECT>] < query.sql
+sqlclean facts [--dialect <DIALECT>] [--max-function-call-depth <N>] < query.sql
 ```
 
 ```bash
@@ -25,6 +25,7 @@ echo "SELECT o.order_id, COUNT(*) AS items FROM orders AS o JOIN order_items AS 
 | Flag | Description |
 |------|-------------|
 | `--dialect <DIALECT>` | The dialect to parse with (default: `generic`); see [Dialects](/docs/configuration/#dialects) |
+| `--max-function-call-depth <N>` | The deepest function-call nesting to parse, from `1` to `512` (default: `256`); pass your `max_function_call_depth` setting so `facts` reads what `check` reads |
 
 `facts` reads no configuration file and no paths.
 
@@ -74,4 +75,4 @@ facts with `line`, `column` and `text` added to every node. See
 | Code | Meaning |
 |------|---------|
 | `0` | The facts were printed |
-| `2` | The SQL does not parse under the dialect, or the dialect is unknown |
+| `2` | The SQL does not parse under the dialect, nests function calls deeper than the limit, or the dialect is unknown |

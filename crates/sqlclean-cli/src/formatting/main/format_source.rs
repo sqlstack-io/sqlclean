@@ -15,7 +15,7 @@ pub fn format_source(
     (line_width, indent, max_function_call_depth): (usize, usize, usize),
 ) -> Result<Formatted, String> {
     let characters: Vec<char> = text.chars().collect();
-    let Some(mut boundaries) = statement_ends(text, dialect)? else {
+    let Some(mut boundaries) = statement_ends(text, dialect, Some(max_function_call_depth))? else {
         return Ok(Formatted::Unavailable(format!(
             "SQL formatting is unavailable for the {dialect} dialect: SQLQuack does not parse it yet"
         )));

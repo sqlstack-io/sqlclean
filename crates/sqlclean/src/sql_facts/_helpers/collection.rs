@@ -21,7 +21,11 @@ use crate::sql_lint::main::lint::lint;
 use crate::sql_lint::main::parse_sql::parse_sql;
 use crate::sql_lint::types::{LintRequest, LintResponse, ParsedSql};
 
-pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> {
+pub(crate) fn file_facts(
+    sql: &str,
+    dialect: &str,
+    max_function_call_depth: Option<usize>,
+) -> Result<FileFacts, String> {
     if let Some(reason) = unavailable(dialect)? {
         return Ok(FileFacts {
             statements: Vec::new(),
@@ -33,7 +37,7 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
             tokens, statements, ..
         },
         ranges,
-    ) = parsed_statements(sql, dialect)?;
+    ) = parsed_statements(sql, dialect, max_function_call_depth)?;
     let characters: Vec<char> = sql.chars().collect();
     let snowflake: bool = dialect.eq_ignore_ascii_case("snowflake");
     let facts: Vec<StatementFacts> = statements
@@ -59,14 +63,18 @@ pub(crate) fn file_facts(sql: &str, dialect: &str) -> Result<FileFacts, String> 
     })
 }
 
-pub(crate) fn statement_ends(sql: &str, dialect: &str) -> Result<Option<Vec<usize>>, String> {
+pub(crate) fn statement_ends(
+    sql: &str,
+    dialect: &str,
+    max_function_call_depth: Option<usize>,
+) -> Result<Option<Vec<usize>>, String> {
     if TSQL_DIALECTS.contains(&dialect.to_ascii_lowercase().as_str()) {
         return Ok(Some(sqlserver_statement_ends(sql)));
     }
     if unavailable(dialect)?.is_some() {
         return Ok(None);
     }
-    let (_, ranges) = parsed_statements(sql, dialect)?;
+    let (_, ranges) = parsed_statements(sql, dialect, max_function_call_depth)?;
     Ok(Some(
         ranges.iter().map(|range| range.terminated_end).collect(),
     ))
@@ -104,12 +112,13 @@ fn unavailable(dialect: &str) -> Result<Option<String>, String> {
     }))
 }
 
-/// Parse `sql` and split its tokens into one range per parsed statement.
+/// Parse `sql` within the call-depth limit and split its tokens into one range per parsed statement.
 fn parsed_statements(
     sql: &str,
     dialect: &str,
+    max_function_call_depth: Option<usize>,
 ) -> Result<(ParsedSql, Vec<StatementTokens>), String> {
-    let parsed: ParsedSql = parse_sql(sql, dialect)?;
+    let parsed: ParsedSql = parse_sql(sql, dialect, max_function_call_depth)?;
     let ranges: Vec<StatementTokens> = statement_token_ranges(&parsed.tokens);
     if ranges.len() != parsed.statements.len() {
         return Err(format!(

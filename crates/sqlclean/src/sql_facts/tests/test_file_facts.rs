@@ -97,7 +97,7 @@ FROM recent AS r LEFT JOIN customers AS c ON r.customer_id = c.customer_id",
         },
     ];
     for test_case in &test_cases {
-        let facts: FileFacts = file_facts(test_case.sql, "duckdb")?;
+        let facts: FileFacts = file_facts(test_case.sql, "duckdb", None)?;
         let statement: &StatementFacts = &facts.statements[test_case.statement];
         let located = |start: usize, end: usize| text(test_case.sql, start, end);
         assert_eq!(
@@ -245,7 +245,7 @@ fn given_comma_and_nested_joins_when_collecting_postgres_facts_then_joins_read_a
         },
     ];
     for test_case in &test_cases {
-        let facts: FileFacts = file_facts(test_case.sql, "postgres")?;
+        let facts: FileFacts = file_facts(test_case.sql, "postgres", None)?;
         let joins: Vec<(&str, &str, bool, String)> = facts.statements[0]
             .joins
             .iter()
@@ -286,7 +286,7 @@ fn given_sql_text_when_collecting_facts_then_only_unparseable_sql_is_an_error() 
         },
     ];
     for test_case in &test_cases {
-        let statements: Option<usize> = file_facts(test_case.sql, "duckdb")
+        let statements: Option<usize> = file_facts(test_case.sql, "duckdb", None)
             .map(|facts| facts.statements.len())
             .ok();
         assert_eq!(
@@ -323,7 +323,7 @@ fn given_sql_text_when_finding_statement_ends_then_each_ends_after_its_terminato
     ];
     for test_case in &test_cases {
         let characters: Vec<char> = test_case.sql.chars().collect();
-        let statements: Option<Vec<String>> = statement_ends(test_case.sql, "duckdb")
+        let statements: Option<Vec<String>> = statement_ends(test_case.sql, "duckdb", None)
             .ok()
             .flatten()
             .map(|ends| {
@@ -368,8 +368,9 @@ fn given_a_dialect_sqlquack_does_not_parse_when_collecting_facts_then_they_are_u
         },
     ];
     for test_case in &test_cases {
-        let facts: FileFacts = file_facts("SELECT 1; SELECT 2", test_case.dialect)?;
-        let ends: Option<Vec<usize>> = statement_ends("SELECT 1; SELECT 2", test_case.dialect)?;
+        let facts: FileFacts = file_facts("SELECT 1; SELECT 2", test_case.dialect, None)?;
+        let ends: Option<Vec<usize>> =
+            statement_ends("SELECT 1; SELECT 2", test_case.dialect, None)?;
         assert_eq!(
             facts.unavailable.as_deref(),
             test_case.expected_unavailable,

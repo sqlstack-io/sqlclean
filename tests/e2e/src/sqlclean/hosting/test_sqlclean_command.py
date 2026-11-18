@@ -196,26 +196,53 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
             expected_codes=(),
             expected_message="",
         ),
+        CallDepthTestCase(
+            description="custom Rules read 300 nested calls under max_function_call_depth = 300",
+            config="max_function_call_depth = 300\n" + CUSTOM,
+            expected_codes=("XSQLCLEANNAME001",),
+            expected_message="forbidden prefix",
+            relation="tmp_a",
+            files={"sql_rules/naming.py": SAMPLE_RULES},
+        ),
     ],
     ids=lambda case: case.description,
 )
 def test_given_deeply_nested_calls_when_checking_then_the_configured_depth_bounds_parsing(
     tmp_path: Path, test_case: CallDepthTestCase
 ) -> None:
-    nested: str = "lower(" * 300 + "a.name" + ")" * 300
+    nested: str = "lower(" * 300 + "name" + ")" * 300
     write_project(
         tmp_path,
         config=test_case.config,
-        files={"models/q.sql": f"SELECT {nested} AS n FROM a\n"},
+        files={"models/q.sql": f"SELECT {nested} AS n FROM {test_case.relation}\n", **test_case.files},
     )
 
     completed: subprocess.CompletedProcess[str] = run(
         tmp_path, "check", "--output-format", "json", environment={}
     )
+    assert completed.returncode in (0, 1), completed.stderr
     findings: list[dict[str, object]] = json.loads(completed.stdout)["findings"]
 
     assert tuple(finding["code"] for finding in findings) == test_case.expected_codes, findings
     assert all(test_case.expected_message in str(finding["message"]) for finding in findings)
+
+
+def test_given_deeply_nested_calls_when_formatting_then_the_configured_depth_bounds_parsing(
+    tmp_path: Path,
+) -> None:
+    nested: str = "lower(" * 300 + "name" + ")" * 300
+    write_project(
+        tmp_path,
+        config="max_function_call_depth = 300\n" + DUCKDB,
+        files={"models/q.sql": f"select {nested} as n from a\n"},
+    )
+
+    formatted: subprocess.CompletedProcess[str] = run(tmp_path, "format", environment={})
+    rechecked: subprocess.CompletedProcess[str] = run(tmp_path, "format", "--check", environment={})
+    text: str = (tmp_path / "models/q.sql").read_text(encoding="utf-8")
+
+    assert (formatted.returncode, rechecked.returncode) == (0, 0), formatted.stderr
+    assert text.startswith("SELECT\n    LOWER(\n        LOWER(\n"), text[:200]
 
 
 @pytest.mark.parametrize(
