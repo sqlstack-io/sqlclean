@@ -10,6 +10,7 @@ import pytest
 
 from tests.e2e.src.sqlclean.hosting._test_types import (
     CacheTestCase,
+    CallDepthTestCase,
     CheckTestCase,
     IdempotencyTestCase,
     ManyFilesTestCase,
@@ -24,6 +25,7 @@ from tests.integration.src.sqlclean.rule_testing.helpers import SAMPLE_RULES
 DUCKDB: str = 'dialect = "duckdb"\n'
 MYSQL_FILES: str = DUCKDB + '[[dialects]]\npaths = ["mysql/**"]\ndialect = "mysql"\n'
 CROSS_JOIN_ONLY: str = DUCKDB + '[rules]\nselect = ["SQLCLEAN038"]\n'
+SNOWFLAKE_CROSS_JOIN_ONLY: str = 'dialect = "snowflake"\n[rules]\nselect = ["SQLCLEAN038"]\n'
 CUSTOM: str = (
     DUCKDB + '[rules]\nselect = ["XSQLCLEANNAME", "XSQLCLEANSTYLE"]\ncustom = ["sql_rules"]\n'
 )
@@ -177,6 +179,43 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
         tuple(stale["relation"] for stale in report["stale_exceptions"]) == test_case.expected_stale
     )
     assert tuple(file["path"] for file in report["unavailable"]) == test_case.expected_unavailable
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        CallDepthTestCase(
+            description="the default limit refuses 300 nested calls and names the key that raises it",
+            config=SNOWFLAKE_CROSS_JOIN_ONLY,
+            expected_codes=("SQLCLEAN999",),
+            expected_message="raise max_function_call_depth, up to 512",
+        ),
+        CallDepthTestCase(
+            description="max_function_call_depth in sqlclean.toml lets 300 nested calls parse",
+            config="max_function_call_depth = 300\n" + SNOWFLAKE_CROSS_JOIN_ONLY,
+            expected_codes=(),
+            expected_message="",
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_deeply_nested_calls_when_checking_then_the_configured_depth_bounds_parsing(
+    tmp_path: Path, test_case: CallDepthTestCase
+) -> None:
+    nested: str = "lower(" * 300 + "a.name" + ")" * 300
+    write_project(
+        tmp_path,
+        config=test_case.config,
+        files={"models/q.sql": f"SELECT {nested} AS n FROM a\n"},
+    )
+
+    completed: subprocess.CompletedProcess[str] = run(
+        tmp_path, "check", "--output-format", "json", environment={}
+    )
+    findings: list[dict[str, object]] = json.loads(completed.stdout)["findings"]
+
+    assert tuple(finding["code"] for finding in findings) == test_case.expected_codes, findings
+    assert all(test_case.expected_message in str(finding["message"]) for finding in findings)
 
 
 @pytest.mark.parametrize(

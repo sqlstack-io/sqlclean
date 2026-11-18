@@ -21,6 +21,16 @@ class CheckTestCase:
 
 
 @dataclass(frozen=True)
+class CallDepthTestCase:
+    """A configuration and the findings checking 300 nested function calls must give."""
+
+    description: str
+    config: str
+    expected_codes: tuple[str, ...]
+    expected_message: str
+
+
+@dataclass(frozen=True)
 class RewriteTestCase:
     """A project, a fix or format invocation and the file contents it must leave."""
 

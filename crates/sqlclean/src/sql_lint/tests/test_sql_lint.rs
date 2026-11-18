@@ -2005,10 +2005,10 @@ fn given_nested_function_calls_when_formatting_then_the_requested_or_default_dep
             expected_error: None,
         },
         test_types::FunctionDepthTestCase {
-            description: "one call past the default is declined like lint refuses it",
+            description: "one call past the default is declined, naming the setting that raises it",
             depth: 257,
             max_function_call_depth: None,
-            expected_error: Some("configured limit 256"),
+            expected_error: Some("configured limit 256; raise max_function_call_depth, up to 512"),
         },
         test_types::FunctionDepthTestCase {
             description: "a requested depth bounds the formatter",

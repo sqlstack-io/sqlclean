@@ -11,6 +11,7 @@ use crate::config::models::{DialectOverride, RuleException, RuleIgnore, Threshol
 pub(crate) struct ConfigFile {
     pub(crate) dialect: Option<String>,
     pub(crate) include: Option<Vec<String>>,
+    pub(crate) max_function_call_depth: Option<usize>,
     #[serde(default)]
     pub(crate) exclude: Vec<String>,
     #[serde(default)]

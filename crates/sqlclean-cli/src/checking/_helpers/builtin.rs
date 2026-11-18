@@ -21,7 +21,7 @@ use crate::positions::models::Edit;
 pub(crate) fn builtin_findings(
     file: &SourceFile,
     codes: &BTreeSet<String>,
-    thresholds: Thresholds,
+    (thresholds, max_function_call_depth): (Thresholds, usize),
 ) -> Vec<Finding> {
     let request = LintRequest {
         version: LINT_API_VERSION,
@@ -30,6 +30,7 @@ pub(crate) fn builtin_findings(
         enabled_rules: Some(codes.iter().cloned().collect()),
         max_literal_length: Some(thresholds.max_literal_length),
         max_ranking_order_by: Some(thresholds.max_ranking_order_by),
+        max_function_call_depth: Some(max_function_call_depth),
         config_file: Some(CONFIG_FILE_NAME.to_owned()),
         ..LintRequest::default()
     };

@@ -7,6 +7,7 @@ pub(crate) struct LoadedConfigTestCase {
     pub(crate) expected_select: Option<&'static [&'static str]>,
     pub(crate) expected_max_literal_length: usize,
     pub(crate) expected_max_ranking_order_by: usize,
+    pub(crate) expected_max_function_call_depth: usize,
 }
 
 pub(crate) struct RejectedConfigTestCase {
