@@ -9,13 +9,14 @@ fn given_a_config_file_when_loading_from_below_then_the_nearest_one_applies() ->
     let test_cases = [
         LoadedConfigTestCase {
             description: "values set in a parent directory apply and unset thresholds keep defaults",
-            config_text: "dialect = \"duckdb\"\n[format]\nline_width = 80\n[rules]\nselect = [\"SQLCLEAN004\"]\n[rules.thresholds]\nmax_literal_length = 40\n",
+            config_text: "dialect = \"duckdb\"\nmax_function_call_depth = 300\n[format]\nline_width = 80\n[rules]\nselect = [\"SQLCLEAN004\"]\n[rules.thresholds]\nmax_literal_length = 40\n",
             start: "models/orders",
             expected_dialect: "duckdb",
             expected_line_width: 80,
             expected_select: Some(&["SQLCLEAN004"]),
             expected_max_literal_length: 40,
             expected_max_ranking_order_by: 5,
+            expected_max_function_call_depth: 300,
         },
         LoadedConfigTestCase {
             description: "an empty file gives the defaults",
@@ -26,6 +27,7 @@ fn given_a_config_file_when_loading_from_below_then_the_nearest_one_applies() ->
             expected_select: None,
             expected_max_literal_length: 100,
             expected_max_ranking_order_by: 5,
+            expected_max_function_call_depth: 256,
         },
     ];
     for test_case in &test_cases {
@@ -70,6 +72,11 @@ fn given_a_config_file_when_loading_from_below_then_the_nearest_one_applies() ->
             "{}",
             test_case.description
         );
+        assert_eq!(
+            config.max_function_call_depth, test_case.expected_max_function_call_depth,
+            "{}",
+            test_case.description
+        );
     }
     Ok(())
 }
@@ -101,6 +108,16 @@ fn given_invalid_values_when_loading_then_each_is_rejected_with_its_reason() -> 
             description: "an indent of zero is rejected",
             config_text: "[format]\nindent = 0\n",
             expected_error: "indent must be between 1 and 8",
+        },
+        RejectedConfigTestCase {
+            description: "a function-call depth above SQLQuack's ceiling",
+            config_text: "max_function_call_depth = 513\n",
+            expected_error: "max_function_call_depth must be between 1 and 512",
+        },
+        RejectedConfigTestCase {
+            description: "a function-call depth of zero",
+            config_text: "max_function_call_depth = 0\n",
+            expected_error: "max_function_call_depth must be between 1 and 512",
         },
     ];
     for test_case in &test_cases {

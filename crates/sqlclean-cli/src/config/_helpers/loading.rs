@@ -3,6 +3,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use sqlclean::sql_lint::constants::MAX_FUNCTION_CALL_DEPTH;
+
 use crate::config::_helpers::file_schema::ConfigFile;
 use crate::config::_helpers::validation::validate;
 use crate::config::constants::{
@@ -52,6 +54,9 @@ fn effective_config(root: PathBuf, file: ConfigFile) -> Config {
         dialects: file.dialects,
         line_width: file.format.line_width.unwrap_or(DEFAULT_LINE_WIDTH),
         indent: file.format.indent.unwrap_or(DEFAULT_INDENT),
+        max_function_call_depth: file
+            .max_function_call_depth
+            .unwrap_or(MAX_FUNCTION_CALL_DEPTH),
         rules: RulesConfig {
             select: file.rules.select,
             ignore: file.rules.ignore,

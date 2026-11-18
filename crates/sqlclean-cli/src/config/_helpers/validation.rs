@@ -1,6 +1,7 @@
 //! Checks that need more than the schema: positive limits, valid globs, dialects and reasons.
 
 use globset::Glob;
+use sqlclean::sql_lint::constants::MAX_CALL_DEPTH_CEILING;
 use sqlclean::sql_lint::main::validate_dialect::validate_dialect;
 
 use crate::config::constants::MAX_INDENT;
@@ -20,6 +21,11 @@ pub(crate) fn validate(config: &Config) -> Result<(), String> {
     if !(1..=MAX_INDENT).contains(&config.indent) {
         return Err(format!(
             "[format] indent must be between 1 and {MAX_INDENT}"
+        ));
+    }
+    if !(1..=MAX_CALL_DEPTH_CEILING).contains(&config.max_function_call_depth) {
+        return Err(format!(
+            "max_function_call_depth must be between 1 and {MAX_CALL_DEPTH_CEILING}"
         ));
     }
     let thresholds = config.rules.thresholds;

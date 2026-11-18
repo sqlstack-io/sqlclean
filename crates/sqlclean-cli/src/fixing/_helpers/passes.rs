@@ -36,7 +36,15 @@ pub(crate) fn fix_sources(
     }
     let mut format_refusals: Vec<(String, String)> = Vec::new();
     for file in &mut files {
-        match format_source(&file.text, &file.dialect, config.line_width, config.indent) {
+        match format_source(
+            &file.text,
+            &file.dialect,
+            (
+                config.line_width,
+                config.indent,
+                config.max_function_call_depth,
+            ),
+        ) {
             Ok(Formatted::Sql(formatted)) => file.text = formatted,
             Ok(Formatted::Unavailable(_)) => {}
             Err(reason) => format_refusals.push((file.path.clone(), reason)),
