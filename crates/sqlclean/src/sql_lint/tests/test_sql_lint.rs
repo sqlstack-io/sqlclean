@@ -6,48 +6,58 @@ use crate::sql_lint::tests::{helpers, test_types};
 use crate::sql_tokens::main::query_fingerprint::query_fingerprint;
 
 #[test]
-fn given_production_function_depth_when_linting_then_bounded_parser_accepts_it() {
-    let test_cases = [test_types::FunctionDepthTestCase {
-        description: "production depth remains supported",
-        depth: 65,
-        expected_diagnostic_count: 0,
-    }];
+fn given_nested_function_calls_when_linting_then_the_requested_or_default_depth_bounds_them() {
+    let test_cases = [
+        test_types::FunctionDepthTestCase {
+            description: "the default depth of 256 parses",
+            depth: 256,
+            max_function_call_depth: None,
+            expected_error: None,
+        },
+        test_types::FunctionDepthTestCase {
+            description: "one call past the default fails and names the setting",
+            depth: 257,
+            max_function_call_depth: None,
+            expected_error: Some("configured limit 256"),
+        },
+        test_types::FunctionDepthTestCase {
+            description: "a requested depth bounds the parse",
+            depth: 65,
+            max_function_call_depth: Some(64),
+            expected_error: Some("configured limit 64"),
+        },
+        test_types::FunctionDepthTestCase {
+            description: "a requested depth above the default lets deeper calls parse",
+            depth: 300,
+            max_function_call_depth: Some(300),
+            expected_error: None,
+        },
+    ];
     for test_case in test_cases {
-        let sql = helpers::nested_function_sql(test_case.depth);
-        let diagnostics = helpers::diagnostics(&sql).unwrap_or_else(|error| {
-            panic!("{}: {error}", test_case.description);
+        let request = json!({
+            "version": 1,
+            "sql": helpers::nested_function_sql(test_case.depth),
+            "dialect": "snowflake",
+            "max_function_call_depth": test_case.max_function_call_depth,
         });
-        assert_eq!(
-            diagnostics.len(),
-            test_case.expected_diagnostic_count,
-            "{}",
-            test_case.description
-        );
-    }
-}
-
-#[test]
-fn given_excessive_function_depth_when_linting_then_complexity_guard_rejects_it() {
-    let test_cases = [test_types::FunctionDepthFailureTestCase {
-        description: "excessive depth remains bounded",
-        depth: 129,
-        expected_code: "E_GUARD_FUNCTION_NESTING_DEPTH_EXCEEDED",
-        expected_limit: "configured limit 128",
-    }];
-    for test_case in test_cases {
-        let sql = helpers::nested_function_sql(test_case.depth);
-        let error =
-            helpers::diagnostics(&sql).expect_err("excessive nested calls should remain bounded");
-        assert!(
-            error.contains(test_case.expected_code),
-            "{}",
-            test_case.description
-        );
-        assert!(
-            error.contains(test_case.expected_limit),
-            "{}",
-            test_case.description
-        );
+        let outcome: Result<Value, String> = lint_json(&request.to_string())
+            .and_then(|response| serde_json::from_str(&response).map_err(|e| e.to_string()));
+        match (outcome, test_case.expected_error) {
+            (Ok(response), None) => assert_eq!(
+                response["diagnostics"],
+                json!([]),
+                "{}",
+                test_case.description
+            ),
+            (Err(error), Some(limit)) => assert!(
+                error.contains("E_GUARD_FUNCTION_NESTING_DEPTH_EXCEEDED")
+                    && error.contains(limit)
+                    && error.contains("max_function_call_depth"),
+                "{}: {error}",
+                test_case.description
+            ),
+            (outcome, _) => panic!("{}: {outcome:?}", test_case.description),
+        }
     }
 }
 
@@ -1983,4 +1993,58 @@ fn given_each_documented_dialect_when_reading_sql_then_sqlquack_was_built_for_it
         );
     }
     Ok(())
+}
+
+#[test]
+fn given_nested_function_calls_when_formatting_then_the_requested_or_default_depth_bounds_them() {
+    let test_cases = [
+        test_types::FunctionDepthTestCase {
+            description: "the default depth of 256 formats",
+            depth: 256,
+            max_function_call_depth: None,
+            expected_error: None,
+        },
+        test_types::FunctionDepthTestCase {
+            description: "one call past the default is declined like lint refuses it",
+            depth: 257,
+            max_function_call_depth: None,
+            expected_error: Some("configured limit 256"),
+        },
+        test_types::FunctionDepthTestCase {
+            description: "a requested depth bounds the formatter",
+            depth: 65,
+            max_function_call_depth: Some(64),
+            expected_error: Some("configured limit 64"),
+        },
+        test_types::FunctionDepthTestCase {
+            description: "a requested depth above the most allowed is declined",
+            depth: 2,
+            max_function_call_depth: Some(513),
+            expected_error: Some("max_function_call_depth"),
+        },
+    ];
+    for test_case in test_cases {
+        let request = json!({
+            "version": 1,
+            "sql": helpers::nested_function_sql(test_case.depth),
+            "dialect": "snowflake",
+            "max_function_call_depth": test_case.max_function_call_depth,
+        });
+        let response: Value = serde_json::from_str(
+            &crate::sql_lint::main::formatter::format_json(&request.to_string())
+                .expect("a format response"),
+        )
+        .expect("JSON");
+        let declined: Option<&str> = (response["formatted"] == json!(false))
+            .then(|| response["reason"].as_str().unwrap_or_default());
+        match (declined, test_case.expected_error) {
+            (None, None) => {}
+            (Some(reason), Some(limit)) => assert!(
+                reason.contains(limit),
+                "{}: {reason}",
+                test_case.description
+            ),
+            (declined, _) => panic!("{}: {declined:?}", test_case.description),
+        }
+    }
 }

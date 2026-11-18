@@ -135,14 +135,9 @@ pub(crate) struct InvalidRuleTestCase {
 pub(crate) struct FunctionDepthTestCase {
     pub description: &'static str,
     pub depth: usize,
-    pub expected_diagnostic_count: usize,
-}
-
-pub(crate) struct FunctionDepthFailureTestCase {
-    pub description: &'static str,
-    pub depth: usize,
-    pub expected_code: &'static str,
-    pub expected_limit: &'static str,
+    pub max_function_call_depth: Option<usize>,
+    /// The limit the parse error names; `None` when the SQL parses.
+    pub expected_error: Option<&'static str>,
 }
 
 pub(crate) struct CrossJoinTestCase {

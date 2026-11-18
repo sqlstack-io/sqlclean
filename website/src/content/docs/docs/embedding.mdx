@@ -76,6 +76,7 @@ the dialect. Offsets in requests, findings, edits and facts count Unicode charac
 | `ignored_rules` | `[]` | Rule codes or prefixes to skip |
 | `max_literal_length` | `100` | The `SQLCLEAN044` limit |
 | `max_ranking_order_by` | `5` | The `SQLCLEAN043` limit |
+| `max_function_call_depth` | `256` | Function calls nested deeper than this are a parse error that names this setting; at most `512` |
 | `config_file` | `sqlclean.toml` | The configuration file name that remediation text refers to |
 | `long_literal_guidance` | SQLClean's advice | The advice `SQLCLEAN044` gives before its `max_literal_length` setting, so a host can point at its own way to share a value |
 | `externally_referenced_ctes` | `[]` | CTE names that something outside the SQL reads, so `SQLCLEAN005` does not report them |
@@ -135,6 +136,9 @@ println!("{}", format_json(request)?);
 
 `indent` sets the spaces per indent step. Without it the engine indents two spaces, its layout
 before the `sqlclean` command chose four; pass `"indent": 4` to match `sqlclean format`.
+
+`max_function_call_depth` bounds nested function calls as it does in a lint request: `256` by
+default, at most `512`.
 
 When the formatter cannot format the SQL, `formatted` is `false`, `sql` is the input unchanged,
 and `reason` says why.
