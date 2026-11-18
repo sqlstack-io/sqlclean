@@ -160,6 +160,10 @@ make check             # format, lint, type-check, fensu and clippy
 make test              # Rust and Python tests
 ```
 
+## Community
+
+Ask questions and share feedback on [Discord](https://discord.com/invite/gATNYuBK6).
+
 ## License
 
 [Apache License 2.0](https://github.com/sqlstack-io/sqlclean/blob/main/LICENSE).

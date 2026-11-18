@@ -28,6 +28,7 @@ export default defineConfig({
 			],
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/sqlstack-io/sqlclean' },
+				{ icon: 'discord', label: 'Discord', href: 'https://discord.com/invite/gATNYuBK6' },
 			],
 			components: {
 				PageFrame: './src/components/PageFrame.astro',
