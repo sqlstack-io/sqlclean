@@ -147,6 +147,16 @@ pub(crate) struct FunctionDepthTestCase {
     pub expected_error: Option<&'static str>,
 }
 
+pub(crate) struct FormatCeilingTestCase {
+    pub description: &'static str,
+    pub dialect: &'static str,
+    pub sql: String,
+    /// Text the refusal must contain.
+    pub expected_reason: &'static str,
+    /// How many times the refusal explains the 512 ceiling.
+    pub expected_notes: usize,
+}
+
 pub(crate) struct CrossJoinTestCase {
     pub description: &'static str,
     pub sql: &'static str,

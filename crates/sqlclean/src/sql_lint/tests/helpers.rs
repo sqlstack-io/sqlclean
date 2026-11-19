@@ -22,6 +22,14 @@ pub(crate) fn nested_function_sql(depth: usize) -> String {
     format!("SELECT {}1{}", "F(".repeat(depth), ")".repeat(depth))
 }
 
+/// `operands` selects joined by UNION ALL: a statement that nests deeply without calling anything.
+pub(crate) fn union_all_sql(operands: usize) -> String {
+    (0..operands)
+        .map(|index| format!("SELECT {index} AS n"))
+        .collect::<Vec<_>>()
+        .join(" UNION ALL ")
+}
+
 pub(crate) fn diagnostics(sql: &str) -> Result<Vec<Value>, String> {
     let response = lint_json(
         &json!({

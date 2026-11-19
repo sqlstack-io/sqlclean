@@ -35,5 +35,6 @@ pub(crate) struct StatementEndsTestCase {
 pub(crate) struct JoinFactsTestCase {
     pub(crate) description: &'static str,
     pub(crate) sql: &'static str,
+    pub(crate) dialect: &'static str,
     pub(crate) expected_joins: &'static [(&'static str, &'static str, bool, &'static str)],
 }

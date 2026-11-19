@@ -13,6 +13,8 @@ from tests.e2e.src.sqlclean.hosting._test_types import (
     CallDepthFormatTestCase,
     CallDepthTestCase,
     CheckTestCase,
+    DepthAcceptedTestCase,
+    DepthRefusedTestCase,
     IdempotencyTestCase,
     ManyFilesTestCase,
     RewriteTestCase,
@@ -20,7 +22,7 @@ from tests.e2e.src.sqlclean.hosting._test_types import (
     SkillsTestCase,
     SummaryTestCase,
 )
-from tests.e2e.src.sqlclean.hosting.helpers import run, write_project
+from tests.e2e.src.sqlclean.hosting.helpers import nested_calls, run, union_all, write_project
 from tests.integration.src.sqlclean.rule_testing.helpers import SAMPLE_RULES
 
 DUCKDB: str = 'dialect = "duckdb"\n'
@@ -40,6 +42,17 @@ CROSS_JOIN_EXCEPTIONS: str = (
 NULL_AND_COMMA: str = "select a.id from a, b where a.x = null\n"
 # SQLCLEAN001 is a default Rule; SQLCLEAN034 and SQLCLEAN050 are opt-in.
 DEFAULT_AND_OPT_IN: str = "insert into orders select a.id from a where a.x = null\n"
+CHECK_NOTHING: str = '[rules]\nselect = ["SQLCLEAN038"]\n'
+CEILING_NOTE: str = (
+    "The maximum is 512. The statement and every expression around the calls also count toward"
+    " that limit, so at 512 a bare SELECT can nest at most 511 calls, and fewer fit inside an"
+    " alias, comparison or CTE."
+)
+CEILING_REFUSAL: str = "value 513 exceeds configured limit 512"
+LIMIT_64_REFUSAL: str = (
+    "value 65 exceeds configured limit 64; raise max_function_call_depth, up to 512"
+)
+DEFAULT_LIMIT_REFUSAL: str = "value 257 exceeds configured limit 256; raise max_function_call_depth"
 
 
 @pytest.mark.parametrize(
@@ -229,6 +242,176 @@ def test_given_deeply_nested_calls_when_checking_then_the_configured_depth_bound
 
     assert tuple(finding["code"] for finding in findings) == test_case.expected_codes, findings
     assert all(test_case.expected_message in str(finding["message"]) for finding in findings)
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        DepthAcceptedTestCase(
+            description="databricks: a limit of 64 reads 64 nested calls",
+            config='max_function_call_depth = 64\ndialect = "databricks"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(64)} as n from a\n",
+            expected_codes=(),
+        ),
+        DepthAcceptedTestCase(
+            description="databricks: at 512 a bare select reads 511 nested calls",
+            config='max_function_call_depth = 512\ndialect = "databricks"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(511)}\n",
+            expected_codes=(),
+        ),
+        DepthAcceptedTestCase(
+            description="bigquery: a limit of 64 reads 64 nested calls",
+            config='max_function_call_depth = 64\ndialect = "bigquery"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(64)} as n from a\n",
+            expected_codes=(),
+        ),
+        DepthAcceptedTestCase(
+            description="bigquery: at 512 a bare select reads 511 nested calls",
+            config='max_function_call_depth = 512\ndialect = "bigquery"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(511)}\n",
+            expected_codes=(),
+        ),
+        DepthAcceptedTestCase(
+            description="postgres: a limit of 64 reads 64 nested calls",
+            config='max_function_call_depth = 64\ndialect = "postgres"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(64)} as n from a\n",
+            expected_codes=(),
+        ),
+        DepthAcceptedTestCase(
+            description="postgres: at 512 a bare select reads 511 nested calls",
+            config='max_function_call_depth = 512\ndialect = "postgres"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(511)}\n",
+            expected_codes=(),
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_sql_nested_up_to_a_limit_when_checking_and_formatting_then_it_is_read(
+    tmp_path: Path, test_case: DepthAcceptedTestCase
+) -> None:
+    write_project(tmp_path, config=test_case.config, files={"models/q.sql": test_case.sql})
+
+    checked: subprocess.CompletedProcess[str] = run(
+        tmp_path, "check", "--output-format", "json", environment={}
+    )
+    formatted: subprocess.CompletedProcess[str] = run(tmp_path, "format", environment={})
+    text: str = (tmp_path / "models/q.sql").read_text(encoding="utf-8")
+    findings: list[dict[str, object]] = json.loads(checked.stdout)["findings"]
+
+    assert tuple(finding["code"] for finding in findings) == test_case.expected_codes, findings
+    assert formatted.returncode == 0, formatted.stderr
+    assert text != test_case.sql
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        DepthRefusedTestCase(
+            description="databricks: a limit of 64 refuses 65 nested calls and names the key",
+            config='max_function_call_depth = 64\ndialect = "databricks"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(65)} as n from a\n",
+            expected_message=LIMIT_64_REFUSAL,
+            expected_ceiling_notes=0,
+        ),
+        DepthRefusedTestCase(
+            description="databricks: the default limit refuses 257 nested calls",
+            config='dialect = "databricks"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(257)} as n from a\n",
+            expected_message=DEFAULT_LIMIT_REFUSAL,
+            expected_ceiling_notes=0,
+        ),
+        DepthRefusedTestCase(
+            description="databricks: at 512 a bare select of 512 nested calls explains the ceiling",
+            config='max_function_call_depth = 512\ndialect = "databricks"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(512)}\n",
+            expected_message=CEILING_REFUSAL + ". " + CEILING_NOTE,
+            expected_ceiling_notes=1,
+        ),
+        DepthRefusedTestCase(
+            description="databricks: 600 union all operands are refused without the ceiling note",
+            config='max_function_call_depth = 512\ndialect = "databricks"\n' + CHECK_NOTHING,
+            sql=union_all(600) + "\n",
+            expected_message=CEILING_REFUSAL,
+            expected_ceiling_notes=0,
+        ),
+        DepthRefusedTestCase(
+            description="bigquery: a limit of 64 refuses 65 nested calls and names the key",
+            config='max_function_call_depth = 64\ndialect = "bigquery"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(65)} as n from a\n",
+            expected_message=LIMIT_64_REFUSAL,
+            expected_ceiling_notes=0,
+        ),
+        DepthRefusedTestCase(
+            description="bigquery: the default limit refuses 257 nested calls",
+            config='dialect = "bigquery"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(257)} as n from a\n",
+            expected_message=DEFAULT_LIMIT_REFUSAL,
+            expected_ceiling_notes=0,
+        ),
+        DepthRefusedTestCase(
+            description="bigquery: at 512 a bare select of 512 nested calls explains the ceiling",
+            config='max_function_call_depth = 512\ndialect = "bigquery"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(512)}\n",
+            expected_message=CEILING_REFUSAL + ". " + CEILING_NOTE,
+            expected_ceiling_notes=1,
+        ),
+        DepthRefusedTestCase(
+            description="bigquery: 600 union all operands are refused without the ceiling note",
+            config='max_function_call_depth = 512\ndialect = "bigquery"\n' + CHECK_NOTHING,
+            sql=union_all(600) + "\n",
+            expected_message=CEILING_REFUSAL,
+            expected_ceiling_notes=0,
+        ),
+        DepthRefusedTestCase(
+            description="postgres: a limit of 64 refuses 65 nested calls and names the key",
+            config='max_function_call_depth = 64\ndialect = "postgres"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(65)} as n from a\n",
+            expected_message=LIMIT_64_REFUSAL,
+            expected_ceiling_notes=0,
+        ),
+        DepthRefusedTestCase(
+            description="postgres: the default limit refuses 257 nested calls",
+            config='dialect = "postgres"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(257)} as n from a\n",
+            expected_message=DEFAULT_LIMIT_REFUSAL,
+            expected_ceiling_notes=0,
+        ),
+        DepthRefusedTestCase(
+            description="postgres: at 512 a bare select of 512 nested calls explains the ceiling",
+            config='max_function_call_depth = 512\ndialect = "postgres"\n' + CHECK_NOTHING,
+            sql=f"select {nested_calls(512)}\n",
+            expected_message=CEILING_REFUSAL + ". " + CEILING_NOTE,
+            expected_ceiling_notes=1,
+        ),
+        DepthRefusedTestCase(
+            description="postgres: 600 union all operands are refused without the ceiling note",
+            config='max_function_call_depth = 512\ndialect = "postgres"\n' + CHECK_NOTHING,
+            sql=union_all(600) + "\n",
+            expected_message=CEILING_REFUSAL,
+            expected_ceiling_notes=0,
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_sql_nested_past_a_limit_when_checking_and_formatting_then_it_is_refused_as_written(
+    tmp_path: Path, test_case: DepthRefusedTestCase
+) -> None:
+    write_project(tmp_path, config=test_case.config, files={"models/q.sql": test_case.sql})
+
+    checked: subprocess.CompletedProcess[str] = run(
+        tmp_path, "check", "--output-format", "json", environment={}
+    )
+    findings: list[dict[str, object]] = json.loads(checked.stdout)["findings"]
+    formatted: subprocess.CompletedProcess[str] = run(tmp_path, "format", environment={})
+    text: str = (tmp_path / "models/q.sql").read_text(encoding="utf-8")
+    message: str = " ".join(str(finding["message"]) for finding in findings)
+
+    assert [finding["code"] for finding in findings] == ["SQLCLEAN999"], message
+    assert test_case.expected_message in message
+    assert message.count(CEILING_NOTE) == test_case.expected_ceiling_notes
+    assert formatted.returncode == 1, formatted.stderr
+    assert text == test_case.sql
+    assert test_case.expected_message in formatted.stdout + formatted.stderr
 
 
 @pytest.mark.parametrize(

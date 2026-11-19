@@ -4,6 +4,7 @@ use sqlquack_parse::parsing::constants::MAX_FUNCTION_CALL_DEPTH;
 use sqlquack_parse::parsing::main::call_depth_hint::call_depth_hint;
 use sqlquack_parse::parsing::main::checked_call_depth::checked_call_depth;
 use sqlquack_syntax::Dialect as SqlQuackDialect;
+use sqlquack_syntax::guard::main::has_function_call::has_function_call;
 
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 use crate::sql_lint::_helpers::cte_macros::{take_out_cte_macros, wrap_query_placeholders};
@@ -105,6 +106,12 @@ fn format_with_sqlquack(
             reason,
             max_function_call_depth,
             Some("max_function_call_depth"),
+            || {
+                macros.is_some_and(|dialect| {
+                    sqlquack_parse::dialect_tokens(&request.sql, dialect)
+                        .is_ok_and(|tokens| has_function_call(&tokens))
+                })
+            },
         )
     })?;
     if request.sql.contains(INTERPOLATION_PLACEHOLDER_PREFIX)
