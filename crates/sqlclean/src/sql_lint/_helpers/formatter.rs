@@ -1,5 +1,8 @@
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sqlquack_format::{FormatDialect, FormatOptions};
+use sqlquack_parse::parsing::constants::MAX_FUNCTION_CALL_DEPTH;
+use sqlquack_parse::parsing::main::call_depth_hint::call_depth_hint;
+use sqlquack_parse::parsing::main::checked_call_depth::checked_call_depth;
 use sqlquack_syntax::Dialect as SqlQuackDialect;
 
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
@@ -79,19 +82,31 @@ fn format_with_sqlquack(
     dialect: FormatDialect,
     macros: Option<SqlQuackDialect>,
 ) -> Result<FormatResponse, String> {
+    let max_function_call_depth: usize = checked_call_depth(
+        request
+            .max_function_call_depth
+            .unwrap_or(MAX_FUNCTION_CALL_DEPTH),
+    )
+    .map_err(|reason| format!("max_function_call_depth: {reason}"))?;
     let options = FormatOptions {
         line_width: request.line_width,
         indent: request.indent.unwrap_or(DEFAULT_INDENT),
         token_widths: request.token_widths,
         parse: sqlquack_syntax::ParseOptions {
             complexity_guard: Some(sqlquack_syntax::ComplexityGuardOptions {
-                max_function_call_depth: request.max_function_call_depth,
+                max_function_call_depth: Some(max_function_call_depth),
                 ..Default::default()
             }),
         },
         ..FormatOptions::new(dialect)
     };
-    let sql = format_around_cte_macros(&request.sql, macros, &options)?;
+    let sql = format_around_cte_macros(&request.sql, macros, &options).map_err(|reason| {
+        call_depth_hint(
+            reason,
+            max_function_call_depth,
+            Some("max_function_call_depth"),
+        )
+    })?;
     if request.sql.contains(INTERPOLATION_PLACEHOLDER_PREFIX)
         && sql != request.sql
         && format_around_cte_macros(&sql, macros, &options)? != sql

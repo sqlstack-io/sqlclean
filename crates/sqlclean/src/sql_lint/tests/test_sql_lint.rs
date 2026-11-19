@@ -6,52 +6,6 @@ use crate::sql_lint::tests::{helpers, test_types};
 use crate::sql_tokens::main::query_fingerprint::query_fingerprint;
 
 #[test]
-fn given_production_function_depth_when_linting_then_bounded_parser_accepts_it() {
-    let test_cases = [test_types::FunctionDepthTestCase {
-        description: "production depth remains supported",
-        depth: 65,
-        expected_diagnostic_count: 0,
-    }];
-    for test_case in test_cases {
-        let sql = helpers::nested_function_sql(test_case.depth);
-        let diagnostics = helpers::diagnostics(&sql).unwrap_or_else(|error| {
-            panic!("{}: {error}", test_case.description);
-        });
-        assert_eq!(
-            diagnostics.len(),
-            test_case.expected_diagnostic_count,
-            "{}",
-            test_case.description
-        );
-    }
-}
-
-#[test]
-fn given_excessive_function_depth_when_linting_then_complexity_guard_rejects_it() {
-    let test_cases = [test_types::FunctionDepthFailureTestCase {
-        description: "excessive depth remains bounded",
-        depth: 129,
-        expected_code: "E_GUARD_FUNCTION_NESTING_DEPTH_EXCEEDED",
-        expected_limit: "configured limit 128",
-    }];
-    for test_case in test_cases {
-        let sql = helpers::nested_function_sql(test_case.depth);
-        let error =
-            helpers::diagnostics(&sql).expect_err("excessive nested calls should remain bounded");
-        assert!(
-            error.contains(test_case.expected_code),
-            "{}",
-            test_case.description
-        );
-        assert!(
-            error.contains(test_case.expected_limit),
-            "{}",
-            test_case.description
-        );
-    }
-}
-
-#[test]
 fn given_sql_cases_when_linting_then_diagnostics_match() -> Result<(), String> {
     let test_cases = [
         test_types::LintTestCase {

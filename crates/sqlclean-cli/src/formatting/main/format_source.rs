@@ -12,11 +12,10 @@ use crate::formatting::models::Formatted;
 pub fn format_source(
     text: &str,
     dialect: &str,
-    line_width: usize,
-    indent: usize,
+    (line_width, indent, max_function_call_depth): (usize, usize, usize),
 ) -> Result<Formatted, String> {
     let characters: Vec<char> = text.chars().collect();
-    let Some(mut boundaries) = statement_ends(text, dialect)? else {
+    let Some(mut boundaries) = statement_ends(text, dialect, Some(max_function_call_depth))? else {
         return Ok(Formatted::Unavailable(format!(
             "SQL formatting is unavailable for the {dialect} dialect: SQLQuack does not parse it yet"
         )));
@@ -29,7 +28,11 @@ pub fn format_source(
     for end in boundaries {
         let chunk: String = characters[start..end].iter().collect();
         start = end;
-        let formatted: String = match format_statement(chunk.trim(), dialect, line_width, indent)? {
+        let formatted: String = match format_statement(
+            chunk.trim(),
+            dialect,
+            (line_width, indent, max_function_call_depth),
+        )? {
             Formatted::Sql(sql) => sql,
             unavailable @ Formatted::Unavailable(_) => return Ok(unavailable),
         };
@@ -51,8 +54,7 @@ pub fn format_source(
 fn format_statement(
     sql: &str,
     dialect: &str,
-    line_width: usize,
-    indent: usize,
+    (line_width, indent, max_function_call_depth): (usize, usize, usize),
 ) -> Result<Formatted, String> {
     let request = FormatRequest {
         version: LINT_API_VERSION,
@@ -60,6 +62,7 @@ fn format_statement(
         dialect: dialect.to_owned(),
         line_width: Some(line_width),
         indent: Some(indent),
+        max_function_call_depth: Some(max_function_call_depth),
         ..FormatRequest::default()
     };
     let response: FormatResponse = format_requests(vec![request])

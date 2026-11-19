@@ -137,8 +137,9 @@ fn run_builtins(run: &BuiltinRun<'_>, mut cache: ResultCache) -> (Vec<Finding>, 
         .collect();
     let selection: String = codes.iter().cloned().collect::<Vec<String>>().join(",");
     let thresholds = run.config.rules.thresholds;
+    let depth: usize = run.config.max_function_call_depth;
     let limits: String = format!(
-        "{}:{}",
+        "{}:{}:{depth}",
         thresholds.max_literal_length, thresholds.max_ranking_order_by
     );
     let keys: Vec<String> = run
@@ -160,7 +161,9 @@ fn run_builtins(run: &BuiltinRun<'_>, mut cache: ResultCache) -> (Vec<Finding>, 
         .files
         .par_iter()
         .zip(cached)
-        .map(|(file, cached)| cached.unwrap_or_else(|| builtin_findings(file, &codes, thresholds)))
+        .map(|(file, cached)| {
+            cached.unwrap_or_else(|| builtin_findings(file, &codes, (thresholds, depth)))
+        })
         .collect();
     for ((file, key), found) in run.files.iter().zip(&keys).zip(&computed) {
         cache.put(key, Some(&file.path), found);

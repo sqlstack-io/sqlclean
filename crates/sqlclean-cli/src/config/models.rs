@@ -17,6 +17,8 @@ pub struct Config {
     pub line_width: usize,
     /// Spaces per indent step in formatted SQL.
     pub indent: usize,
+    /// Function calls nested deeper than this make a file unparseable.
+    pub max_function_call_depth: usize,
     pub rules: RulesConfig,
 }
 

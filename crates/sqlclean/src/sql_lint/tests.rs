@@ -10,6 +10,8 @@ mod empty_fixture_lint;
 mod format_corpus;
 #[path = "tests/test_function_call_spacing.rs"]
 mod function_call_spacing;
+#[path = "tests/test_function_depth.rs"]
+mod function_depth;
 #[path = "tests/helpers.rs"]
 mod helpers;
 #[path = "tests/test_layout_rules.rs"]
@@ -18,6 +20,8 @@ mod layout_rules;
 mod line_wrap;
 #[path = "tests/test_lint_exemptions.rs"]
 mod lint_exemptions;
+#[path = "tests/test_named_windows.rs"]
+mod named_windows;
 #[path = "tests/test_set_operation_formatter.rs"]
 mod set_operation_formatter;
 #[path = "tests/test_sql_lint.rs"]

@@ -21,6 +21,7 @@ applies.
 dialect = "duckdb"            # default "generic"
 include = ["**/*.sql"]
 exclude = ["vendor/**"]
+max_function_call_depth = 256 # nested function calls a file may hold
 
 [[dialects]]                  # a different dialect for some paths
 paths = ["warehouse/**"]
@@ -71,6 +72,7 @@ directory is the root.
 | `include` | `["**/*.sql"]` | Glob patterns of the files to read |
 | `exclude` | `[]` | Glob patterns of files never to read |
 | `[[dialects]]` | none | `paths` and `dialect`: a different dialect for matching files |
+| `max_function_call_depth` | `256` | The deepest function-call nesting SQLClean parses, from `1` to `512`; a file nested deeper is a `SQLCLEAN999` finding and is not formatted |
 | `[format] line_width` | `100` | The line width the formatter fills; see [Line width](formatting.md#line-width) |
 | `[format] indent` | `4` | Spaces per indent step, from `1` to `8`; see [Indent](formatting.md#indent) |
 | `[rules] select` | Rules enabled by default | Rule codes or prefixes to run |

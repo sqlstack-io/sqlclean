@@ -80,12 +80,13 @@ pub(crate) fn custom_findings(
     if misses.is_empty() {
         return Ok(findings);
     }
+    let depth: usize = evaluation.config.max_function_call_depth;
     let mut host_files: Vec<HostFile> = pending
         .into_par_iter()
-        .map(|(file, missing)| host_file(file, missing))
+        .map(|(file, missing)| host_file(file, missing, depth))
         .collect::<Result<_, _>>()?;
     if !missing_repository.is_empty() {
-        host_files = with_every_file(files, host_files)?;
+        host_files = with_every_file(files, host_files, depth)?;
     }
     let results: Vec<HostResult> =
         evaluate_on_hosts(evaluation, options, host_files, missing_repository)?;
@@ -188,8 +189,9 @@ fn file_key(
     ])
 }
 
-fn host_file(file: &SourceFile, rules: Vec<String>) -> Result<HostFile, String> {
-    let facts = file_facts(&file.text, &file.dialect)?;
+/// The file as a Rule host reads it, its facts parsed within the configured call-depth limit.
+fn host_file(file: &SourceFile, rules: Vec<String>, depth: usize) -> Result<HostFile, String> {
+    let facts = file_facts(&file.text, &file.dialect, Some(depth))?;
     if let Some(reason) = facts.unavailable {
         return Err(reason);
     }
@@ -206,10 +208,11 @@ fn host_file(file: &SourceFile, rules: Vec<String>) -> Result<HostFile, String> 
 fn with_every_file(
     files: &[&SourceFile],
     mut host_files: Vec<HostFile>,
+    depth: usize,
 ) -> Result<Vec<HostFile>, String> {
     for file in files {
         if !host_files.iter().any(|host| host.path == file.path) {
-            host_files.push(host_file(file, Vec::new())?);
+            host_files.push(host_file(file, Vec::new(), depth)?);
         }
     }
     host_files.sort_by(|left, right| left.path.cmp(&right.path));

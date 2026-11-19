@@ -10,6 +10,8 @@ import pytest
 
 from tests.e2e.src.sqlclean.hosting._test_types import (
     CacheTestCase,
+    CallDepthFormatTestCase,
+    CallDepthTestCase,
     CheckTestCase,
     IdempotencyTestCase,
     ManyFilesTestCase,
@@ -24,6 +26,7 @@ from tests.integration.src.sqlclean.rule_testing.helpers import SAMPLE_RULES
 DUCKDB: str = 'dialect = "duckdb"\n'
 MYSQL_FILES: str = DUCKDB + '[[dialects]]\npaths = ["mysql/**"]\ndialect = "mysql"\n'
 CROSS_JOIN_ONLY: str = DUCKDB + '[rules]\nselect = ["SQLCLEAN038"]\n'
+SNOWFLAKE_CROSS_JOIN_ONLY: str = 'dialect = "snowflake"\n[rules]\nselect = ["SQLCLEAN038"]\n'
 CUSTOM: str = (
     DUCKDB + '[rules]\nselect = ["XSQLCLEANNAME", "XSQLCLEANSTYLE"]\ncustom = ["sql_rules"]\n'
 )
@@ -177,6 +180,96 @@ def test_given_project_when_checking_then_reports_findings_and_exit_status(
         tuple(stale["relation"] for stale in report["stale_exceptions"]) == test_case.expected_stale
     )
     assert tuple(file["path"] for file in report["unavailable"]) == test_case.expected_unavailable
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        CallDepthTestCase(
+            description="the default limit refuses 300 nested calls and names the key that raises it",
+            config=SNOWFLAKE_CROSS_JOIN_ONLY,
+            expected_codes=("SQLCLEAN999",),
+            expected_message="raise max_function_call_depth, up to 512",
+        ),
+        CallDepthTestCase(
+            description="max_function_call_depth in sqlclean.toml lets 300 nested calls parse",
+            config="max_function_call_depth = 300\n" + SNOWFLAKE_CROSS_JOIN_ONLY,
+            expected_codes=(),
+            expected_message="",
+        ),
+        CallDepthTestCase(
+            description="custom Rules read 300 nested calls under max_function_call_depth = 300",
+            config="max_function_call_depth = 300\n" + CUSTOM,
+            expected_codes=("XSQLCLEANNAME001",),
+            expected_message="forbidden prefix",
+            relation="tmp_a",
+            files={"sql_rules/naming.py": SAMPLE_RULES},
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_deeply_nested_calls_when_checking_then_the_configured_depth_bounds_parsing(
+    tmp_path: Path, test_case: CallDepthTestCase
+) -> None:
+    nested: str = "lower(" * 300 + "name" + ")" * 300
+    write_project(
+        tmp_path,
+        config=test_case.config,
+        files={
+            "models/q.sql": f"SELECT {nested} AS n FROM {test_case.relation}\n",
+            **test_case.files,
+        },
+    )
+
+    completed: subprocess.CompletedProcess[str] = run(
+        tmp_path, "check", "--output-format", "json", environment={}
+    )
+    assert completed.returncode in (0, 1), completed.stderr
+    findings: list[dict[str, object]] = json.loads(completed.stdout)["findings"]
+
+    assert tuple(finding["code"] for finding in findings) == test_case.expected_codes, findings
+    assert all(test_case.expected_message in str(finding["message"]) for finding in findings)
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        CallDepthFormatTestCase(
+            description="the default limit leaves 300 nested calls as written and names the key",
+            config=DUCKDB,
+            expected_exits=(1, 1),
+            expected_start="select lower(lower(",
+            expected_message="raise max_function_call_depth, up to 512",
+        ),
+        CallDepthFormatTestCase(
+            description="max_function_call_depth = 300 formats 300 nested calls, and they stay formatted",
+            config="max_function_call_depth = 300\n" + DUCKDB,
+            expected_exits=(0, 0),
+            expected_start="SELECT\n    LOWER(\n        LOWER(\n",
+            expected_message="",
+        ),
+    ],
+    ids=lambda case: case.description,
+)
+def test_given_deeply_nested_calls_when_formatting_then_the_configured_depth_bounds_parsing(
+    tmp_path: Path, test_case: CallDepthFormatTestCase
+) -> None:
+    nested: str = "lower(" * 300 + "name" + ")" * 300
+    write_project(
+        tmp_path,
+        config=test_case.config,
+        files={"models/q.sql": f"select {nested} as n from a\n"},
+    )
+
+    formatted: subprocess.CompletedProcess[str] = run(tmp_path, "format", environment={})
+    rechecked: subprocess.CompletedProcess[str] = run(tmp_path, "format", "--check", environment={})
+    text: str = (tmp_path / "models/q.sql").read_text(encoding="utf-8")
+
+    assert (formatted.returncode, rechecked.returncode) == test_case.expected_exits, (
+        formatted.stderr
+    )
+    assert text.startswith(test_case.expected_start), text[:200]
+    assert test_case.expected_message in formatted.stdout + formatted.stderr
 
 
 @pytest.mark.parametrize(

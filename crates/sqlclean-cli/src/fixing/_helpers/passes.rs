@@ -27,7 +27,7 @@ pub(crate) fn fix_sources(
     while passes < MAX_FIX_PASSES {
         let outcome: CheckOutcome = check_sources(config, &files, options)?;
         let edits: BTreeMap<String, Vec<Edit>> = select_edits(&outcome.findings, unsafe_fixes);
-        let applied: usize = apply_pass(&mut files, &edits);
+        let applied: usize = apply_pass(&mut files, &edits, config.max_function_call_depth);
         if applied == 0 {
             break;
         }
@@ -36,7 +36,15 @@ pub(crate) fn fix_sources(
     }
     let mut format_refusals: Vec<(String, String)> = Vec::new();
     for file in &mut files {
-        match format_source(&file.text, &file.dialect, config.line_width, config.indent) {
+        match format_source(
+            &file.text,
+            &file.dialect,
+            (
+                config.line_width,
+                config.indent,
+                config.max_function_call_depth,
+            ),
+        ) {
             Ok(Formatted::Sql(formatted)) => file.text = formatted,
             Ok(Formatted::Unavailable(_)) => {}
             Err(reason) => format_refusals.push((file.path.clone(), reason)),
@@ -52,8 +60,12 @@ pub(crate) fn fix_sources(
     })
 }
 
-/// Apply each file's edits unless they turn parsing SQL into SQL that no longer parses.
-fn apply_pass(files: &mut [SourceFile], edits: &BTreeMap<String, Vec<Edit>>) -> usize {
+/// Apply each file's edits unless they turn parsing SQL into SQL that no longer parses within the call-depth limit.
+fn apply_pass(
+    files: &mut [SourceFile],
+    edits: &BTreeMap<String, Vec<Edit>>,
+    depth: usize,
+) -> usize {
     let mut applied: usize = 0;
     for file in files.iter_mut() {
         let Some(file_edits) = edits.get(&file.path) else {
@@ -64,8 +76,8 @@ fn apply_pass(files: &mut [SourceFile], edits: &BTreeMap<String, Vec<Edit>>) -> 
             continue;
         }
         if let (Ok(_), Err(_)) = (
-            file_facts(&file.text, &file.dialect),
-            file_facts(&fixed, &file.dialect),
+            file_facts(&file.text, &file.dialect, Some(depth)),
+            file_facts(&fixed, &file.dialect, Some(depth)),
         ) {
             continue;
         }

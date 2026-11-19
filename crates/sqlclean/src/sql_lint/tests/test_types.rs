@@ -88,6 +88,13 @@ pub(crate) struct DialectLintRuleTestCase {
     pub expected_reason: &'static str,
 }
 
+pub(crate) struct NamedWindowRankingTestCase {
+    pub description: &'static str,
+    pub sql: &'static str,
+    pub rule: &'static str,
+    pub expected_anchors: &'static [&'static str],
+}
+
 pub(crate) struct LineWrapTestCase {
     pub description: &'static str,
     pub sql: &'static str,
@@ -135,14 +142,9 @@ pub(crate) struct InvalidRuleTestCase {
 pub(crate) struct FunctionDepthTestCase {
     pub description: &'static str,
     pub depth: usize,
-    pub expected_diagnostic_count: usize,
-}
-
-pub(crate) struct FunctionDepthFailureTestCase {
-    pub description: &'static str,
-    pub depth: usize,
-    pub expected_code: &'static str,
-    pub expected_limit: &'static str,
+    pub max_function_call_depth: Option<usize>,
+    /// The limit the parse error names; `None` when the SQL parses.
+    pub expected_error: Option<&'static str>,
 }
 
 pub(crate) struct CrossJoinTestCase {

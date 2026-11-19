@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
+use sqlclean::sql_lint::constants::MAX_FUNCTION_CALL_DEPTH;
 
 use crate::reporting::models::OutputFormat;
 
@@ -94,6 +95,9 @@ pub struct RulesArgs {
 pub struct FactsArgs {
     #[arg(long, default_value = "generic")]
     pub dialect: String,
+    /// Most nested function calls the parser follows, from 1 to 512.
+    #[arg(long, default_value_t = MAX_FUNCTION_CALL_DEPTH)]
+    pub max_function_call_depth: usize,
 }
 
 #[derive(Debug, Args)]

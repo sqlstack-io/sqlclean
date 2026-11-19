@@ -1,4 +1,10 @@
 pub const LINT_API_VERSION: u32 = 1;
+/// Nested function calls a request accepts by default.
+pub const MAX_FUNCTION_CALL_DEPTH: usize =
+    sqlquack_parse::parsing::constants::MAX_FUNCTION_CALL_DEPTH;
+/// The most nested function calls a request may allow.
+pub const MAX_CALL_DEPTH_CEILING: usize =
+    sqlquack_parse::parsing::constants::MAX_CALL_DEPTH_CEILING;
 /// The dialect name SQLQuack lays out as Snowflake.
 pub(crate) const SNOWFLAKE_DIALECT: &str = "snowflake";
 /// The dialect name SQLQuack lays out as DuckDB.
