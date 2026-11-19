@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.10.0](https://github.com/sqlstack-io/sqlclean/compare/v0.9.7...v0.10.0) (2026-11-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* format requests without a depth were unbounded and are now bounded at 256; a depth above 512 is declined; parse_sql, file_facts and statement_ends take a max_function_call_depth argument.
+
+### Features
+
+* pin SQLQuack 0.21.0 and bound nested function calls by a configurable depth ([#92](https://github.com/sqlstack-io/sqlclean/issues/92)) ([17a5239](https://github.com/sqlstack-io/sqlclean/commit/17a52395b61ab4be40fac9288a0c99194dbc2432))
+
+
+### Documentation
+
+* link the Discord community from the README and website ([#89](https://github.com/sqlstack-io/sqlclean/issues/89)) ([d9ae846](https://github.com/sqlstack-io/sqlclean/commit/d9ae8463cf5bc7e1da33444a37e968e178ddb877))
+
 ## [0.9.7](https://github.com/sqlstack-io/sqlclean/compare/v0.9.6...v0.9.7) (2026-11-18)
 
 
