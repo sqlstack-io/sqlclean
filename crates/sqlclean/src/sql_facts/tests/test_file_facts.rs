@@ -209,33 +209,47 @@ FROM recent AS r LEFT JOIN customers AS c ON r.customer_id = c.customer_id",
 }
 
 #[test]
-fn given_comma_and_nested_joins_when_collecting_postgres_facts_then_joins_read_as_polyglot_did()
+fn given_comma_and_nested_joins_when_collecting_postgres_and_databricks_facts_then_joins_read_as_polyglot_did()
 -> Result<(), String> {
     let test_cases = [
         JoinFactsTestCase {
-            description: "a comma relation after an explicit join is an implicit join",
+            description: "postgres: a comma relation after an explicit join is an implicit join",
             sql: "SELECT * FROM a FULL JOIN b USING (x), c AS cc",
+            dialect: "postgres",
             expected_joins: &[
                 ("FULL", "b", true, "FULL JOIN b USING (x)"),
                 ("IMPLICIT", "c", false, "c AS cc"),
             ],
         },
         JoinFactsTestCase {
-            description: "a comma relation before the first join is not",
+            description: "postgres: each comma item keeps its own joins, and a later item is an implicit join",
+            sql: "SELECT * FROM a JOIN b ON true, c JOIN d ON true",
+            dialect: "postgres",
+            expected_joins: &[
+                ("INNER", "b", true, "JOIN b ON true"),
+                ("IMPLICIT", "c", false, "c"),
+                ("INNER", "d", true, "JOIN d ON true"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "postgres: a comma relation before the first join is not",
             sql: "SELECT * FROM a, b JOIN c ON true",
+            dialect: "postgres",
             expected_joins: &[("INNER", "c", true, "JOIN c ON true")],
         },
         JoinFactsTestCase {
-            description: "a join nested by its ON clauses reports both joins",
+            description: "postgres: a join nested by its ON clauses reports both joins",
             sql: "SELECT * FROM t2 LEFT JOIN t3 FULL JOIN t4 ON false ON false",
+            dialect: "postgres",
             expected_joins: &[
                 ("LEFT", "t3", true, "LEFT JOIN t3"),
                 ("FULL", "t4", true, "FULL JOIN t4 ON false ON false"),
             ],
         },
         JoinFactsTestCase {
-            description: "a parenthesized join group reports only the join to it",
+            description: "postgres: a parenthesized join group reports only the join to it",
             sql: "SELECT * FROM t1 LEFT JOIN (t2 LEFT JOIN t3 ON true) ON true",
+            dialect: "postgres",
             expected_joins: &[(
                 "LEFT",
                 "",
@@ -243,9 +257,105 @@ fn given_comma_and_nested_joins_when_collecting_postgres_facts_then_joins_read_a
                 "LEFT JOIN (t2 LEFT JOIN t3 ON true) ON true",
             )],
         },
+        JoinFactsTestCase {
+            description: "databricks: a comma relation after an explicit join is an implicit join",
+            sql: "SELECT * FROM a FULL JOIN b USING (x), c AS cc",
+            dialect: "databricks",
+            expected_joins: &[
+                ("FULL", "b", true, "FULL JOIN b USING (x)"),
+                ("IMPLICIT", "c", false, "c AS cc"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "databricks: each comma item keeps its own joins, and a later item is an implicit join",
+            sql: "SELECT * FROM a JOIN b ON true, c JOIN d ON true",
+            dialect: "databricks",
+            expected_joins: &[
+                ("INNER", "b", true, "JOIN b ON true"),
+                ("IMPLICIT", "c", false, "c"),
+                ("INNER", "d", true, "JOIN d ON true"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "databricks: a comma relation before the first join is not",
+            sql: "SELECT * FROM a, b JOIN c ON true",
+            dialect: "databricks",
+            expected_joins: &[("INNER", "c", true, "JOIN c ON true")],
+        },
+        JoinFactsTestCase {
+            description: "databricks: a parenthesized join group reports only the join to it",
+            sql: "SELECT * FROM t1 LEFT JOIN (t2 LEFT JOIN t3 ON true) ON true",
+            dialect: "databricks",
+            expected_joins: &[(
+                "LEFT",
+                "",
+                true,
+                "LEFT JOIN (t2 LEFT JOIN t3 ON true) ON true",
+            )],
+        },
+        JoinFactsTestCase {
+            description: "postgres: a comma item whose relation is a table function keeps its joins",
+            sql: "SELECT * FROM a, unnest(arr) u JOIN b ON true",
+            dialect: "postgres",
+            expected_joins: &[("INNER", "b", true, "JOIN b ON true")],
+        },
+        JoinFactsTestCase {
+            description: "postgres: a comma item that opens with a parenthesized group keeps the joins after it",
+            sql: "SELECT * FROM a, (b JOIN c ON true) JOIN d ON true",
+            dialect: "postgres",
+            expected_joins: &[("INNER", "d", true, "JOIN d ON true")],
+        },
+        JoinFactsTestCase {
+            description: "postgres: a comma item headed by a subquery is not an implicit join of its own join",
+            sql: "SELECT * FROM a JOIN b ON true, (SELECT 1) s JOIN c ON true",
+            dialect: "postgres",
+            expected_joins: &[
+                ("INNER", "b", true, "JOIN b ON true"),
+                ("INNER", "c", true, "JOIN c ON true"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "postgres: a wholly parenthesized comma item is an unnamed implicit join",
+            sql: "SELECT * FROM a JOIN x ON true, (b JOIN c ON true)",
+            dialect: "postgres",
+            expected_joins: &[
+                ("INNER", "x", true, "JOIN x ON true"),
+                ("IMPLICIT", "", false, "b"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "databricks: a comma item whose relation is a table function keeps its joins",
+            sql: "SELECT * FROM a, unnest(arr) u JOIN b ON true",
+            dialect: "databricks",
+            expected_joins: &[("INNER", "b", true, "JOIN b ON true")],
+        },
+        JoinFactsTestCase {
+            description: "databricks: a comma item that opens with a parenthesized group keeps the joins after it",
+            sql: "SELECT * FROM a, (b JOIN c ON true) JOIN d ON true",
+            dialect: "databricks",
+            expected_joins: &[("INNER", "d", true, "JOIN d ON true")],
+        },
+        JoinFactsTestCase {
+            description: "databricks: a comma item headed by a subquery is not an implicit join of its own join",
+            sql: "SELECT * FROM a JOIN b ON true, (SELECT 1) s JOIN c ON true",
+            dialect: "databricks",
+            expected_joins: &[
+                ("INNER", "b", true, "JOIN b ON true"),
+                ("INNER", "c", true, "JOIN c ON true"),
+            ],
+        },
+        JoinFactsTestCase {
+            description: "databricks: a wholly parenthesized comma item is an unnamed implicit join",
+            sql: "SELECT * FROM a JOIN x ON true, (b JOIN c ON true)",
+            dialect: "databricks",
+            expected_joins: &[
+                ("INNER", "x", true, "JOIN x ON true"),
+                ("IMPLICIT", "", false, "b"),
+            ],
+        },
     ];
     for test_case in &test_cases {
-        let facts: FileFacts = file_facts(test_case.sql, "postgres", None)?;
+        let facts: FileFacts = file_facts(test_case.sql, test_case.dialect, None)?;
         let joins: Vec<(&str, &str, bool, String)> = facts.statements[0]
             .joins
             .iter()

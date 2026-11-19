@@ -138,7 +138,9 @@ println!("{}", format_json(request)?);
 before the `sqlclean` command chose four; pass `"indent": 4` to match `sqlclean format`.
 
 `max_function_call_depth` bounds nested function calls as it does in a lint request: `256` by
-default, at most `512`.
+default. The maximum is 512. The statement and every expression around the calls also count toward
+that limit, so at 512 a bare SELECT can nest at most 511 calls, and fewer fit inside an alias,
+comparison or CTE.
 
 When the formatter cannot format the SQL, `formatted` is `false`, `sql` is the input unchanged,
 and `reason` says why.

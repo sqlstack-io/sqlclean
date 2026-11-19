@@ -33,6 +33,27 @@ class CallDepthTestCase:
 
 
 @dataclass(frozen=True)
+class DepthAcceptedTestCase:
+    """A configuration under which SQL nested up to a limit is checked and formatted."""
+
+    description: str
+    config: str
+    sql: str
+    expected_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DepthRefusedTestCase:
+    """A dialect and a configuration under which SQL nested past a limit is refused, and how."""
+
+    description: str
+    config: str
+    sql: str
+    expected_message: str
+    expected_ceiling_notes: int
+
+
+@dataclass(frozen=True)
 class CallDepthFormatTestCase:
     """A configuration and what formatting 300 nested function calls twice must give."""
 

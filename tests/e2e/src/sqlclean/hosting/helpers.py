@@ -43,3 +43,15 @@ def run(
         check=False,
         env={**os.environ, **environment},
     )
+
+
+def nested_calls(depth: int) -> str:
+    """Return depth nested calls around one column."""
+
+    return "lower(" * depth + "name" + ")" * depth
+
+
+def union_all(operands: int) -> str:
+    """Return operands selects joined by UNION ALL: deep nesting without any call."""
+
+    return " union all ".join(f"select {index} as n" for index in range(operands))

@@ -10,6 +10,7 @@ Online: https://sqlclean.io/docs/configuration/
 
 - Finding the file
 - Keys
+- Nesting limit
 - Choosing files
 - Dialects
 - Validation
@@ -72,7 +73,7 @@ directory is the root.
 | `include` | `["**/*.sql"]` | Glob patterns of the files to read |
 | `exclude` | `[]` | Glob patterns of files never to read |
 | `[[dialects]]` | none | `paths` and `dialect`: a different dialect for matching files |
-| `max_function_call_depth` | `256` | The deepest function-call nesting SQLClean parses, from `1` to `512`; a file nested deeper is a `SQLCLEAN999` finding and is not formatted |
+| `max_function_call_depth` | `256` | The deepest function-call nesting SQLClean parses, from `1` to `512`; see [Nesting limit](#nesting-limit) |
 | `[format] line_width` | `100` | The line width the formatter fills; see [Line width](formatting.md#line-width) |
 | `[format] indent` | `4` | Spaces per indent step, from `1` to `8`; see [Indent](formatting.md#indent) |
 | `[rules] select` | Rules enabled by default | Rule codes or prefixes to run |
@@ -85,6 +86,18 @@ directory is the root.
 | `[[rules.rule_ignores]]` | none | Rules that do not apply to some paths; see [Path ignores](rules/overview.md#path-ignores) |
 
 Selection, exceptions and ignores are described in [Rules](rules/overview.md).
+
+## Nesting limit
+
+`max_function_call_depth` sets how deeply function calls may nest. A file nested deeper is a
+`SQLCLEAN999` finding, and `format` leaves it as written. Below 512 the message names the key.
+
+The maximum is 512. The statement and every expression around the calls also count toward that
+limit, so at 512 a bare SELECT can nest at most 511 calls, and fewer fit inside an alias, comparison
+or CTE.
+
+A statement nested more than 512 levels deep is refused the same way in every dialect `check` reads,
+whatever the setting and even without function calls, for example 600 `UNION ALL` operands.
 
 ## Choosing files
 

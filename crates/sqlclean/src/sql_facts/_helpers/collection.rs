@@ -239,7 +239,15 @@ fn node_joins<'a>(node: &'a Expression, tokens: &[Token]) -> Vec<&'a Join> {
         return Vec::new();
     };
     let mut joins: Vec<&Join> = Vec::new();
-    let mut pending: Vec<&Join> = select.joins.iter().rev().collect();
+    let mut pending: Vec<&Join> = select
+        .joins
+        .iter()
+        .chain(from_item_joins(
+            select.from.iter().flat_map(|from| &from.expressions),
+            tokens,
+        ))
+        .collect();
+    pending.reverse();
     while let Some(join) = pending.pop() {
         joins.push(join);
         if let Expression::JoinedTable(joined) = &join.this
@@ -251,12 +259,72 @@ fn node_joins<'a>(node: &'a Expression, tokens: &[Token]) -> Vec<&'a Join> {
     joins
 }
 
+/// The joins each item of a FROM list of several items keeps with it, unless the item is written in parentheses.
+fn from_item_joins<'a>(
+    items: impl Iterator<Item = &'a Expression>,
+    tokens: &[Token],
+) -> impl Iterator<Item = &'a Join> {
+    items
+        .filter_map(|item| match item {
+            Expression::JoinedTable(joined) if !parenthesized_item(joined, tokens) => {
+                Some(joined.joins.iter())
+            }
+            _ => None,
+        })
+        .flatten()
+}
+
+/// Whether a FROM item is written inside one pair of parentheses, which closes after its last join.
+fn parenthesized_item(joined: &JoinedTable, tokens: &[Token]) -> bool {
+    let (Some(first), Some(last)) = (
+        located_spans(&joined.left)
+            .chain(joined.joins.iter().flat_map(join_spans))
+            .map(|span| span.start)
+            .min(),
+        joined
+            .joins
+            .iter()
+            .flat_map(join_spans)
+            .map(|span| span.end)
+            .max(),
+    ) else {
+        return false;
+    };
+    tokens
+        .iter()
+        .rposition(|token| token.span.end <= first)
+        .filter(|&open| tokens[open].token_type == TokenType::LParen)
+        .and_then(|open| closing_parenthesis(tokens, open))
+        .is_some_and(|close| last <= close.start)
+}
+
+/// The spans of the tables and columns a join names in its relation and its ON clause.
+fn join_spans(join: &Join) -> impl Iterator<Item = Span> + '_ {
+    located_spans(&join.this).chain(join.on.iter().flat_map(located_spans))
+}
+
+/// The span of the `)` that closes the `(` at `open`.
+fn closing_parenthesis(tokens: &[Token], open: usize) -> Option<Span> {
+    let mut depth: usize = 0;
+    for token in &tokens[open..] {
+        match token.token_type {
+            TokenType::LParen => depth += 1,
+            TokenType::RParen => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(token.span);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 /// Whether the `(` after a join group's JOIN keyword closes after everything the group names.
 fn parenthesized(joined: &JoinedTable, tokens: &[Token]) -> bool {
     let spans: Vec<Span> = located_spans(&joined.left)
-        .chain(joined.joins.iter().flat_map(|join| {
-            located_spans(&join.this).chain(join.on.iter().flat_map(located_spans))
-        }))
+        .chain(joined.joins.iter().flat_map(join_spans))
         .collect();
     let (Some(first), Some(last)) = (
         spans.iter().map(|span| span.start).min(),
@@ -278,20 +346,7 @@ fn parenthesized(joined: &JoinedTable, tokens: &[Token]) -> bool {
     else {
         return false;
     };
-    let mut depth: usize = 0;
-    for token in &tokens[open..] {
-        match token.token_type {
-            TokenType::LParen => depth += 1,
-            TokenType::RParen => {
-                depth -= 1;
-                if depth == 0 {
-                    return last <= token.span.start;
-                }
-            }
-            _ => {}
-        }
-    }
-    false
+    closing_parenthesis(tokens, open).is_some_and(|close| last <= close.start)
 }
 
 /// The spans of the tables and columns `expression` names.
@@ -308,14 +363,24 @@ fn implicit_join_nodes(node: &Expression, tokens: &[Token], characters: &[char])
     let Expression::Select(select) = node else {
         return Vec::new();
     };
-    let (Some(from), Some(first_join)) = (
-        select.from.as_ref(),
-        select.joins.first().and_then(|join| first_span(&join.this)),
-    ) else {
+    let Some(from) = select.from.as_ref() else {
+        return Vec::new();
+    };
+    let Some(first_join) = select
+        .joins
+        .iter()
+        .chain(from_item_joins(from.expressions.iter(), tokens))
+        .filter_map(|join| first_span(&join.this))
+        .min_by_key(|span| span.start)
+    else {
         return Vec::new();
     };
     let mut joins: Vec<JoinNode> = Vec::new();
-    for relation in &from.expressions {
+    for item in &from.expressions {
+        let relation: &Expression = match item {
+            Expression::JoinedTable(joined) if !parenthesized_item(joined, tokens) => &joined.left,
+            _ => item,
+        };
         let Some(span) = first_span(relation).filter(|span| span.start > first_join.start) else {
             continue;
         };
