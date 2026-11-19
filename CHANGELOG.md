@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.11.0](https://github.com/sqlstack-io/sqlclean/compare/v0.10.0...v0.11.0) (2026-11-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* Postgres, BigQuery and Databricks files nested more than 512 levels deep, such as 600 UNION ALL operands, are now a SQLCLEAN999 finding and are left as written by format.
+
+### Features
+
+* pin SQLQuack 0.22.0 and document the 512 nesting ceiling ([#93](https://github.com/sqlstack-io/sqlclean/issues/93)) ([3af2a20](https://github.com/sqlstack-io/sqlclean/commit/3af2a20951973080ab5f9d8753c1ca4826dc2346))
+
 ## [0.10.0](https://github.com/sqlstack-io/sqlclean/compare/v0.9.7...v0.10.0) (2026-11-19)
 
 
