@@ -33,6 +33,17 @@ class CallDepthTestCase:
 
 
 @dataclass(frozen=True)
+class CallDepthFormatTestCase:
+    """A configuration and what formatting 300 nested function calls twice must give."""
+
+    description: str
+    config: str
+    expected_exits: tuple[int, int]
+    expected_start: str
+    expected_message: str
+
+
+@dataclass(frozen=True)
 class RewriteTestCase:
     """A project, a fix or format invocation and the file contents it must leave."""
 

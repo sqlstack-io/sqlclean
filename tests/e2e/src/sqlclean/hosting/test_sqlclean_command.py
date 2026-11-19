@@ -10,6 +10,7 @@ import pytest
 
 from tests.e2e.src.sqlclean.hosting._test_types import (
     CacheTestCase,
+    CallDepthFormatTestCase,
     CallDepthTestCase,
     CheckTestCase,
     IdempotencyTestCase,
@@ -230,13 +231,33 @@ def test_given_deeply_nested_calls_when_checking_then_the_configured_depth_bound
     assert all(test_case.expected_message in str(finding["message"]) for finding in findings)
 
 
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        CallDepthFormatTestCase(
+            description="the default limit leaves 300 nested calls as written and names the key",
+            config=DUCKDB,
+            expected_exits=(1, 1),
+            expected_start="select lower(lower(",
+            expected_message="raise max_function_call_depth, up to 512",
+        ),
+        CallDepthFormatTestCase(
+            description="max_function_call_depth = 300 formats 300 nested calls, and they stay formatted",
+            config="max_function_call_depth = 300\n" + DUCKDB,
+            expected_exits=(0, 0),
+            expected_start="SELECT\n    LOWER(\n        LOWER(\n",
+            expected_message="",
+        ),
+    ],
+    ids=lambda case: case.description,
+)
 def test_given_deeply_nested_calls_when_formatting_then_the_configured_depth_bounds_parsing(
-    tmp_path: Path,
+    tmp_path: Path, test_case: CallDepthFormatTestCase
 ) -> None:
     nested: str = "lower(" * 300 + "name" + ")" * 300
     write_project(
         tmp_path,
-        config="max_function_call_depth = 300\n" + DUCKDB,
+        config=test_case.config,
         files={"models/q.sql": f"select {nested} as n from a\n"},
     )
 
@@ -244,8 +265,11 @@ def test_given_deeply_nested_calls_when_formatting_then_the_configured_depth_bou
     rechecked: subprocess.CompletedProcess[str] = run(tmp_path, "format", "--check", environment={})
     text: str = (tmp_path / "models/q.sql").read_text(encoding="utf-8")
 
-    assert (formatted.returncode, rechecked.returncode) == (0, 0), formatted.stderr
-    assert text.startswith("SELECT\n    LOWER(\n        LOWER(\n"), text[:200]
+    assert (formatted.returncode, rechecked.returncode) == test_case.expected_exits, (
+        formatted.stderr
+    )
+    assert text.startswith(test_case.expected_start), text[:200]
+    assert test_case.expected_message in formatted.stdout + formatted.stderr
 
 
 @pytest.mark.parametrize(
