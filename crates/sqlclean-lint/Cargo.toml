@@ -26,6 +26,7 @@ shared-statements = ["shared-parser"]
 
 [dependencies]
 rayon.workspace = true
+sqlclean-rules.workspace = true
 rustc-hash.workspace = true
 serde.workspace = true
 serde_json.workspace = true

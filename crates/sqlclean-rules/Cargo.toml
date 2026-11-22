@@ -1,0 +1,17 @@
+[package]
+name = "sqlclean-rules"
+version.workspace = true
+description = "SQLClean's built-in Rules over SQLQuack's located syntax trees."
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# A Rule is handed a tree and never SQL or tokens. Keep every parser out of these dependencies: a
+# Rule that needs one is missing a fact or a position, which belongs in SQLQuack.
+[dependencies]
+sqlquack-syntax.workspace = true
+
+[lints]
+workspace = true

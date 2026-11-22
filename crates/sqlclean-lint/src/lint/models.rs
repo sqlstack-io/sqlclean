@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
+use sqlclean_rules::models::RuleFinding;
 use sqlquack_syntax::Expression;
 use sqlquack_syntax::tokens::models::{Span, Token};
 
@@ -24,21 +25,14 @@ pub struct ParsedSql {
     pub statements: Vec<Expression>,
 }
 
-/// A finding anchored on the tree, with the edit its Rule can make there.
-#[derive(Debug)]
-pub(crate) struct AnchoredFinding {
-    pub(crate) span: Span,
-    pub(crate) fix: Option<LintEdit>,
-}
-
 #[derive(Debug, Default)]
 pub(crate) struct QueryFacts {
     pub null_comparisons: Vec<Span>,
-    pub implicit_cartesian_joins: Vec<AnchoredFinding>,
-    pub joins_without_condition: Vec<AnchoredFinding>,
+    pub implicit_cartesian_joins: Vec<RuleFinding>,
+    pub joins_without_condition: Vec<RuleFinding>,
     pub unordered_limits: Vec<Span>,
     pub redundant_distincts: Vec<Span>,
-    pub positional_set_stars: Vec<Span>,
+    pub positional_set_stars: Vec<RuleFinding>,
     pub unused_cte_names: Vec<String>,
     pub cross_joins: Vec<Span>,
     pub cte_only_bodies: Vec<Span>,
@@ -64,7 +58,7 @@ pub(crate) struct AdditionalQueryFacts {
     pub count_one_literals: Vec<Span>,
     pub unstable_row_numbers: Vec<Span>,
     pub null_not_in_predicates: Vec<Span>,
-    pub set_arity_mismatches: Vec<Span>,
+    pub set_arity_mismatches: Vec<RuleFinding>,
     pub projected_stars: Vec<Span>,
     pub unaliased_calculations: Vec<Span>,
     pub unused_table_aliases: Vec<Span>,

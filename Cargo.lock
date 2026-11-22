@@ -619,7 +619,15 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlclean-lint",
+ "sqlclean-rules",
  "sqlquack-parse",
+ "sqlquack-syntax",
+]
+
+[[package]]
+name = "sqlclean-rules"
+version = "0.11.1"
+dependencies = [
  "sqlquack-syntax",
 ]
 

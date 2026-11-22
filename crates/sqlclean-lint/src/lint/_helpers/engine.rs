@@ -2,6 +2,7 @@ use crate::lint::models::LintDialect;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 
+use sqlclean_rules::models::{RuleFinding, RuleInput};
 use sqlquack_syntax::expressions::queries::models::With;
 use sqlquack_syntax::tokens::models::{Span, Token, TokenType};
 use sqlquack_syntax::{Expression, ExpressionWalk};
@@ -18,12 +19,11 @@ use crate::lint::_helpers::additional::collect_additional_facts;
 use crate::lint::_helpers::inline_relations::collect_inline_query_relation_spans;
 use crate::lint::_helpers::join_predicates::cross_join_diagnostics;
 use crate::lint::_helpers::parsing::parse;
+use crate::lint::_helpers::rule_edits::rendered;
 use crate::lint::_helpers::terminal_shape::{
     collect_terminal_shape_facts, first_row_selection_clause, limits_to_no_rows,
     projects_only_constants,
 };
-use crate::lint::_helpers::tree_joins::{implicit_joins, joins_without_condition};
-use crate::lint::_helpers::tree_set_operations::{arity_mismatches, positional_stars};
 
 const NULL_COMPARISON: LintRuleMetadata = LintRuleMetadata {
     code: "SQLCLEAN001",
@@ -545,10 +545,13 @@ fn build_facts(
             fixture_harness: options.fixture_harness,
         },
     );
-    facts.implicit_cartesian_joins = implicit_joins(expressions, tokens, sql);
-    facts.joins_without_condition = joins_without_condition(expressions);
-    facts.positional_set_stars = positional_stars(expressions);
-    facts.additional.set_arity_mismatches = arity_mismatches(expressions);
+    let input: RuleInput<'_> = RuleInput {
+        statements: expressions,
+    };
+    facts.implicit_cartesian_joins = sqlclean_rules::implicit_joins(&input);
+    facts.joins_without_condition = sqlclean_rules::joins_without_condition(&input);
+    facts.positional_set_stars = sqlclean_rules::positional_stars(&input);
+    facts.additional.set_arity_mismatches = sqlclean_rules::arity_mismatches(&input);
     for expression in expressions {
         facts
             .unused_cte_names
@@ -1064,14 +1067,6 @@ fn unused_cte_fix(sql: &str, tokens: &[Token], name_span: Span) -> Option<LintEd
     })
 }
 
-/// Where the first text after character `end` begins, past layout and comments.
-pub(super) fn next_text_start(tokens: &[Token], end: usize) -> Option<usize> {
-    tokens
-        .iter()
-        .find(|token| token.span.start >= end && !is_layout(token) && !is_comment(token))
-        .map(|token| token.span.start)
-}
-
 fn token_index_for_span(tokens: &[Token], span: Span) -> Option<usize> {
     tokens.iter().position(|token| token.span == span)
 }
@@ -1126,24 +1121,20 @@ fn core_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
         }));
     }
     if enabled.contains(IMPLICIT_CARTESIAN_JOIN.code) {
-        diagnostics.extend(facts.implicit_cartesian_joins.iter().map(|finding| {
-            diagnostic(
-                &IMPLICIT_CARTESIAN_JOIN,
-                Some(finding.span),
-                finding.fix.clone(),
-                Some("mixed joins, comments, or generated SQL require an explicit authored repair"),
-            )
-        }));
+        diagnostics.extend(rule_diagnostics(
+            &IMPLICIT_CARTESIAN_JOIN,
+            &facts.implicit_cartesian_joins,
+            sql,
+            Some("mixed joins, comments, or generated SQL require an explicit authored repair"),
+        ));
     }
     if enabled.contains(JOIN_WITHOUT_CONDITION.code) {
-        diagnostics.extend(facts.joins_without_condition.iter().map(|finding| {
-            diagnostic(
-                &JOIN_WITHOUT_CONDITION,
-                Some(finding.span),
-                finding.fix.clone(),
-                Some("qualified joins or joins with placeholder conditions require user intent"),
-            )
-        }));
+        diagnostics.extend(rule_diagnostics(
+            &JOIN_WITHOUT_CONDITION,
+            &facts.joins_without_condition,
+            sql,
+            Some("qualified joins or joins with placeholder conditions require user intent"),
+        ));
     }
     if enabled.contains(UNORDERED_LIMIT.code) {
         diagnostics.extend(diagnostics_for_spans(
@@ -1174,9 +1165,10 @@ fn core_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
         }));
     }
     if enabled.contains(POSITIONAL_SET_STAR.code) {
-        diagnostics.extend(diagnostics_for_spans(
+        diagnostics.extend(rule_diagnostics(
             &POSITIONAL_SET_STAR,
             &facts.positional_set_stars,
+            sql,
             Some(
                 "column names and their intended positional order require resolved schema evidence",
             ),
@@ -1314,9 +1306,10 @@ fn additional_relation_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintD
         ));
     }
     if enabled.contains(SET_ARITY_MISMATCH.code) {
-        diagnostics.extend(diagnostics_for_spans(
+        diagnostics.extend(rule_diagnostics(
             &SET_ARITY_MISMATCH,
             &facts.additional.set_arity_mismatches,
+            sql,
             Some("the intended branch schema requires user intent"),
         ));
     }
@@ -1579,6 +1572,22 @@ fn diagnostics_for_spans(
     spans
         .iter()
         .map(|span| diagnostic(rule, Some(*span), None, fix_unavailable_reason))
+        .collect()
+}
+
+/// The diagnostics of one tree Rule's findings, their edits rendered on `sql`.
+fn rule_diagnostics(
+    rule: &LintRuleMetadata,
+    findings: &[RuleFinding],
+    sql: &str,
+    fix_unavailable_reason: Option<&'static str>,
+) -> Vec<LintDiagnostic> {
+    findings
+        .iter()
+        .map(|finding| {
+            let fix: Option<LintEdit> = finding.fix.as_ref().and_then(|edit| rendered(edit, sql));
+            diagnostic(rule, Some(finding.span), fix, fix_unavailable_reason)
+        })
         .collect()
 }
 

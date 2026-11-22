@@ -32,7 +32,9 @@ VERSION_PATHS: tuple[str, ...] = (
 )
 # Files that may not exist before the first release.
 OPTIONAL_BASE_PATHS: frozenset[str] = frozenset({CHANGELOG_PATH})
-OWNED_CARGO_PACKAGES: frozenset[str] = frozenset({"sqlclean", "sqlclean-cli", "sqlclean-lint"})
+OWNED_CARGO_PACKAGES: frozenset[str] = frozenset(
+    {"sqlclean", "sqlclean-cli", "sqlclean-lint", "sqlclean-rules"}
+)
 OWNED_UV_PACKAGES: frozenset[str] = frozenset({"sqlclean", "sqlclean-cli"})
 ALLOWED_PATHS: frozenset[str] = frozenset((*VERSION_PATHS, CHANGELOG_PATH))
 # The TOML table holding the owned version field in each manifest.

@@ -63,6 +63,27 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
             expected_findings: Ok(&[]),
         },
         RulePinTestCase {
+            description: "the fix before a name of one character",
+            rule: "SQLCLEAN002",
+            dialects: &["snowflake", "postgres"],
+            sql: "SELECT a.id FROM a, b",
+            expected_findings: Ok(&[(",", Some("SELECT a.id FROM a CROSS JOIN b"))]),
+        },
+        RulePinTestCase {
+            description: "the fix before a name of three-byte characters",
+            rule: "SQLCLEAN002",
+            dialects: &["snowflake", "postgres"],
+            sql: "SELECT a.id FROM a, 注文",
+            expected_findings: Ok(&[(",", Some("SELECT a.id FROM a CROSS JOIN 注文"))]),
+        },
+        RulePinTestCase {
+            description: "no fix over a comment after the comma",
+            rule: "SQLCLEAN002",
+            dialects: &["snowflake", "postgres"],
+            sql: "SELECT a.id FROM a, -- every pair\nb",
+            expected_findings: Ok(&[(",", None)]),
+        },
+        RulePinTestCase {
             description: "the comma between named windows",
             rule: "SQLCLEAN002",
             dialects: &["duckdb", "postgres"],
