@@ -209,3 +209,14 @@ pub(crate) struct LintRefusalTestCase {
     pub(crate) dialect: &'static str,
     pub(crate) expected_refusal: &'static str,
 }
+
+/// One Rule on one SQL text, read the same in each listed dialect.
+pub(crate) struct RulePinTestCase {
+    pub(crate) description: &'static str,
+    pub(crate) rule: &'static str,
+    pub(crate) dialects: &'static [&'static str],
+    pub(crate) sql: &'static str,
+    /// Each finding's anchored text and the SQL after its fix, or how the refusal begins.
+    pub(crate) expected_findings:
+        Result<&'static [(&'static str, Option<&'static str>)], &'static str>,
+}

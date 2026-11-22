@@ -176,3 +176,34 @@ pub(crate) fn fixture_harness() -> Value {
         "empty_relation": "__empty_fixture",
     })
 }
+
+/// Each finding of `rule` on `sql`: its anchored text, and the SQL once its fix is applied.
+pub(crate) fn pinned_findings(
+    sql: &str,
+    dialect: &str,
+    rule: &str,
+) -> Result<Vec<(String, Option<String>)>, String> {
+    let found: Vec<Value> = diagnostics_for_dialect(sql, dialect, &[rule])
+        .map_err(|error| error.chars().take(100).collect::<String>())?;
+    Ok(found
+        .iter()
+        .map(|finding| (spanned_text(sql, finding), fixed_sql(sql, &finding["fix"])))
+        .collect())
+}
+
+fn spanned_text(sql: &str, finding: &Value) -> String {
+    let start: usize = finding["start"].as_u64().unwrap_or_default() as usize;
+    let end: usize = finding["end"].as_u64().unwrap_or_default() as usize;
+    sql.chars()
+        .skip(start)
+        .take(end.saturating_sub(start))
+        .collect()
+}
+
+fn fixed_sql(sql: &str, fix: &Value) -> Option<String> {
+    let start: usize = fix["start"].as_u64()? as usize;
+    let end: usize = fix["end"].as_u64()? as usize;
+    let head: String = sql.chars().take(start).collect();
+    let tail: String = sql.chars().skip(end).collect();
+    Some(format!("{head}{}{tail}", fix["replacement"].as_str()?))
+}

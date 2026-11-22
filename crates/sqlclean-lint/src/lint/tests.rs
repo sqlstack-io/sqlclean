@@ -16,6 +16,10 @@ mod keyword_aliases;
 mod lint_exemptions;
 #[path = "tests/test_long_chains.rs"]
 mod long_chains;
+#[path = "tests/test_rule_misreads.rs"]
+mod rule_misreads;
+#[path = "tests/test_rule_pins.rs"]
+mod rule_pins;
 #[path = "tests/test_sql_lint.rs"]
 mod sql_lint;
 #[path = "tests/test_types.rs"]
