@@ -584,9 +584,9 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sqlclean-lint",
  "sqlquack-fingerprint",
  "sqlquack-format",
- "sqlquack-lint",
  "sqlquack-parse",
  "sqlquack-syntax",
  "sqlquack-syntax-sqlserver",
@@ -608,6 +608,19 @@ dependencies = [
  "sqlclean",
  "tempfile",
  "toml",
+]
+
+[[package]]
+name = "sqlclean-lint"
+version = "0.11.1"
+dependencies = [
+ "rayon",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "sqlclean-lint",
+ "sqlquack-parse",
+ "sqlquack-syntax",
 ]
 
 [[package]]
@@ -635,19 +648,6 @@ name = "sqlquack-format"
 version = "0.22.1"
 source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed#fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed"
 dependencies = [
- "serde_json",
- "sqlquack-parse",
- "sqlquack-syntax",
-]
-
-[[package]]
-name = "sqlquack-lint"
-version = "0.22.1"
-source = "git+https://github.com/sqlstack-io/sqlquack.git?rev=fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed#fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed"
-dependencies = [
- "rayon",
- "rustc-hash",
- "serde",
  "serde_json",
  "sqlquack-parse",
  "sqlquack-syntax",

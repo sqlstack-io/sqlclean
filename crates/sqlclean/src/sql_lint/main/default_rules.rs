@@ -2,5 +2,5 @@
 
 /// The codes enabled when no Rule selection is given.
 pub fn default_rules() -> Vec<&'static str> {
-    sqlquack_lint::default_rules()
+    sqlclean_lint::default_rules()
 }

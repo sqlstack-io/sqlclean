@@ -14,9 +14,9 @@ default = []
 test-support = []
 
 [dependencies]
+sqlclean-lint.workspace = true
 sqlquack-fingerprint.workspace = true
 sqlquack-format.workspace = true
-sqlquack-lint.workspace = true
 sqlquack-parse.workspace = true
 sqlquack-syntax.workspace = true
 sqlquack-syntax-sqlserver.workspace = true

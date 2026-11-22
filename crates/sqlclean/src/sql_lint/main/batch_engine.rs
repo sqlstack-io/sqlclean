@@ -1,4 +1,4 @@
-/// Lint a JSON array of requests in parallel, with SQLQuack's lint engine.
+/// Lint a JSON array of requests in parallel, with the lint engine.
 pub fn lint_batch_json(request_json: &str) -> Result<String, String> {
-    sqlquack_lint::lint_batch_json(request_json)
+    sqlclean_lint::lint_batch_json(request_json)
 }
