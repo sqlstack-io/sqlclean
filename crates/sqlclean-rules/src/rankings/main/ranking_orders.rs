@@ -4,10 +4,9 @@ use sqlquack_syntax::Expression;
 
 use crate::models::{RankingFinding, RuleInput};
 use crate::rankings::_helpers::keys::{covers, key_environment, window_columns};
-use crate::rankings::_helpers::ranking::{effective_over, ranking_windows};
+use crate::rankings::_helpers::ranking::{effective_over, named_at, ranking_windows};
 use crate::rankings::constants::ROW_NUMBER;
 use crate::rankings::constants::TIE_SENSITIVE_FUNCTIONS;
-use crate::trees::main::call_positions::call_positions;
 
 /// The ranking windows with no order, an order not proven unique, or more sort keys than allowed.
 pub fn ranking_orders(input: &RuleInput<'_>) -> Vec<RankingFinding> {
@@ -29,7 +28,7 @@ pub fn ranking_orders(input: &RuleInput<'_>) -> Vec<RankingFinding> {
         if !(exceeds_cap || unordered || unproven) {
             continue;
         }
-        if let Some(span) = call_positions(ranking.called).0.0.or(ranking.window.span.0) {
+        if let Some(span) = named_at(&ranking) {
             found.push(RankingFinding {
                 span,
                 sort_keys: order.len(),

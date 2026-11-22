@@ -15,6 +15,8 @@ struct WrittenAlias<'a> {
     span: Span,
     /// The name the relation answers to without the alias.
     bare: Option<&'a str>,
+    /// The alias is written before its relation, as `alias: relation`.
+    prefix: bool,
 }
 
 /// The aliases of `scope` that nothing in its SELECT reads, with their removal where no names then collide.
@@ -33,7 +35,7 @@ pub(crate) fn unused_aliases(scope: &QueryScope<'_>, select: &Expression) -> Vec
         let collides: bool = alias
             .bare
             .is_some_and(|bare| names_another(scope, (bare, alias.span)));
-        let fix: Option<RuleEdit> = (!collides).then_some(RuleEdit {
+        let fix: Option<RuleEdit> = (!collides && !alias.prefix).then_some(RuleEdit {
             span,
             replacement: Replacement::Text(""),
             trailing_layout: false,
@@ -62,6 +64,7 @@ fn written_aliases<'a>(scope: &QueryScope<'a>) -> Vec<WrittenAlias<'a>> {
                     name,
                     span,
                     bare: None,
+                    prefix: false,
                 });
             }
             continue;
@@ -70,17 +73,22 @@ fn written_aliases<'a>(scope: &QueryScope<'a>) -> Vec<WrittenAlias<'a>> {
         if let Some(alias) = alias
             && let Some(span) = alias.span
         {
-            let bare: Option<&'a str> = match item {
-                Expression::Table(table) => Some(&table.name.name),
-                _ => None,
+            let (bare, after): (Option<&'a str>, Option<Span>) = match item {
+                Expression::Table(table) => (Some(&table.name.name), table.name.span),
+                Expression::Subquery(query) => (None, query.this.source_span()),
+                Expression::Alias(aliased) => (None, aliased.this.source_span()),
+                _ => (None, None),
             };
+            let prefix: bool = after.is_some_and(|body| span.start < body.start);
             found.push(WrittenAlias {
                 name: &alias.name,
                 span,
                 bare,
+                prefix,
             });
         }
     }
+    found.extend(wrapped_aliases(scope.select));
     found
 }
 
@@ -120,4 +128,29 @@ fn names_another(scope: &QueryScope<'_>, (name, alias): (&str, Span)) -> bool {
             && (relation.name.eq_ignore_ascii_case(name)
                 || table.is_some_and(|known| known.eq_ignore_ascii_case(name)))
     })
+}
+
+/// The aliases of derived tables that a sample or UNPIVOT wraps, which scopes leave out.
+fn wrapped_aliases(select: &Select) -> Vec<WrittenAlias<'_>> {
+    let items = select.from.iter().flat_map(|from| &from.expressions);
+    let mut found: Vec<WrittenAlias<'_>> = Vec::new();
+    for item in items.chain(select.joins.iter().map(|join| &join.this)) {
+        let inner: Option<&Expression> = match item {
+            Expression::TableSample(sampled) => sampled.this.as_deref(),
+            Expression::Unpivot(unpivot) => Some(&unpivot.this),
+            _ => None,
+        };
+        if let Some(Expression::Subquery(query)) = inner
+            && let Some(alias) = &query.alias
+            && let Some(span) = alias.span
+        {
+            found.push(WrittenAlias {
+                name: &alias.name,
+                span,
+                bare: None,
+                prefix: false,
+            });
+        }
+    }
+    found
 }

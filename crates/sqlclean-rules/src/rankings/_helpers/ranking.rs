@@ -4,10 +4,12 @@ use std::collections::{HashMap, HashSet};
 
 use sqlquack_syntax::expressions::functions::models::WindowFunction;
 use sqlquack_syntax::expressions::queries::models::{NamedWindow, Over, Select};
+use sqlquack_syntax::tokens::models::Span;
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
 use crate::queries::main::lower::lower;
 use crate::trees::main::call_name::call_name;
+use crate::trees::main::call_positions::call_positions;
 use crate::trees::main::walk_in_scope::walk_in_scope;
 
 /// One ranking call's window.
@@ -109,4 +111,15 @@ pub(crate) fn effective_over<'a>(over: &'a Over, windows: &[&'a NamedWindow]) ->
             .find(|window| lower(&window.name.name) == name)?
             .spec;
     }
+}
+
+/// Where the ranking call's name is written: a typed call keeps none, and begins its window with it.
+pub(crate) fn named_at(ranking: &RankingWindow<'_>) -> Option<Span> {
+    call_positions(ranking.called).0.0.or_else(|| {
+        let window: Span = ranking.window.span.0?;
+        Some(Span {
+            end: window.start + ranking.function.len(),
+            ..window
+        })
+    })
 }

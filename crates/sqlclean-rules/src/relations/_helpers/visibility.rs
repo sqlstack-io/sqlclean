@@ -3,6 +3,9 @@
 use sqlquack_syntax::traversal::models::QueryScopes;
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
+use crate::relations::constants::{CONFLICT_ROW, RULE_ROWS};
+use crate::trees::main::join_chains::join_chains;
+
 /// The relation names visible to scope `index`, an aliased table's own and leading part included.
 pub(crate) fn visible_names<'a>(scopes: &QueryScopes<'a>, index: usize) -> Vec<&'a str> {
     let mut names: Vec<&'a str> = Vec::new();
@@ -35,6 +38,9 @@ pub(crate) fn visible_names<'a>(scopes: &QueryScopes<'a>, index: usize) -> Vec<&
                 _ => {}
             }
         }
+        for join in join_chains(select).into_iter().flat_map(|(_, joins)| joins) {
+            names.extend(join.using_alias.as_ref().map(|alias| alias.name.as_str()));
+        }
         for view in &select.lateral_views {
             names.extend(view.table_alias.as_ref().map(|alias| alias.name.as_str()));
         }
@@ -54,4 +60,19 @@ fn shallow_nodes(item: &Expression) -> Vec<&Expression> {
         }
     }
     found
+}
+
+/// The row names `statement` itself puts in sight of every query inside it.
+pub(crate) fn statement_rows(statement: &Expression) -> Vec<&'static str> {
+    let mut node: &Expression = statement;
+    if let Expression::UtilityStatement(utility) = statement
+        && let Some(body) = utility.operands.last()
+    {
+        node = body;
+    }
+    match node {
+        Expression::Insert(_) => vec![CONFLICT_ROW],
+        Expression::CreateObject(_) => RULE_ROWS.to_vec(),
+        _ => Vec::new(),
+    }
 }

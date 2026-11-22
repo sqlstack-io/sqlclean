@@ -71,6 +71,8 @@ fn derived_queries(item: &Expression) -> Vec<&Expression> {
             Expression::Subquery(subquery) => found.push(&subquery.this),
             Expression::Alias(alias) => pending.push(&alias.this),
             Expression::Pivot(pivot) => pending.push(&pivot.this),
+            Expression::Unpivot(unpivot) => pending.push(&unpivot.this),
+            Expression::TableSample(sampled) => pending.extend(sampled.this.as_deref()),
             Expression::Lateral(lateral) => pending.push(&lateral.this),
             Expression::JoinedTable(joined) => {
                 pending.push(&joined.left);

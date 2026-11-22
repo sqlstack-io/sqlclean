@@ -8,6 +8,8 @@ use crate::selects::_helpers::stars::is_bare_star;
 use crate::trees::main::principal_query::principal_query;
 use crate::trees::main::unwrapped::unwrapped;
 
+const ANY: &str = "ANY";
+
 /// The SELECTs of `statement` whose projected star is exempt.
 pub(crate) fn exempt_stars<'a>(
     input: &RuleInput<'a>,
@@ -125,7 +127,7 @@ fn reads_open_columns(input: &RuleInput<'_>, select: &Select) -> bool {
                     .fields
                     .iter()
                     .flat_map(|field| field.dfs())
-                    .any(|node| matches!(node, Expression::PivotAny(_)))
+                    .any(is_any)
         }
         _ => false,
     }
@@ -137,4 +139,17 @@ fn is_relation_parameter(input: &RuleInput<'_>, name: &str) -> bool {
         .strip_prefix(input.settings.placeholders.relation_parameter)
         .and_then(|rest| rest.strip_suffix("__"))
         .is_some_and(|index| !index.is_empty() && index.chars().all(|digit| digit.is_ascii_digit()))
+}
+
+/// Whether `node` is a PIVOT's ANY, which some parsers read as a name.
+fn is_any(node: &Expression) -> bool {
+    match node {
+        Expression::PivotAny(_) => true,
+        Expression::Column(column) => {
+            column.table.is_none()
+                && !column.name.quoted
+                && column.name.name.eq_ignore_ascii_case(ANY)
+        }
+        _ => false,
+    }
 }

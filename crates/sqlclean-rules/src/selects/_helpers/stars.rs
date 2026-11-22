@@ -4,11 +4,13 @@ use sqlquack_syntax::Expression;
 use sqlquack_syntax::expressions::names::models::Star;
 use sqlquack_syntax::tokens::models::Span;
 
+use crate::trees::main::unwrapped::unwrapped;
+
 const WILDCARD: &str = "*";
 
 /// Whether select item `item` is a wildcard.
 pub(crate) fn is_wildcard(item: &Expression) -> bool {
-    match item {
+    match unwrapped(item) {
         Expression::Star(_) => true,
         Expression::Alias(alias) => matches!(alias.this, Expression::Star(_)),
         Expression::Column(column) => column.name.name == WILDCARD && !column.name.quoted,
@@ -19,11 +21,12 @@ pub(crate) fn is_wildcard(item: &Expression) -> bool {
 
 /// Whether `star` is a wildcard alone, with no qualifier and no modifiers.
 pub(crate) fn is_bare_star(item: &Expression) -> bool {
-    matches!(item, Expression::Star(star) if star.table.is_none() && !is_modified(star))
+    matches!(unwrapped(item), Expression::Star(star) if star.table.is_none() && !is_modified(star))
 }
 
 /// The asterisk of wildcard `item`, written in `written`.
 pub(crate) fn asterisk(item: &Expression, written: Span) -> Option<Span> {
+    let item: &Expression = unwrapped(item);
     let star: &Star = match item {
         Expression::Star(star) => star,
         Expression::Alias(alias) => match &alias.this {

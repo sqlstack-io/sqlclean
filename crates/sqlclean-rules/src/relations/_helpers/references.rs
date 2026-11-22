@@ -41,7 +41,11 @@ pub(crate) fn references<'a>(input: &RuleInput<'_>, scope: &QueryScope<'a>) -> R
         }
         match &column.table {
             Some(table) => {
-                if !names.dotted.contains(&address) && !is_generated(input, &table.name) {
+                let parameter: bool = names.parameters.contains(&table.name.as_str());
+                if !parameter
+                    && !names.dotted.contains(&address)
+                    && !is_generated(input, &table.name)
+                {
                     found.qualified.push(column);
                 }
             }

@@ -26,3 +26,7 @@ pub(crate) const DATE_PART_CALLS: [&str; 10] = [
 ];
 /// The name of a star read as a column.
 pub(crate) const WILDCARD: &str = "*";
+/// The row an ON CONFLICT action reads.
+pub(crate) const CONFLICT_ROW: &str = "EXCLUDED";
+/// The rows a rule's actions read.
+pub(crate) const RULE_ROWS: [&str; 2] = ["NEW", "OLD"];

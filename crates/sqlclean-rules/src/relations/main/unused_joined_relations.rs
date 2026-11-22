@@ -9,7 +9,7 @@ pub fn unused_joined_relations(input: &RuleInput<'_>) -> Vec<RuleFinding> {
     let mut found: Vec<RuleFinding> = Vec::new();
     for statement in input.statements {
         for scope in statement.query_scopes().scopes {
-            if scope.select.joins.is_empty() || projects_bare_star(&scope) {
+            if projects_bare_star(&scope) {
                 continue;
             }
             if references(input, &scope).unqualified.is_empty() {

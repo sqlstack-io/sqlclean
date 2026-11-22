@@ -89,8 +89,6 @@ fn is_constant(item: &Expression) -> bool {
                 | Expression::Cast(_)
                 | Expression::TryCast(_)
                 | Expression::DataType(_)
-                | Expression::Parameter(_)
-                | Expression::Placeholder(_)
                 | Expression::Interval(_)
                 | Expression::Tuple(_)
                 | Expression::Array(_)

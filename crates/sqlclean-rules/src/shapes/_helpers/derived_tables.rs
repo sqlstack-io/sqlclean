@@ -8,6 +8,9 @@ use crate::trees::main::unwrapped::unwrapped;
 
 /// The first keyword of each derived table `select` reads that cannot see the items before it.
 pub(crate) fn derived_tables(select: &Select) -> Vec<Span> {
+    if stands_for_values(select) {
+        return Vec::new();
+    }
     let mut items: Vec<&Expression> = select
         .from
         .iter()
@@ -34,13 +37,17 @@ pub(crate) fn derived_tables(select: &Select) -> Vec<Span> {
             Expression::Annotated(node) => items.push(&node.this),
             Expression::Alias(node) => items.push(&node.this),
             Expression::Pivot(node) => items.push(&node.this),
+            Expression::Unpivot(node) => items.push(&node.this),
+            Expression::TableSample(node) => items.extend(node.this.as_deref()),
             Expression::JoinedTable(node) => {
                 items.push(&node.left);
                 items.extend(node.joins.iter().map(|join| &join.this));
             }
             Expression::Subquery(node) if !node.lateral => found.extend(first_keyword(&node.this)),
             Expression::Paren(node) => match unwrapped(&node.this) {
-                joined @ Expression::JoinedTable(_) => items.push(joined),
+                wrapped @ (Expression::JoinedTable(_)
+                | Expression::Alias(_)
+                | Expression::Subquery(_)) => items.push(wrapped),
                 query => found.extend(first_keyword(query)),
             },
             _ => {}
@@ -65,4 +72,13 @@ fn first_keyword(query: &Expression) -> Option<Span> {
             _ => node.set_operation()?.left,
         };
     }
+}
+
+/// Whether `select` is one a parser wrote around a VALUES statement.
+fn stands_for_values(select: &Select) -> bool {
+    select.select_span.is_absent()
+        && select
+            .from
+            .as_ref()
+            .is_some_and(|from| from.keyword_span.is_absent())
 }

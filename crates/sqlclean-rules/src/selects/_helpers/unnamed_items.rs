@@ -56,7 +56,11 @@ fn is_named(item: &Expression) -> bool {
 fn is_one_word(item: &Expression, written: &OperatorSpan) -> bool {
     if matches!(
         item,
-        Expression::Literal(_) | Expression::Boolean(_) | Expression::Null(_)
+        Expression::Literal(_)
+            | Expression::Boolean(_)
+            | Expression::Null(_)
+            | Expression::Parameter(_)
+            | Expression::Placeholder(_)
     ) {
         return false;
     }
