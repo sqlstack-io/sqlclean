@@ -5,6 +5,8 @@ use sqlquack_syntax::{Expression, ExpressionWalk};
 
 use crate::models::JoinedName;
 
+const UNNEST: &str = "UNNEST";
+
 /// One CROSS JOIN.
 pub(crate) struct CrossTarget<'a> {
     pub(crate) join: &'a Join,
@@ -97,7 +99,18 @@ pub(crate) fn joined_relation_name(relation: &Expression) -> Option<JoinedName<'
             .alias
             .as_ref()
             .map(|alias| JoinedName::Read(&alias.name)),
-        Expression::Alias(alias) => Some(JoinedName::Alias(&alias.alias)),
+        Expression::Alias(alias) if !is_unnest(&alias.this) => {
+            Some(JoinedName::Alias(&alias.alias))
+        }
         _ => None,
+    }
+}
+
+/// Whether `relation` is UNNEST, whose alias names its rows rather than a relation to except.
+fn is_unnest(relation: &Expression) -> bool {
+    match relation {
+        Expression::Unnest(_) => true,
+        Expression::Function(call) => call.name.eq_ignore_ascii_case(UNNEST),
+        _ => false,
     }
 }
