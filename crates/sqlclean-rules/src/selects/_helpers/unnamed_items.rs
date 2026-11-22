@@ -13,6 +13,9 @@ const CEREMONIAL_SELECT: &str = "1";
 
 /// The first word of each unnamed calculation of `select`.
 pub(crate) fn unnamed_items(input: &RuleInput<'_>, select: &Select) -> Vec<RuleFinding> {
+    if select.kind.is_some() {
+        return Vec::new();
+    }
     if input.settings.fixture.is_some()
         && let [item] = select.expressions.as_slice()
         && number_text(item) == Some(CEREMONIAL_SELECT)
@@ -36,6 +39,16 @@ pub(crate) fn unnamed_items(input: &RuleInput<'_>, select: &Select) -> Vec<RuleF
         found.extend(head.map(|span| RuleFinding { span, fix: None }));
     }
     found
+}
+
+/// The body of a derived table whose alias lists the names of its columns.
+pub(crate) fn column_aliased_body(node: &Expression) -> Option<&Expression> {
+    match node {
+        Expression::Subquery(query) if !query.column_aliases.is_empty() => {
+            Some(query.this.first_branch())
+        }
+        _ => None,
+    }
 }
 
 fn is_named(item: &Expression) -> bool {

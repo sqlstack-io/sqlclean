@@ -50,7 +50,8 @@ pub(crate) fn references<'a>(input: &RuleInput<'_>, scope: &QueryScope<'a>) -> R
                 }
             }
             None => {
-                if is_column_reference(input, (&names, column)) {
+                if is_column_reference(input, (&names, column)) && !is_row(scope, &column.name.name)
+                {
                     found.unqualified.push(column);
                 }
             }
@@ -136,6 +137,15 @@ fn is_column_reference(input: &RuleInput<'_>, (names, column): (&NotColumns<'_>,
             .contains(&name.to_ascii_lowercase())
         && !names.parameters.iter().any(|parameter| same(parameter))
         && !aliased_before
+}
+
+/// Whether `name` alone is an alias in FROM, and so stands for that relation's row.
+fn is_row(scope: &QueryScope<'_>, name: &str) -> bool {
+    scope
+        .relations
+        .iter()
+        .filter_map(|relation| relation.alias)
+        .any(|alias| alias.name.eq_ignore_ascii_case(name))
 }
 
 /// Every node of FROM and the joins.

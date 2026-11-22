@@ -42,9 +42,8 @@ pub(crate) fn placed_queries(statement: &Expression) -> Vec<&Expression> {
 fn statement_relations(statement: &Expression) -> Vec<&Expression> {
     let (from, joins) = match statement {
         Expression::Update(update) => (update.from_clause.as_ref(), update.from_joins.as_slice()),
-        Expression::Merge(merge) => return derived_queries(&merge.using),
         Expression::Delete(delete) => (None, delete.joins.as_slice()),
-        Expression::Insert(_) => (None, &[][..]),
+        Expression::Insert(_) | Expression::Merge(_) => (None, &[][..]),
         _ => return Vec::new(),
     };
     let mut found: Vec<&Expression> = statement
@@ -53,6 +52,9 @@ fn statement_relations(statement: &Expression) -> Vec<&Expression> {
         .flat_map(|with| &with.ctes)
         .map(|cte| &cte.this)
         .collect();
+    if let Expression::Merge(merge) = statement {
+        found.extend(derived_queries(&merge.using));
+    }
     let items = from.iter().flat_map(|from| &from.expressions);
     found.extend(
         items

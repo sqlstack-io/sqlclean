@@ -75,6 +75,7 @@ pub(crate) fn reads_last_cte(select: &Select, with: &With) -> bool {
         && !has_logic(select)
         && select.fetch.is_none()
         && select.windows.is_none()
+        && select.locks.is_empty()
         && select.sample.is_none()
         && select.lateral_views.is_empty()
         && select.sort_by.is_none()

@@ -1,5 +1,6 @@
 //! The clauses that run before aggregates and windows are computed.
 
+use sqlquack_syntax::tokens::models::Span;
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
 use crate::models::{DialectFacts, RuleFinding};
@@ -49,15 +50,20 @@ pub(crate) fn computed_later(clause: &Expression, dialect: &DialectFacts) -> Vec
                 found.extend(window.span.0.map(|span| RuleFinding { span, fix: None }));
             }
             _ if is_known_aggregate(node, dialect) => {
-                found.extend(
-                    node.source_span()
-                        .map(|span| RuleFinding { span, fix: None }),
-                );
+                found.extend(written_call(node).map(|span| RuleFinding { span, fix: None }));
             }
             _ => pending.extend(node.children()),
         }
     }
     found
+}
+
+/// A call's range, which a keyword call keeps apart from its node's.
+fn written_call(node: &Expression) -> Option<Span> {
+    match node {
+        Expression::KeywordCall(call) => call.call_span.0,
+        _ => node.source_span(),
+    }
 }
 
 /// An aggregate here, leaving out other dialects' names and MIN or MAX of several values.

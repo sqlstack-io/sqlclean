@@ -23,6 +23,8 @@ pub(crate) fn principal_query(statement: &Expression) -> Option<&Expression> {
             Expression::Copy(copy) => &copy.this,
             Expression::Cache(cache) => cache.query.as_ref()?,
             Expression::PipeOperator(pipe) => &pipe.this,
+            Expression::Summarize(summary) => &summary.this,
+            Expression::Property(property) => property.value.as_deref()?,
             Expression::UtilityStatement(utility) => utility.operands.last()?,
             Expression::CreateObject(object) => return defined_query(&object.operands),
             altered @ Expression::AlterView(_) => altered.children().into_iter().find(is_query)?,

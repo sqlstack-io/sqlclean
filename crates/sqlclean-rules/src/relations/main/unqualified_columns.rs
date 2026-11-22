@@ -14,7 +14,9 @@ pub fn unqualified_columns(input: &RuleInput<'_>) -> Vec<RuleFinding> {
                     .from
                     .as_ref()
                     .map_or(0, |from| from.expressions.len());
-            if items.max(scope.relations.len()) <= 1 {
+            let sources: usize =
+                items.max(scope.relations.len()) + scope.select.lateral_views.len();
+            if sources <= 1 {
                 continue;
             }
             found.extend(

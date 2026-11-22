@@ -28,8 +28,18 @@ pub(crate) fn select_distinct(select: &Select) -> Option<RuleFinding> {
             fix: None,
         });
     }
-    let opened: usize = written.operator()?.start;
-    parenthesised_finding(distinct, value).filter(|_| begins_at(value, opened))
+    let head: Span = written.operator()?;
+    if let Expression::Paren(group) = leading_operand(value)
+        && group.span.is_absent()
+    {
+        let whole: Span = distinct.through(written.operation()?);
+        let parenthesised: bool = head.end == head.start + 1;
+        return parenthesised.then_some(RuleFinding {
+            span: whole,
+            fix: None,
+        });
+    }
+    parenthesised_finding(distinct, value).filter(|_| begins_at(value, head.start))
 }
 
 /// The finding of a call's DISTINCT whose first argument begins with parentheses.
