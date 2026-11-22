@@ -9,6 +9,6 @@ pub(crate) fn shared_statements(
     dialect: Dialect,
     options: &ParseOptions,
 ) -> Result<Vec<Expression>, String> {
-    parse_statements_with(sql, dialect, options, CallMode::FaithfulLocated)
+    parse_statements_with(sql, dialect, options, CallMode::QueriesLocated)
         .map_err(|error| error.to_string())
 }

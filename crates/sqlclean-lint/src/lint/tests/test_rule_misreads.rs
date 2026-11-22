@@ -157,6 +157,13 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
             expected_findings: Ok(&[]),
         },
         RulePinTestCase {
+            description: "a written star over VALUES is a wildcard",
+            rule: "SQLCLEAN007",
+            dialects: &["snowflake"],
+            sql: "SELECT id FROM orders UNION ALL SELECT * FROM VALUES (2)",
+            expected_findings: Ok(&[("UNION", None)]),
+        },
+        RulePinTestCase {
             description: "multiplication in a set operation",
             rule: "SQLCLEAN007",
             dialects: &[
