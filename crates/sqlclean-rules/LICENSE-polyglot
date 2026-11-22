@@ -1,4 +1,4 @@
-The lint Rules' scope walk and aggregate classifier, in src/tree, are ported from polyglot's
+The Rules' scope walk and aggregate classifier, in src/trees, are ported from polyglot's
 scope.rs and traversal.rs.
 
 polyglot is distributed under the following licence:

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: check check-ci check-docs-skill check-rust develop-native release-rehearsal skills test test-e2e test-integration test-rust test-unit verify
+.PHONY: accept-lint-corpus check check-ci check-docs-skill check-rust develop-native release-rehearsal skills test test-e2e test-integration test-rust test-unit verify
 
 check:
 	uv run ruff format .
@@ -19,6 +19,10 @@ check-ci:
 
 check-docs-skill:
 	uv run python -m scripts.check_docs_skill
+
+# Rewrites the lint corpus's accepted findings from the current engine; read and commit the diff.
+accept-lint-corpus:
+	SQLCLEAN_ACCEPT_LINT_CORPUS=1 cargo test -p sqlclean-lint --lib --quiet lint_corpus
 
 release-rehearsal:
 	bash .github/scripts/simulate_release.sh

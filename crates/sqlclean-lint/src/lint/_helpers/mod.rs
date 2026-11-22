@@ -6,3 +6,4 @@ pub mod report;
 pub mod rule_edits;
 pub mod rule_input;
 pub mod text_views;
+pub mod trigger_programs;

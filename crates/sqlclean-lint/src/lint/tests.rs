@@ -1,5 +1,7 @@
 #[path = "tests/test_batch_lint.rs"]
 mod batch_lint;
+#[path = "tests/corpus.rs"]
+mod corpus;
 #[path = "tests/test_cross_joins.rs"]
 mod cross_joins;
 #[path = "tests/test_empty_fixture_lint.rs"]
@@ -12,6 +14,8 @@ mod helpers;
 mod join_predicates;
 #[path = "tests/test_keyword_aliases.rs"]
 mod keyword_aliases;
+#[path = "tests/test_lint_corpus.rs"]
+mod lint_corpus;
 #[path = "tests/test_lint_exemptions.rs"]
 mod lint_exemptions;
 #[path = "tests/test_long_chains.rs"]

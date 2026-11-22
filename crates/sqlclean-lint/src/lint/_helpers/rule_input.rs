@@ -2,6 +2,8 @@
 
 use std::collections::HashSet;
 
+use sqlquack_syntax::Expression;
+
 use sqlclean_rules::models::{
     DialectFacts, Fixture, MacroOutput, Placeholders, RuleInput, RuleSettings,
 };
@@ -38,10 +40,11 @@ pub(super) fn rule_input<'a>(
     request: &'a LintRequest,
     parsed: &'a ParsedSql,
     facts: &'a RequestFacts<'a>,
+    statements: &'a [Expression],
 ) -> RuleInput<'a> {
     let profile: LintProfile = profile(parsed.dialect);
     RuleInput {
-        statements: &parsed.statements,
+        statements,
         dialect: DialectFacts {
             union_distinct: profile.union_distinct,
             resolved_name: profile.resolved_name,

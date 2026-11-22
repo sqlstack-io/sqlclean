@@ -1,12 +1,14 @@
+use std::borrow::Cow;
 use std::collections::HashSet;
 
 use sqlclean_rules::models::RuleInput;
-use sqlquack_syntax::CallMode;
+use sqlquack_syntax::{CallMode, Expression};
 
 use crate::dialects::main::lint_dialect::lint_dialect;
 use crate::lint::_helpers::parsing::parse;
 use crate::lint::_helpers::report::reported;
 use crate::lint::_helpers::rule_input::{request_facts, rule_input};
+use crate::lint::_helpers::trigger_programs::with_trigger_programs;
 use crate::lint::constants::LINT_API_VERSION;
 use crate::lint::models::{
     LintRequest, LintResponse, LintRuleMetadata, ParsedSql, Report, RequestFacts,
@@ -343,7 +345,8 @@ pub(crate) fn lint(request: LintRequest) -> Result<LintResponse, String> {
         return Err("max_literal_length and max_ranking_order_by must be positive".to_owned());
     }
     let facts: RequestFacts<'_> = request_facts(&request);
-    let input: RuleInput<'_> = rule_input(&request, &parsed, &facts);
+    let statements: Cow<'_, [Expression]> = with_trigger_programs(&parsed.statements);
+    let input: RuleInput<'_> = rule_input(&request, &parsed, &facts, &statements);
     let mut diagnostics = reported(&Report {
         request: &request,
         parsed: &parsed,

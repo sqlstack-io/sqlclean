@@ -63,6 +63,20 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
             expected_findings: Ok(&[]),
         },
         RulePinTestCase {
+            description: "a calculation in a SQLite trigger program",
+            rule: "SQLCLEAN022",
+            dialects: &["sqlite"],
+            sql: "CREATE TRIGGER r AFTER DELETE ON t BEGIN SELECT 1 + 1; END",
+            expected_findings: Ok(&[("1", None)]),
+        },
+        RulePinTestCase {
+            description: "a CTE before a VALUES statement",
+            rule: "SQLCLEAN041",
+            dialects: &["duckdb", "sqlite", "postgres"],
+            sql: "WITH a AS (SELECT 1) VALUES (1)",
+            expected_findings: Ok(&[("a", None)]),
+        },
+        RulePinTestCase {
             description: "a series that reads the item before the comma",
             rule: "SQLCLEAN002",
             dialects: &["duckdb", "postgres"],
