@@ -7,6 +7,14 @@ use sqlquack_syntax::tokens::models::Span;
 #[derive(Clone, Copy, Debug)]
 pub struct RuleInput<'a> {
     pub statements: &'a [Expression],
+    pub dialect: DialectFacts,
+}
+
+/// What a Rule needs to know of the dialect.
+#[derive(Clone, Copy, Debug)]
+pub struct DialectFacts {
+    /// `UNION DISTINCT` is valid, so a bare UNION may be spelled out.
+    pub union_distinct: bool,
 }
 
 /// A finding at a position of the tree, with the edit its Rule can make there.

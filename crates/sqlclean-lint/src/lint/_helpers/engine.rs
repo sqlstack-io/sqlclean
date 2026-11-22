@@ -2,7 +2,7 @@ use crate::lint::models::LintDialect;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use sqlclean_rules::models::{RuleFinding, RuleInput};
+use sqlclean_rules::models::{DialectFacts, RuleFinding, RuleInput};
 use sqlquack_syntax::expressions::queries::models::With;
 use sqlquack_syntax::tokens::models::{Span, Token, TokenType};
 use sqlquack_syntax::{Expression, ExpressionWalk};
@@ -335,13 +335,13 @@ struct ExpressionRange {
 
 struct DiagnosticContext<'a> {
     sql: &'a str,
-    dialect: LintDialect,
     facts: &'a QueryFacts,
     tokens: &'a [Token],
     enabled: &'a HashSet<String>,
 }
 
 struct FactBuildOptions<'a> {
+    dialect: LintDialect,
     external_identifiers: &'a HashSet<String>,
     sql_macro_outputs: &'a [SqlMacroOutput],
     dependency_identifiers: &'a HashSet<String>,
@@ -411,6 +411,7 @@ pub(crate) fn lint(request: LintRequest) -> Result<LintResponse, String> {
         .map(|name| name.to_ascii_lowercase())
         .collect();
     let options = FactBuildOptions {
+        dialect: dialect_type,
         external_identifiers: &external_identifiers,
         sql_macro_outputs: &request.sql_macro_outputs,
         dependency_identifiers: &dependency_identifiers,
@@ -422,7 +423,6 @@ pub(crate) fn lint(request: LintRequest) -> Result<LintResponse, String> {
     let facts = build_facts(&statements, &tokens, &request.sql, &options);
     let context = DiagnosticContext {
         sql: &request.sql,
-        dialect: dialect_type,
         facts: &facts,
         tokens: &tokens,
         enabled: &enabled,
@@ -547,10 +547,14 @@ fn build_facts(
     );
     let input: RuleInput<'_> = RuleInput {
         statements: expressions,
+        dialect: DialectFacts {
+            union_distinct: profile(options.dialect).union_distinct,
+        },
     };
     facts.implicit_cartesian_joins = sqlclean_rules::implicit_joins(&input);
     facts.joins_without_condition = sqlclean_rules::joins_without_condition(&input);
     facts.positional_set_stars = sqlclean_rules::positional_stars(&input);
+    facts.additional.bare_unions = sqlclean_rules::bare_unions(&input);
     facts.additional.set_arity_mismatches = sqlclean_rules::arity_mismatches(&input);
     for expression in expressions {
         facts
@@ -1103,7 +1107,6 @@ fn diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
 fn core_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
     let DiagnosticContext {
         sql,
-        dialect,
         facts,
         tokens,
         enabled,
@@ -1175,15 +1178,12 @@ fn core_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
         ));
     }
     if enabled.contains(EXPLICIT_UNION.code) {
-        diagnostics.extend(facts.additional.bare_unions.iter().map(|span| {
-            let fix = explicit_union_fix(*dialect, *span);
-            diagnostic(
-                &EXPLICIT_UNION,
-                Some(*span),
-                fix,
-                Some("the active dialect does not accept explicit UNION DISTINCT"),
-            )
-        }));
+        diagnostics.extend(rule_diagnostics(
+            &EXPLICIT_UNION,
+            &facts.additional.bare_unions,
+            sql,
+            Some("the active dialect does not accept explicit UNION DISTINCT"),
+        ));
     }
     diagnostics
 }
@@ -1194,7 +1194,6 @@ fn additional_style_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiag
         facts,
         tokens,
         enabled,
-        ..
     } = context;
     let mut diagnostics: Vec<LintDiagnostic> = Vec::new();
     if enabled.contains(DUPLICATE_TABLE_ALIAS.code) {
@@ -1295,7 +1294,6 @@ fn additional_relation_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintD
         facts,
         tokens,
         enabled,
-        ..
     } = context;
     let mut diagnostics: Vec<LintDiagnostic> = Vec::new();
     if enabled.contains(NULL_NOT_IN.code) {
@@ -1531,14 +1529,6 @@ fn simple_boolean_case_fix(sql: &str, tokens: &[Token], span: Span) -> Option<Li
         start: span.start,
         end: span.end,
         replacement: format!("COALESCE({condition}, FALSE)"),
-    })
-}
-
-fn explicit_union_fix(dialect: LintDialect, span: Span) -> Option<LintEdit> {
-    profile(dialect).union_distinct.then(|| LintEdit {
-        start: span.start,
-        end: span.end,
-        replacement: "UNION DISTINCT".to_string(),
     })
 }
 

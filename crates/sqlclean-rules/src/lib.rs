@@ -9,4 +9,5 @@ pub mod set_operations;
 pub use crate::joins::main::implicit_joins::implicit_joins;
 pub use crate::joins::main::joins_without_condition::joins_without_condition;
 pub use crate::set_operations::main::arity_mismatches::arity_mismatches;
+pub use crate::set_operations::main::bare_unions::bare_unions;
 pub use crate::set_operations::main::positional_stars::positional_stars;

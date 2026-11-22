@@ -217,7 +217,10 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
             rule: "SQLCLEAN008",
             dialects: &["snowflake", "duckdb"],
             sql: "SELECT id FROM orders UNION BY NAME SELECT id FROM returns",
-            expected_findings: Ok(&[]),
+            expected_findings: Ok(&[(
+                "UNION",
+                Some("SELECT id FROM orders UNION DISTINCT BY NAME SELECT id FROM returns"),
+            )]),
         },
         RulePinTestCase {
             description: "one implicit alias twice",

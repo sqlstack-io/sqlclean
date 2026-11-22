@@ -46,7 +46,7 @@ pub(crate) struct QueryFacts {
 
 #[derive(Debug, Default)]
 pub(crate) struct AdditionalQueryFacts {
-    pub bare_unions: Vec<Span>,
+    pub bare_unions: Vec<RuleFinding>,
     pub duplicate_table_aliases: Vec<Span>,
     pub duplicate_output_aliases: Vec<Span>,
     pub mixed_group_order_references: Vec<Span>,

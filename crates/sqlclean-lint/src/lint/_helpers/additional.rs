@@ -77,16 +77,6 @@ pub(super) fn collect_additional_facts(
         .collect();
     for (position, &index) in significant.iter().enumerate() {
         let token = &tokens[index];
-        if token.token_type == TokenType::Union
-            && significant.get(position + 1).is_none_or(|&next| {
-                !matches!(
-                    tokens[next].token_type,
-                    TokenType::All | TokenType::Distinct | TokenType::By
-                )
-            })
-        {
-            facts.bare_unions.push(token.span);
-        }
         if token.token_type == TokenType::Else
             && significant
                 .get(position + 1)
