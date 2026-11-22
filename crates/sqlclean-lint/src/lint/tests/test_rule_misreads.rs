@@ -108,7 +108,7 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
             description: "ASOF JOIN with MATCH_CONDITION and no ON",
             rule: "SQLCLEAN003",
             dialects: &["snowflake"],
-            sql: "SELECT t.id FROM trades t ASOF JOIN quotes q MATCH_CONDITION (t.ts >= q.ts)",
+            sql: "SELECT o.id FROM orders o ASOF JOIN shipments s MATCH_CONDITION (o.ts >= s.ts)",
             expected_findings: Ok(&[]),
         },
         RulePinTestCase {
