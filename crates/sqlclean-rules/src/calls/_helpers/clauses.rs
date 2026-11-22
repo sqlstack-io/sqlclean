@@ -11,7 +11,7 @@ use crate::trees::main::node_joins::node_joins;
 
 const SINGLE_ARGUMENT_AGGREGATES: [&str; 2] = ["MIN", "MAX"];
 
-/// WHERE, ON and GROUP BY as `node` writes them.
+/// WHERE, ON, GROUP BY and an aggregate's FILTER as `node` writes them.
 pub(crate) fn early_clauses(node: &Expression) -> Vec<&Expression> {
     let mut clauses: Vec<&Expression> = node_joins(node)
         .into_iter()
@@ -24,6 +24,10 @@ pub(crate) fn early_clauses(node: &Expression) -> Vec<&Expression> {
         }
         Expression::Update(update) => update.where_clause.as_ref(),
         Expression::Delete(delete) => delete.where_clause.as_ref(),
+        Expression::AggregateFunction(call) => {
+            clauses.extend(call.filter.as_ref());
+            None
+        }
         Expression::Merge(merge) => {
             clauses.extend(merge.on.as_deref());
             None

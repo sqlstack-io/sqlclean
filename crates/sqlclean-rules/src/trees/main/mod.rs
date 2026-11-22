@@ -2,6 +2,7 @@
 
 pub(crate) mod call_name;
 pub(crate) mod call_positions;
+pub(crate) mod carried_statement;
 pub(crate) mod contains_aggregate;
 pub(crate) mod is_aggregate;
 pub(crate) mod is_foreign_aggregate;

@@ -15,8 +15,8 @@ struct WrittenAlias<'a> {
     span: Span,
     /// The name the relation answers to without the alias.
     bare: Option<&'a str>,
-    /// The alias is written before its relation, as `alias: relation`.
-    prefix: bool,
+    /// The alias has no plain removal: it is written before its relation, as `alias: relation`, or its clause needs it.
+    kept: bool,
 }
 
 /// The aliases of `scope` that nothing in its SELECT reads, with their removal where no names then collide.
@@ -35,7 +35,7 @@ pub(crate) fn unused_aliases(scope: &QueryScope<'_>, select: &Expression) -> Vec
         let collides: bool = alias
             .bare
             .is_some_and(|bare| names_another(scope, (bare, alias.span)));
-        let fix: Option<RuleEdit> = (!collides && !alias.prefix).then_some(RuleEdit {
+        let fix: Option<RuleEdit> = (!collides && !alias.kept).then_some(RuleEdit {
             span,
             replacement: Replacement::Text(""),
             trailing_layout: false,
@@ -64,7 +64,7 @@ fn written_aliases<'a>(scope: &QueryScope<'a>) -> Vec<WrittenAlias<'a>> {
                     name,
                     span,
                     bare: None,
-                    prefix: false,
+                    kept: false,
                 });
             }
             continue;
@@ -75,20 +75,24 @@ fn written_aliases<'a>(scope: &QueryScope<'a>) -> Vec<WrittenAlias<'a>> {
         {
             let (bare, after): (Option<&'a str>, Option<Span>) = match item {
                 Expression::Table(table) => (Some(&table.name.name), table.name.span),
-                Expression::Subquery(query) => (None, query.this.source_span()),
+                Expression::Subquery(query) => (None, query.span.0.or(query.this.source_span())),
                 Expression::Alias(aliased) => (None, aliased.this.source_span()),
                 _ => (None, None),
             };
-            let prefix: bool = after.is_some_and(|body| span.start < body.start);
+            let kept: bool = after.is_some_and(|body| span.start < body.start);
             found.push(WrittenAlias {
                 name: &alias.name,
                 span,
                 bare,
-                prefix,
+                kept,
             });
         }
     }
-    found.extend(wrapped_aliases(scope.select));
+    for wrapped in wrapped_aliases(scope.select) {
+        if !found.iter().any(|known| known.span == wrapped.span) {
+            found.push(wrapped);
+        }
+    }
     found
 }
 
@@ -130,27 +134,38 @@ fn names_another(scope: &QueryScope<'_>, (name, alias): (&str, Span)) -> bool {
     })
 }
 
-/// The aliases of derived tables that a sample or UNPIVOT wraps, which scopes leave out.
+/// The aliases inside a sample or UNPIVOT and of lateral views, which scopes leave out.
 fn wrapped_aliases(select: &Select) -> Vec<WrittenAlias<'_>> {
     let items = select.from.iter().flat_map(|from| &from.expressions);
     let mut found: Vec<WrittenAlias<'_>> = Vec::new();
     for item in items.chain(select.joins.iter().map(|join| &join.this)) {
         let inner: Option<&Expression> = match item {
             Expression::TableSample(sampled) => sampled.this.as_deref(),
-            Expression::Unpivot(unpivot) => Some(&unpivot.this),
+            Expression::Unpivot(unpivot) => {
+                found.extend(written(unpivot.alias.as_ref(), true));
+                Some(&unpivot.this)
+            }
             _ => None,
         };
-        if let Some(Expression::Subquery(query)) = inner
-            && let Some(alias) = &query.alias
-            && let Some(span) = alias.span
-        {
-            found.push(WrittenAlias {
-                name: &alias.name,
-                span,
-                bare: None,
-                prefix: false,
-            });
-        }
+        let alias: Option<&Identifier> = match inner {
+            Some(Expression::Subquery(query)) => query.alias.as_ref(),
+            Some(Expression::Table(table)) => table.alias.as_ref(),
+            _ => None,
+        };
+        found.extend(written(alias, false));
+    }
+    for view in &select.lateral_views {
+        found.extend(written(view.table_alias.as_ref(), true));
     }
     found
+}
+
+fn written(alias: Option<&Identifier>, kept: bool) -> Option<WrittenAlias<'_>> {
+    let alias: &Identifier = alias?;
+    Some(WrittenAlias {
+        name: &alias.name,
+        span: alias.span?,
+        bare: None,
+        kept,
+    })
 }
