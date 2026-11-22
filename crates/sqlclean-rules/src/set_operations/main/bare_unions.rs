@@ -2,7 +2,7 @@
 
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
-use crate::models::{RuleEdit, RuleFinding, RuleInput};
+use crate::models::{Replacement, RuleEdit, RuleFinding, RuleInput};
 
 /// The UNIONs that state neither ALL nor DISTINCT, by name or by position, with DISTINCT as their fix.
 pub fn bare_unions(input: &RuleInput<'_>) -> Vec<RuleFinding> {
@@ -23,7 +23,7 @@ pub fn bare_unions(input: &RuleInput<'_>) -> Vec<RuleFinding> {
         };
         let fix: Option<RuleEdit> = input.dialect.union_distinct.then_some(RuleEdit {
             span,
-            replacement: "UNION DISTINCT",
+            replacement: Replacement::Text("UNION DISTINCT"),
             trailing_layout: false,
         });
         found.push(RuleFinding { span, fix });

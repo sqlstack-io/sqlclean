@@ -255,10 +255,7 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
             rule: "SQLCLEAN012",
             dialects: &["snowflake", "duckdb", "postgres"],
             sql: "SELECT CASE WHEN paid THEN total ELSE NULL::VARCHAR END AS t FROM orders",
-            expected_findings: Ok(&[(
-                "ELSE NULL",
-                Some("SELECT CASE WHEN paid THEN total ::VARCHAR END AS t FROM orders"),
-            )]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "the fix of ELSE NULL with an operator",
@@ -272,10 +269,7 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
                 "databricks",
             ],
             sql: "SELECT CASE WHEN paid THEN total ELSE NULL + 1 END AS t FROM orders",
-            expected_findings: Ok(&[(
-                "ELSE NULL",
-                Some("SELECT CASE WHEN paid THEN total  + 1 END AS t FROM orders"),
-            )]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "ELSE NULL in parentheses",
@@ -289,7 +283,36 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
                 "databricks",
             ],
             sql: "SELECT CASE WHEN paid THEN total ELSE (NULL) END AS t FROM orders",
-            expected_findings: Ok(&[]),
+            expected_findings: Ok(&[(
+                "ELSE (NULL)",
+                Some("SELECT CASE WHEN paid THEN total  END AS t FROM orders"),
+            )]),
+        },
+        RulePinTestCase {
+            description: "a CASE whose ELSE is NULL, inside a THEN",
+            rule: "SQLCLEAN012",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT CASE WHEN a = 1 THEN CASE WHEN b = 1 THEN 2 ELSE NULL END ELSE 3 END AS x FROM t",
+            expected_findings: Ok(&[(
+                "ELSE NULL",
+                Some(
+                    "SELECT CASE WHEN a = 1 THEN CASE WHEN b = 1 THEN 2  END ELSE 3 END AS x FROM t",
+                ),
+            )]),
+        },
+        RulePinTestCase {
+            description: "no fix over a comment inside the clause",
+            rule: "SQLCLEAN012",
+            dialects: &["snowflake", "postgres"],
+            sql: "SELECT CASE WHEN paid THEN total ELSE /* unknown */ NULL END AS t FROM orders",
+            expected_findings: Ok(&[("ELSE /* unknown */ NULL", None)]),
         },
         RulePinTestCase {
             description: "UNION DISTINCT before a parenthesised query",
@@ -533,7 +556,58 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
                 "databricks",
             ],
             sql: "SELECT CASE WHEN a = 1 THEN 1 ELSE (CASE WHEN b = 1 THEN 2 END) END AS x FROM t",
+            expected_findings: Ok(&[("CASE", None)]),
+        },
+        RulePinTestCase {
+            description: "a CASE that is only part of the ELSE value",
+            rule: "SQLCLEAN031",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT CASE WHEN a = 1 THEN 1 ELSE CASE WHEN b = 1 THEN 2 END + 1 END AS x FROM t",
             expected_findings: Ok(&[]),
+        },
+        RulePinTestCase {
+            description: "a CASE inside the condition",
+            rule: "SQLCLEAN030",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT CASE WHEN CASE WHEN a = 1 THEN 1 END = 1 THEN TRUE ELSE FALSE END AS y FROM t",
+            expected_findings: Ok(&[(
+                "CASE WHEN CASE WHEN a = 1 THEN 1 END = 1 THEN TRUE ELSE FALSE END",
+                Some("SELECT COALESCE(CASE WHEN a = 1 THEN 1 END = 1, FALSE) AS y FROM t"),
+            )]),
+        },
+        RulePinTestCase {
+            description: "no fix over a // comment",
+            rule: "SQLCLEAN030",
+            dialects: &["snowflake"],
+            sql: "SELECT CASE WHEN qty > 1 // enough\nTHEN TRUE ELSE FALSE END AS y FROM t",
+            expected_findings: Ok(&[(
+                "CASE WHEN qty > 1 // enough\nTHEN TRUE ELSE FALSE END",
+                None,
+            )]),
+        },
+        RulePinTestCase {
+            description: "no fix over a # comment",
+            rule: "SQLCLEAN030",
+            dialects: &["bigquery"],
+            sql: "SELECT CASE WHEN qty > 1 # enough\nTHEN TRUE ELSE FALSE END AS y FROM t",
+            expected_findings: Ok(&[(
+                "CASE WHEN qty > 1 # enough\nTHEN TRUE ELSE FALSE END",
+                None,
+            )]),
         },
         RulePinTestCase {
             description: "a keyword argument turns the Rule off",

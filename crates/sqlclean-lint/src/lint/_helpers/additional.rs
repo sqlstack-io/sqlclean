@@ -77,19 +77,6 @@ pub(super) fn collect_additional_facts(
         .collect();
     for (position, &index) in significant.iter().enumerate() {
         let token = &tokens[index];
-        if token.token_type == TokenType::Else
-            && significant
-                .get(position + 1)
-                .is_some_and(|&next| tokens[next].token_type == TokenType::Null)
-        {
-            let next = significant[position + 1];
-            facts.redundant_else_nulls.push(Span {
-                start: token.span.start,
-                end: tokens[next].span.end,
-                line: token.span.line,
-                column: token.span.column,
-            });
-        }
         if token.token_type == TokenType::Distinct
             && significant
                 .get(position + 1)
@@ -137,20 +124,6 @@ pub(super) fn collect_additional_facts(
             && let Some(span) = null_not_in_span(tokens, &depths, &significant, position)
         {
             facts.null_not_in_predicates.push(span);
-        }
-        if token.token_type == TokenType::Case
-            && let Some(span) = simple_boolean_case_span(tokens, &significant, position)
-        {
-            facts.simple_boolean_cases.push(span);
-        }
-        if token.token_type == TokenType::Else
-            && significant
-                .get(position + 1)
-                .is_some_and(|&next| tokens[next].token_type == TokenType::Case)
-        {
-            facts
-                .nested_else_cases
-                .push(tokens[significant[position + 1]].span);
         }
         if position + 2 < significant.len()
             && constant_predicate(tokens, &significant[position..position + 3])
@@ -1674,59 +1647,6 @@ fn count_one_span(tokens: &[Token], significant: &[usize], position: usize) -> O
         && tokens[one].text == COUNT_ONE_LITERAL
         && tokens[close].token_type == TokenType::RParen)
         .then_some(tokens[one].span)
-}
-
-fn simple_boolean_case_span(
-    tokens: &[Token],
-    significant: &[usize],
-    position: usize,
-) -> Option<Span> {
-    let tail = &significant[position + 1..];
-    let end_offset = tail
-        .iter()
-        .position(|&index| tokens[index].token_type == TokenType::End)?;
-    let body = &tail[..=end_offset];
-    if body
-        .iter()
-        .any(|&index| tokens[index].token_type == TokenType::Case)
-    {
-        return None;
-    }
-    let when_position = body
-        .iter()
-        .position(|&index| tokens[index].token_type == TokenType::When)?;
-    let else_position = body
-        .iter()
-        .position(|&index| tokens[index].token_type == TokenType::Else)?;
-    let else_value = *body.get(else_position + 1)?;
-    let mut thens = body
-        .iter()
-        .enumerate()
-        .filter(|&(_, &index)| tokens[index].token_type == TokenType::Then)
-        .peekable();
-    thens.peek()?;
-    let every_branch_returns_true = thens.all(|(offset, _)| {
-        body.get(offset + 1)
-            .is_some_and(|&value| tokens[value].token_type == TokenType::True)
-            && body.get(offset + 2).is_some_and(|&next| {
-                matches!(tokens[next].token_type, TokenType::When | TokenType::Else)
-            })
-    });
-    if when_position != 0
-        || !every_branch_returns_true
-        || tokens[else_value].token_type != TokenType::False
-        || else_position + 2 != body.len() - 1
-    {
-        return None;
-    }
-    let start = tokens[significant[position]].span;
-    let end = tokens[*body.last()?].span;
-    Some(Span {
-        start: start.start,
-        end: end.end,
-        line: start.line,
-        column: start.column,
-    })
 }
 
 fn unstable_row_number_span(

@@ -555,6 +555,9 @@ fn build_facts(
     facts.joins_without_condition = sqlclean_rules::joins_without_condition(&input);
     facts.positional_set_stars = sqlclean_rules::positional_stars(&input);
     facts.additional.bare_unions = sqlclean_rules::bare_unions(&input);
+    facts.additional.redundant_else_nulls = sqlclean_rules::redundant_else_nulls(&input);
+    facts.additional.simple_boolean_cases = sqlclean_rules::boolean_cases(&input);
+    facts.additional.nested_else_cases = sqlclean_rules::nested_else_cases(&input);
     facts.additional.set_arity_mismatches = sqlclean_rules::arity_mismatches(&input);
     for expression in expressions {
         facts
@@ -1127,7 +1130,7 @@ fn core_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
         diagnostics.extend(rule_diagnostics(
             &IMPLICIT_CARTESIAN_JOIN,
             &facts.implicit_cartesian_joins,
-            sql,
+            context,
             Some("mixed joins, comments, or generated SQL require an explicit authored repair"),
         ));
     }
@@ -1135,7 +1138,7 @@ fn core_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
         diagnostics.extend(rule_diagnostics(
             &JOIN_WITHOUT_CONDITION,
             &facts.joins_without_condition,
-            sql,
+            context,
             Some("qualified joins or joins with placeholder conditions require user intent"),
         ));
     }
@@ -1171,7 +1174,7 @@ fn core_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
         diagnostics.extend(rule_diagnostics(
             &POSITIONAL_SET_STAR,
             &facts.positional_set_stars,
-            sql,
+            context,
             Some(
                 "column names and their intended positional order require resolved schema evidence",
             ),
@@ -1181,7 +1184,7 @@ fn core_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
         diagnostics.extend(rule_diagnostics(
             &EXPLICIT_UNION,
             &facts.additional.bare_unions,
-            sql,
+            context,
             Some("the active dialect does not accept explicit UNION DISTINCT"),
         ));
     }
@@ -1218,14 +1221,12 @@ fn additional_style_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiag
         ));
     }
     if enabled.contains(REDUNDANT_ELSE_NULL.code) {
-        diagnostics.extend(facts.additional.redundant_else_nulls.iter().map(|span| {
-            diagnostic(
-                &REDUNDANT_ELSE_NULL,
-                Some(*span),
-                Some(deletion(*span)),
-                None,
-            )
-        }));
+        diagnostics.extend(rule_diagnostics(
+            &REDUNDANT_ELSE_NULL,
+            &facts.additional.redundant_else_nulls,
+            context,
+            Some("comments inside the clause would be lost"),
+        ));
     }
     if enabled.contains(PARENTHESIZED_DISTINCT.code) {
         diagnostics.extend(facts.additional.parenthesized_distincts.iter().map(|span| {
@@ -1289,12 +1290,7 @@ fn additional_style_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiag
 }
 
 fn additional_relation_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
-    let DiagnosticContext {
-        sql,
-        facts,
-        tokens,
-        enabled,
-    } = context;
+    let DiagnosticContext { facts, enabled, .. } = context;
     let mut diagnostics: Vec<LintDiagnostic> = Vec::new();
     if enabled.contains(NULL_NOT_IN.code) {
         diagnostics.extend(diagnostics_for_spans(
@@ -1307,7 +1303,7 @@ fn additional_relation_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintD
         diagnostics.extend(rule_diagnostics(
             &SET_ARITY_MISMATCH,
             &facts.additional.set_arity_mismatches,
-            sql,
+            context,
             Some("the intended branch schema requires user intent"),
         ));
     }
@@ -1385,19 +1381,18 @@ fn additional_relation_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintD
         ));
     }
     if enabled.contains(SIMPLE_BOOLEAN_CASE.code) {
-        diagnostics.extend(facts.additional.simple_boolean_cases.iter().map(|span| {
-            diagnostic(
-                &SIMPLE_BOOLEAN_CASE,
-                Some(*span),
-                simple_boolean_case_fix(sql, tokens, *span),
-                Some("comments or a non-canonical CASE shape prevent a lossless rewrite"),
-            )
-        }));
+        diagnostics.extend(rule_diagnostics(
+            &SIMPLE_BOOLEAN_CASE,
+            &facts.additional.simple_boolean_cases,
+            context,
+            Some("comments or a non-canonical CASE shape prevent a lossless rewrite"),
+        ));
     }
     if enabled.contains(NESTED_ELSE_CASE.code) {
-        diagnostics.extend(diagnostics_for_spans(
+        diagnostics.extend(rule_diagnostics(
             &NESTED_ELSE_CASE,
             &facts.additional.nested_else_cases,
+            context,
             Some("flattening nested branches requires a multi-range authored rewrite"),
         ));
     }
@@ -1485,53 +1480,6 @@ fn parenthesized_distinct_fix(sql: &str, tokens: &[Token], span: Span) -> Option
     })
 }
 
-fn simple_boolean_case_fix(sql: &str, tokens: &[Token], span: Span) -> Option<LintEdit> {
-    let case_index = token_index_for_span(tokens, span).or_else(|| {
-        tokens
-            .iter()
-            .position(|token| token.span.start == span.start && token.token_type == TokenType::Case)
-    })?;
-    let end_index = tokens.iter().position(|token| token.span.end == span.end)?;
-    let source = char_slice(sql, span.start, span.end)?;
-    if contains_comment(source) {
-        return None;
-    }
-    let case_tokens = &tokens[case_index..=end_index];
-    if case_tokens
-        .iter()
-        .filter(|token| token.token_type == TokenType::When)
-        .count()
-        != 1
-        || case_tokens
-            .iter()
-            .filter(|token| token.token_type == TokenType::Then)
-            .count()
-            != 1
-        || case_tokens
-            .iter()
-            .filter(|token| token.token_type == TokenType::Else)
-            .count()
-            != 1
-    {
-        return None;
-    }
-    let when_index =
-        (case_index + 1..end_index).find(|&index| tokens[index].token_type == TokenType::When)?;
-    let then_index =
-        (when_index + 1..end_index).find(|&index| tokens[index].token_type == TokenType::Then)?;
-    let condition = char_slice(
-        sql,
-        tokens[when_index].span.end,
-        tokens[then_index].span.start,
-    )?
-    .trim();
-    (!condition.is_empty()).then(|| LintEdit {
-        start: span.start,
-        end: span.end,
-        replacement: format!("COALESCE({condition}, FALSE)"),
-    })
-}
-
 pub(super) fn char_slice(sql: &str, start: usize, end: usize) -> Option<&str> {
     if start > end {
         return None;
@@ -1565,17 +1513,20 @@ fn diagnostics_for_spans(
         .collect()
 }
 
-/// The diagnostics of one tree Rule's findings, their edits rendered on `sql`.
+/// The diagnostics of one tree Rule's findings, their edits rendered on the SQL.
 fn rule_diagnostics(
     rule: &LintRuleMetadata,
     findings: &[RuleFinding],
-    sql: &str,
+    context: &DiagnosticContext<'_>,
     fix_unavailable_reason: Option<&'static str>,
 ) -> Vec<LintDiagnostic> {
     findings
         .iter()
         .map(|finding| {
-            let fix: Option<LintEdit> = finding.fix.as_ref().and_then(|edit| rendered(edit, sql));
+            let fix: Option<LintEdit> = finding
+                .fix
+                .as_ref()
+                .and_then(|edit| rendered(edit, context.sql, context.tokens));
             diagnostic(rule, Some(finding.span), fix, fix_unavailable_reason)
         })
         .collect()

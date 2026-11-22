@@ -3,14 +3,15 @@
 use sqlquack_syntax::Expression;
 use sqlquack_syntax::expressions::queries::models::{Join, JoinKind};
 
-use crate::models::{RuleEdit, RuleFinding};
+use crate::models::{Replacement, RuleEdit, RuleFinding};
+use crate::trees::main::unwrapped::unwrapped;
 
 /// The finding on `join`'s JOIN keyword, with CROSS JOIN as its fix when JOIN is written alone.
 pub(crate) fn conditionless_finding(join: &Join) -> Option<RuleFinding> {
     let span = join.keyword_span.0?;
     let fix: Option<RuleEdit> = bare_join(join).then_some(RuleEdit {
         span,
-        replacement: "CROSS JOIN",
+        replacement: Replacement::Text("CROSS JOIN"),
         trailing_layout: false,
     });
     Some(RuleFinding { span, fix })
@@ -64,17 +65,6 @@ fn is_always_true(predicate: &Expression) -> bool {
             }
         }
         _ => false,
-    }
-}
-
-/// `expression` without the parentheses and comments around it.
-fn unwrapped(mut expression: &Expression) -> &Expression {
-    loop {
-        expression = match expression {
-            Expression::Paren(node) => &node.this,
-            Expression::Annotated(node) => &node.this,
-            _ => return expression,
-        };
     }
 }
 

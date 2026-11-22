@@ -3,7 +3,7 @@
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
 use crate::joins::_helpers::written_joins::has_explicit_join;
-use crate::models::{RuleEdit, RuleFinding, RuleInput};
+use crate::models::{Replacement, RuleEdit, RuleFinding, RuleInput};
 
 /// The commas that join relations, without those before an item that may read the items before it.
 pub fn implicit_joins(input: &RuleInput<'_>) -> Vec<RuleFinding> {
@@ -23,7 +23,7 @@ pub fn implicit_joins(input: &RuleInput<'_>) -> Vec<RuleFinding> {
             }
             let fix: Option<RuleEdit> = (!mixed).then_some(RuleEdit {
                 span: comma,
-                replacement: " CROSS JOIN ",
+                replacement: Replacement::Text(" CROSS JOIN "),
                 trailing_layout: true,
             });
             found.push(RuleFinding { span: comma, fix });

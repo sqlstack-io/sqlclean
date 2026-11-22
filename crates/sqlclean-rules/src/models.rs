@@ -28,7 +28,19 @@ pub struct RuleFinding {
 #[derive(Debug)]
 pub struct RuleEdit {
     pub span: Span,
-    pub replacement: &'static str,
+    pub replacement: Replacement,
     /// The edit also takes the layout after `span`, and is dropped when a comment follows that.
     pub trailing_layout: bool,
+}
+
+/// What an edit writes.
+#[derive(Clone, Copy, Debug)]
+pub enum Replacement {
+    Text(&'static str),
+    /// The source at `kept`, without the layout around it, between two fixed texts.
+    Wrapped {
+        before: &'static str,
+        kept: Span,
+        after: &'static str,
+    },
 }

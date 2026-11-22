@@ -50,7 +50,7 @@ pub(crate) struct AdditionalQueryFacts {
     pub duplicate_table_aliases: Vec<Span>,
     pub duplicate_output_aliases: Vec<Span>,
     pub mixed_group_order_references: Vec<Span>,
-    pub redundant_else_nulls: Vec<Span>,
+    pub redundant_else_nulls: Vec<RuleFinding>,
     pub parenthesized_distincts: Vec<Span>,
     pub constant_predicates: Vec<Span>,
     pub consecutive_semicolons: Vec<Span>,
@@ -68,8 +68,8 @@ pub(crate) struct AdditionalQueryFacts {
     pub unqualified_multi_source_columns: Vec<Span>,
     pub inconsistent_single_source_qualification: Vec<Span>,
     pub unknown_relation_qualifiers: Vec<Span>,
-    pub simple_boolean_cases: Vec<Span>,
-    pub nested_else_cases: Vec<Span>,
+    pub simple_boolean_cases: Vec<RuleFinding>,
+    pub nested_else_cases: Vec<RuleFinding>,
     pub unused_joined_relations: Vec<Span>,
 }
 
