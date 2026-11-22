@@ -24,11 +24,18 @@ pub struct ParsedSql {
     pub statements: Vec<Expression>,
 }
 
+/// A finding anchored on the tree, with the edit its Rule can make there.
+#[derive(Debug)]
+pub(crate) struct AnchoredFinding {
+    pub(crate) span: Span,
+    pub(crate) fix: Option<LintEdit>,
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct QueryFacts {
     pub null_comparisons: Vec<Span>,
-    pub implicit_cartesian_joins: Vec<Span>,
-    pub joins_without_condition: Vec<Span>,
+    pub implicit_cartesian_joins: Vec<AnchoredFinding>,
+    pub joins_without_condition: Vec<AnchoredFinding>,
     pub unordered_limits: Vec<Span>,
     pub redundant_distincts: Vec<Span>,
     pub positional_set_stars: Vec<Span>,

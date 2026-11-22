@@ -1,10 +1,10 @@
-//! SQL a token scan misreads, pinned to what the Rules report until each reads the located tree.
+//! SQL a token scan misreads: the regression cases of the Rules on the located tree, and what the others report until they are on it.
 
 use crate::lint::tests::helpers::pinned_findings;
 use crate::lint::tests::test_types::RulePinTestCase;
 
 #[test]
-fn given_sql_a_token_scan_misreads_when_linting_then_the_current_findings_are_pinned() {
+fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_pinned() {
     let test_cases = [
         RulePinTestCase {
             description: "the fix of NULL followed by an operator",
@@ -25,99 +25,77 @@ fn given_sql_a_token_scan_misreads_when_linting_then_the_current_findings_are_pi
             rule: "SQLCLEAN002",
             dialects: &["snowflake"],
             sql: "SELECT o.id, f.value FROM orders o, TABLE(FLATTEN(input => o.items)) f",
-            expected_findings: Ok(&[(
-                ",",
-                Some(
-                    "SELECT o.id, f.value FROM orders o CROSS JOIN TABLE(FLATTEN(input => o.items)) f",
-                ),
-            )]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "a table function over a window after a comma",
             rule: "SQLCLEAN002",
             dialects: &["snowflake"],
             sql: "SELECT s.total FROM payments p, TABLE(smooth_payments(p.amount) OVER (PARTITION BY p.customer_id)) s",
-            expected_findings: Ok(&[(
-                ",",
-                Some(
-                    "SELECT s.total FROM payments p CROSS JOIN TABLE(smooth_payments(p.amount) OVER (PARTITION BY p.customer_id)) s",
-                ),
-            )]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "TABLE(SPLIT_TO_TABLE) after a comma",
             rule: "SQLCLEAN002",
             dialects: &["snowflake"],
             sql: "SELECT s.value FROM orders o, TABLE(SPLIT_TO_TABLE(o.tags, ',')) s",
-            expected_findings: Ok(&[(
-                ",",
-                Some(
-                    "SELECT s.value FROM orders o CROSS JOIN TABLE(SPLIT_TO_TABLE(o.tags, ',')) s",
-                ),
-            )]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "correlated UNNEST after a comma",
             rule: "SQLCLEAN002",
             dialects: &["duckdb", "postgres", "bigquery"],
             sql: "SELECT x FROM orders, UNNEST(orders.items) AS x",
-            expected_findings: Ok(&[(
-                ",",
-                Some("SELECT x FROM orders CROSS JOIN UNNEST(orders.items) AS x"),
-            )]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "an array path after a comma",
             rule: "SQLCLEAN002",
             dialects: &["bigquery"],
             sql: "SELECT o.id FROM orders AS o, o.items",
-            expected_findings: Ok(&[(
-                ",",
-                Some("SELECT o.id FROM orders AS o CROSS JOIN o.items"),
-            )]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "a function in FROM after a comma",
             rule: "SQLCLEAN002",
             dialects: &["postgres"],
             sql: "SELECT e.value FROM orders o, jsonb_array_elements(o.items) e",
-            expected_findings: Ok(&[(
-                ",",
-                Some("SELECT e.value FROM orders o CROSS JOIN jsonb_array_elements(o.items) e"),
-            )]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "the comma between named windows",
             rule: "SQLCLEAN002",
             dialects: &["duckdb", "postgres"],
             sql: "SELECT SUM(total) OVER w1 AS a, SUM(total) OVER w2 AS b FROM orders WINDOW w1 AS (ORDER BY id), w2 AS (ORDER BY total)",
-            expected_findings: Ok(&[(
-                ",",
-                Some(
-                    "SELECT SUM(total) OVER w1 AS a, SUM(total) OVER w2 AS b FROM orders WINDOW w1 AS (ORDER BY id) CROSS JOIN w2 AS (ORDER BY total)",
-                ),
-            )]),
+            expected_findings: Ok(&[]),
+        },
+        RulePinTestCase {
+            description: "the fix before an outer join, which binds tighter",
+            rule: "SQLCLEAN002",
+            dialects: &["snowflake", "postgres"],
+            sql: "SELECT o.id FROM orders o, customers c RIGHT JOIN regions r ON c.region_id = r.id",
+            expected_findings: Ok(&[(",", None)]),
         },
         RulePinTestCase {
             description: "a comma after a join",
             rule: "SQLCLEAN002",
             dialects: &["snowflake", "postgres"],
             sql: "SELECT o.id FROM orders o JOIN customers c ON o.customer_id = c.id, regions r",
-            expected_findings: Ok(&[]),
+            expected_findings: Ok(&[(",", None)]),
         },
         RulePinTestCase {
             description: "ASOF JOIN with MATCH_CONDITION and no ON",
             rule: "SQLCLEAN003",
             dialects: &["snowflake"],
             sql: "SELECT t.id FROM trades t ASOF JOIN quotes q MATCH_CONDITION (t.ts >= q.ts)",
-            expected_findings: Ok(&[("JOIN", None)]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "LEFT JOIN LATERAL ON TRUE",
             rule: "SQLCLEAN003",
             dialects: &["postgres", "duckdb"],
             sql: "SELECT o.id FROM orders o LEFT JOIN LATERAL (SELECT i.sku FROM items i WHERE i.order_id = o.id) s ON TRUE",
-            expected_findings: Ok(&[("JOIN", None)]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "a limit after a parenthesised set operation",
@@ -190,21 +168,21 @@ fn given_sql_a_token_scan_misreads_when_linting_then_the_current_findings_are_pi
                 "databricks",
             ],
             sql: "SELECT qty * price AS amount FROM orders UNION ALL SELECT amount FROM returns",
-            expected_findings: Ok(&[("UNION", None)]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "a star EXCEPT is no set operation",
             rule: "SQLCLEAN007",
             dialects: &["bigquery", "databricks"],
             sql: "SELECT * EXCEPT (secret) FROM customers",
-            expected_findings: Ok(&[("EXCEPT", None)]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "a parenthesised branch and a later CTE",
             rule: "SQLCLEAN007",
             dialects: &["snowflake", "duckdb"],
             sql: "WITH u AS (SELECT a FROM x UNION ALL (SELECT b FROM y)), v AS (SELECT * FROM z) SELECT a FROM u",
-            expected_findings: Ok(&[("UNION", None)]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "a bare UNION BY NAME",
@@ -353,7 +331,7 @@ fn given_sql_a_token_scan_misreads_when_linting_then_the_current_findings_are_pi
             rule: "SQLCLEAN020",
             dialects: &["snowflake", "duckdb"],
             sql: "SELECT 1 AS a, 'x' AS b UNION ALL BY NAME SELECT 'y' AS b",
-            expected_findings: Ok(&[("UNION", None)]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "ORDER BY commas in a last branch without FROM",
@@ -367,7 +345,7 @@ fn given_sql_a_token_scan_misreads_when_linting_then_the_current_findings_are_pi
                 "databricks",
             ],
             sql: "SELECT 'a' AS k, 1 AS v UNION ALL SELECT 'b', 2 ORDER BY k, v",
-            expected_findings: Ok(&[("UNION", None)]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "multiplication hides the count",
@@ -381,28 +359,28 @@ fn given_sql_a_token_scan_misreads_when_linting_then_the_current_findings_are_pi
                 "databricks",
             ],
             sql: "SELECT a * 2 AS a, b FROM t UNION ALL SELECT c FROM u",
-            expected_findings: Ok(&[]),
+            expected_findings: Ok(&[("UNION", None)]),
         },
         RulePinTestCase {
             description: "parenthesised branches",
             rule: "SQLCLEAN020",
             dialects: &["snowflake", "duckdb", "postgres"],
             sql: "(SELECT a, b FROM x) UNION ALL (SELECT c FROM y)",
-            expected_findings: Ok(&[]),
+            expected_findings: Ok(&[("UNION", None)]),
         },
         RulePinTestCase {
             description: "a search across CTEs",
             rule: "SQLCLEAN020",
             dialects: &["snowflake", "duckdb"],
             sql: "WITH v AS (SELECT p, q FROM z), u AS ((SELECT a FROM x) UNION ALL SELECT b FROM y) SELECT a FROM u",
-            expected_findings: Ok(&[("UNION", None)]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "COLUMNS stands for several columns",
             rule: "SQLCLEAN020",
             dialects: &["duckdb"],
             sql: "SELECT COLUMNS('a.*') FROM t UNION ALL SELECT a, b FROM u",
-            expected_findings: Ok(&[("UNION", None)]),
+            expected_findings: Ok(&[]),
         },
         RulePinTestCase {
             description: "a fully qualified column",

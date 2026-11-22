@@ -16,14 +16,14 @@ use crate::dialects::main::lint_dialect::lint_dialect;
 use crate::dialects::main::profile::profile;
 use crate::lint::_helpers::additional::collect_additional_facts;
 use crate::lint::_helpers::inline_relations::collect_inline_query_relation_spans;
-use crate::lint::_helpers::join_predicates::{
-    condition_tokens, cross_join_diagnostics, trivial_on_condition,
-};
+use crate::lint::_helpers::join_predicates::cross_join_diagnostics;
 use crate::lint::_helpers::parsing::parse;
 use crate::lint::_helpers::terminal_shape::{
     collect_terminal_shape_facts, first_row_selection_clause, limits_to_no_rows,
     projects_only_constants,
 };
+use crate::lint::_helpers::tree_joins::{implicit_joins, joins_without_condition};
+use crate::lint::_helpers::tree_set_operations::{arity_mismatches, positional_stars};
 
 const NULL_COMPARISON: LintRuleMetadata = LintRuleMetadata {
     code: "SQLCLEAN001",
@@ -545,6 +545,10 @@ fn build_facts(
             fixture_harness: options.fixture_harness,
         },
     );
+    facts.implicit_cartesian_joins = implicit_joins(expressions, tokens, sql);
+    facts.joins_without_condition = joins_without_condition(expressions);
+    facts.positional_set_stars = positional_stars(expressions);
+    facts.additional.set_arity_mismatches = arity_mismatches(expressions);
     for expression in expressions {
         facts
             .unused_cte_names
@@ -586,11 +590,7 @@ fn collect_token_query_facts(
         if let Some(span) = redundant_distinct_span(&context) {
             facts.redundant_distincts.push(span);
         }
-        let (implicit, missing_conditions) = collect_from_and_join_facts(tokens, &direct);
-        facts.implicit_cartesian_joins.extend(implicit);
-        facts.joins_without_condition.extend(missing_conditions);
     }
-    facts.positional_set_stars = collect_set_operation_facts(tokens, &depths);
     facts
 }
 
@@ -865,191 +865,6 @@ fn alias_start(
         .unwrap_or(segment.end)
 }
 
-fn collect_from_and_join_facts(tokens: &[Token], direct: &[usize]) -> (Vec<Span>, Vec<Span>) {
-    let mut implicit: Vec<Span> = Vec::new();
-    let mut missing_conditions: Vec<Span> = Vec::new();
-    let Some(from_position) = direct
-        .iter()
-        .position(|&index| is_query_from(tokens, index))
-    else {
-        return (implicit, missing_conditions);
-    };
-    let clause_end = direct[from_position + 1..]
-        .iter()
-        .position(|&index| is_post_from_clause(tokens[index].token_type))
-        .map_or(direct.len(), |offset| from_position + 1 + offset);
-    let relation_clause = &direct[from_position + 1..clause_end];
-    let values_relation = relation_clause
-        .first()
-        .is_some_and(|&index| tokens[index].token_type == TokenType::Values);
-    for (position, &index) in relation_clause.iter().enumerate() {
-        if tokens[index].token_type == TokenType::Comma
-            && !values_relation
-            && relation_clause
-                .get(position + 1)
-                .is_none_or(|&next| tokens[next].token_type != TokenType::Lateral)
-        {
-            implicit.push(tokens[index].span);
-        }
-    }
-    for (position, &index) in direct.iter().enumerate() {
-        if tokens[index].token_type != TokenType::Join
-            || is_conditionless_join(tokens, direct, position)
-        {
-            continue;
-        }
-        let condition_end = direct[position + 1..]
-            .iter()
-            .position(|&candidate| {
-                tokens[candidate].token_type == TokenType::Join
-                    || is_post_from_clause(tokens[candidate].token_type)
-            })
-            .map_or(direct.len(), |offset| position + 1 + offset);
-        let condition = &direct[position + 1..condition_end];
-        let on_position = condition
-            .iter()
-            .position(|&candidate| tokens[candidate].token_type == TokenType::On);
-        let has_using = condition
-            .iter()
-            .any(|&candidate| tokens[candidate].token_type == TokenType::Using);
-        if !has_using
-            && on_position.is_none_or(|offset| {
-                let end = direct.get(condition_end).copied().unwrap_or(tokens.len());
-                trivial_on_condition(tokens, &condition_tokens(tokens, condition[offset], end))
-            })
-        {
-            missing_conditions.push(tokens[index].span);
-        }
-    }
-    (implicit, missing_conditions)
-}
-
-fn is_post_from_clause(token_type: TokenType) -> bool {
-    matches!(
-        token_type,
-        TokenType::Join
-            | TokenType::Where
-            | TokenType::Group
-            | TokenType::Having
-            | TokenType::Qualify
-            | TokenType::Order
-            | TokenType::Limit
-            | TokenType::Offset
-            | TokenType::Fetch
-    )
-}
-
-fn is_conditionless_join(tokens: &[Token], direct: &[usize], join_position: usize) -> bool {
-    direct[..join_position]
-        .iter()
-        .rev()
-        .take_while(|&&index| {
-            !matches!(
-                tokens[index].token_type,
-                TokenType::From | TokenType::Join | TokenType::Comma
-            )
-        })
-        .any(|&index| {
-            matches!(
-                tokens[index].text.to_ascii_uppercase().as_str(),
-                "CROSS" | "NATURAL" | "APPLY" | "POSITIONAL" | "PASTE"
-            )
-        })
-}
-
-fn collect_set_operation_facts(tokens: &[Token], depths: &[usize]) -> Vec<Span> {
-    let mut spans: Vec<Span> = Vec::new();
-    for (index, token) in tokens.iter().enumerate() {
-        if !matches!(
-            token.token_type,
-            TokenType::Union | TokenType::Intersect | TokenType::Except
-        ) {
-            continue;
-        }
-        let depth = depths[index];
-        let by_name = tokens[index + 1..]
-            .iter()
-            .take_while(|candidate| candidate.token_type != TokenType::Select)
-            .any(|candidate| candidate.text.eq_ignore_ascii_case("BY"))
-            && tokens[index + 1..]
-                .iter()
-                .take_while(|candidate| candidate.token_type != TokenType::Select)
-                .any(|candidate| candidate.text.eq_ignore_ascii_case("NAME"));
-        if !by_name
-            && (select_before_projects_star(tokens, depths, index, depth)
-                || select_after_projects_star(tokens, depths, index, depth))
-        {
-            spans.push(token.span);
-        }
-    }
-    spans
-}
-
-fn select_before_projects_star(
-    tokens: &[Token],
-    depths: &[usize],
-    end: usize,
-    depth: usize,
-) -> bool {
-    let Some(start) = (0..end)
-        .rev()
-        .find(|&index| depths[index] == depth && tokens[index].token_type == TokenType::Select)
-        .or_else(|| {
-            (0..end)
-                .rev()
-                .filter(|&index| tokens[index].token_type == TokenType::Select)
-                .min_by_key(|&index| depths[index])
-        })
-    else {
-        return false;
-    };
-    projection_projects_star(
-        tokens,
-        depths,
-        &ExpressionRange {
-            start,
-            end,
-            depth: depths[start],
-            strip_alias: false,
-        },
-    )
-}
-
-fn select_after_projects_star(
-    tokens: &[Token],
-    depths: &[usize],
-    start: usize,
-    depth: usize,
-) -> bool {
-    let Some(select) = (start + 1..tokens.len())
-        .find(|&index| depths[index] == depth && tokens[index].token_type == TokenType::Select)
-        .or_else(|| {
-            (start + 1..tokens.len())
-                .filter(|&index| tokens[index].token_type == TokenType::Select)
-                .min_by_key(|&index| depths[index])
-        })
-    else {
-        return false;
-    };
-    let select_depth = depths[select];
-    projection_projects_star(
-        tokens,
-        depths,
-        &ExpressionRange {
-            start: select,
-            end: query_end(tokens, depths, select, select_depth),
-            depth: select_depth,
-            strip_alias: false,
-        },
-    )
-}
-
-fn projection_projects_star(tokens: &[Token], depths: &[usize], range: &ExpressionRange) -> bool {
-    (range.start + 1..range.end)
-        .take_while(|&index| depths[index] != range.depth || !is_query_from(tokens, index))
-        .any(|index| depths[index] == range.depth && tokens[index].token_type == TokenType::Star)
-}
-
 fn collect_unused_ctes(expression: &Expression, options: &FactBuildOptions<'_>) -> Vec<String> {
     let mut unused: Vec<String> = Vec::new();
     for node in expression.dfs() {
@@ -1191,80 +1006,6 @@ fn redundant_distinct_fix(tokens: &[Token], span: Span) -> LintEdit {
     }
 }
 
-fn implicit_cartesian_fix(sql: &str, tokens: &[Token], span: Span) -> Option<LintEdit> {
-    let comma_index = token_index_for_span(tokens, span)?;
-    let depths = token_depths(tokens);
-    let depth = depths[comma_index];
-    let from_index = (0..comma_index).rev().find(|&index| {
-        depths[index] == depth
-            && (is_query_from(tokens, index) || tokens[index].token_type == TokenType::Semicolon)
-    })?;
-    if !is_query_from(tokens, from_index) {
-        return None;
-    }
-    let clause_end = (comma_index + 1..tokens.len())
-        .find(|&index| depths[index] == depth && is_post_from_clause(tokens[index].token_type))
-        .unwrap_or(tokens.len());
-    if tokens[from_index + 1..clause_end]
-        .iter()
-        .any(|token| token.token_type == TokenType::Join)
-    {
-        return None;
-    }
-    let next_index = significant_after(tokens, comma_index)?;
-    let end = tokens[next_index].span.start;
-    let replaced = char_slice(sql, span.start, end)?;
-    if contains_comment(replaced) {
-        return None;
-    }
-    Some(LintEdit {
-        start: span.start,
-        end,
-        replacement: " CROSS JOIN ".to_string(),
-    })
-}
-
-fn conditionless_join_fix(tokens: &[Token], span: Span) -> Option<LintEdit> {
-    let join_index = token_index_for_span(tokens, span)?;
-    let depths = token_depths(tokens);
-    let depth = depths[join_index];
-    if significant_before(tokens, join_index).is_some_and(|index| {
-        matches!(
-            tokens[index].text.to_ascii_uppercase().as_str(),
-            "INNER"
-                | "LEFT"
-                | "RIGHT"
-                | "FULL"
-                | "OUTER"
-                | "CROSS"
-                | "NATURAL"
-                | "ASOF"
-                | "SEMI"
-                | "ANTI"
-        )
-    }) {
-        return None;
-    }
-    let condition_end = (join_index + 1..tokens.len())
-        .find(|&index| {
-            depths[index] == depth
-                && (tokens[index].token_type == TokenType::Join
-                    || is_post_from_clause(tokens[index].token_type))
-        })
-        .unwrap_or(tokens.len());
-    if tokens[join_index + 1..condition_end]
-        .iter()
-        .any(|token| matches!(token.token_type, TokenType::On | TokenType::Using))
-    {
-        return None;
-    }
-    Some(LintEdit {
-        start: span.start,
-        end: span.end,
-        replacement: "CROSS JOIN".to_string(),
-    })
-}
-
 fn unused_cte_fix(sql: &str, tokens: &[Token], name_span: Span) -> Option<LintEdit> {
     let name_index = token_index_for_span(tokens, name_span)?;
     if tokens[name_index].text.starts_with("__") {
@@ -1323,6 +1064,14 @@ fn unused_cte_fix(sql: &str, tokens: &[Token], name_span: Span) -> Option<LintEd
     })
 }
 
+/// Where the first text after character `end` begins, past layout and comments.
+pub(super) fn next_text_start(tokens: &[Token], end: usize) -> Option<usize> {
+    tokens
+        .iter()
+        .find(|token| token.span.start >= end && !is_layout(token) && !is_comment(token))
+        .map(|token| token.span.start)
+}
+
 fn token_index_for_span(tokens: &[Token], span: Span) -> Option<usize> {
     tokens.iter().position(|token| token.span == span)
 }
@@ -1377,23 +1126,21 @@ fn core_diagnostics(context: &DiagnosticContext<'_>) -> Vec<LintDiagnostic> {
         }));
     }
     if enabled.contains(IMPLICIT_CARTESIAN_JOIN.code) {
-        diagnostics.extend(facts.implicit_cartesian_joins.iter().map(|span| {
-            let fix = implicit_cartesian_fix(sql, tokens, *span);
+        diagnostics.extend(facts.implicit_cartesian_joins.iter().map(|finding| {
             diagnostic(
                 &IMPLICIT_CARTESIAN_JOIN,
-                Some(*span),
-                fix,
+                Some(finding.span),
+                finding.fix.clone(),
                 Some("mixed joins, comments, or generated SQL require an explicit authored repair"),
             )
         }));
     }
     if enabled.contains(JOIN_WITHOUT_CONDITION.code) {
-        diagnostics.extend(facts.joins_without_condition.iter().map(|span| {
-            let fix = conditionless_join_fix(tokens, *span);
+        diagnostics.extend(facts.joins_without_condition.iter().map(|finding| {
             diagnostic(
                 &JOIN_WITHOUT_CONDITION,
-                Some(*span),
-                fix,
+                Some(finding.span),
+                finding.fix.clone(),
                 Some("qualified joins or joins with placeholder conditions require user intent"),
             )
         }));
@@ -1802,7 +1549,7 @@ fn explicit_union_fix(dialect: LintDialect, span: Span) -> Option<LintEdit> {
     })
 }
 
-fn char_slice(sql: &str, start: usize, end: usize) -> Option<&str> {
+pub(super) fn char_slice(sql: &str, start: usize, end: usize) -> Option<&str> {
     if start > end {
         return None;
     }
@@ -1820,7 +1567,7 @@ fn char_offset_to_byte_offset(sql: &str, offset: usize) -> Option<usize> {
         .map(|(byte_offset, _)| byte_offset)
 }
 
-fn contains_comment(source: &str) -> bool {
+pub(super) fn contains_comment(source: &str) -> bool {
     source.contains("--") || source.contains("/*")
 }
 

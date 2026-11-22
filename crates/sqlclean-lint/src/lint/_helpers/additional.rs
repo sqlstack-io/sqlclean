@@ -194,7 +194,6 @@ pub(super) fn collect_additional_facts(
     facts.unused_joined_relations = select_facts.unused_joined_relations;
     facts.mixed_group_order_references = select_facts.mixed_group_order_references;
     facts.ambiguous_order_directions = select_facts.ambiguous_order_directions;
-    facts.set_arity_mismatches = set_arity_mismatch_spans(tokens, &depths);
     facts
 }
 
@@ -1800,82 +1799,6 @@ fn constant_predicate(tokens: &[Token], indices: &[usize]) -> bool {
     ) && left.token_type == right.token_type
         && left.text == right.text
         && matches!(operator.token_type, TokenType::Eq | TokenType::Neq)
-}
-
-fn set_arity_mismatch_spans(tokens: &[Token], depths: &[usize]) -> Vec<Span> {
-    let mut spans: Vec<Span> = Vec::new();
-    for (index, token) in tokens.iter().enumerate() {
-        if !matches!(
-            token.token_type,
-            TokenType::Union | TokenType::Intersect | TokenType::Except
-        ) {
-            continue;
-        }
-        let depth = depths[index];
-        let Some(left_select) = (0..index).rev().find(|&candidate| {
-            depths[candidate] == depth && tokens[candidate].token_type == TokenType::Select
-        }) else {
-            continue;
-        };
-        let Some(right_select) = (index + 1..tokens.len()).find(|&candidate| {
-            depths[candidate] == depth && tokens[candidate].token_type == TokenType::Select
-        }) else {
-            continue;
-        };
-        let left_query = QuerySlice {
-            tokens,
-            depths,
-            direct: &[],
-            start: left_select,
-            end: index,
-            depth,
-        };
-        let left_count = projection_arity(&left_query);
-        let right_end = query_end(tokens, depths, right_select, depth);
-        let right_query = QuerySlice {
-            tokens,
-            depths,
-            direct: &[],
-            start: right_select,
-            end: right_end,
-            depth,
-        };
-        let right_count = projection_arity(&right_query);
-        if left_count
-            .zip(right_count)
-            .is_some_and(|(left, right)| left != right)
-        {
-            spans.push(token.span);
-        }
-    }
-    spans
-}
-
-fn projection_arity(query: &QuerySlice<'_>) -> Option<usize> {
-    let QuerySlice {
-        tokens,
-        depths,
-        start: select,
-        end,
-        depth,
-        ..
-    } = query;
-    let select = *select;
-    let end = *end;
-    let depth = *depth;
-    let projection_end = (select + 1..end)
-        .find(|&index| depths[index] == depth && is_query_from(tokens, index))
-        .unwrap_or(end);
-    if (select + 1..projection_end)
-        .any(|index| depths[index] == depth && tokens[index].token_type == TokenType::Star)
-    {
-        return None;
-    }
-    Some(
-        1 + (select + 1..projection_end)
-            .filter(|&index| depths[index] == depth && tokens[index].token_type == TokenType::Comma)
-            .count(),
-    )
 }
 
 fn is_identifier(token: &Token) -> bool {

@@ -19,7 +19,6 @@ use sqlquack_syntax::expressions::queries::models::With;
 use sqlquack_syntax::tokens::models::{Span, Token, TokenType};
 
 use crate::constants::SETTING_SNIPPET_INDENT;
-use crate::lint::_helpers::engine::{is_comment, is_layout};
 use crate::lint::constants::{
     CROSS_JOIN_CTE_MARKER, CROSS_JOIN_PATH_PLACEHOLDER, CROSS_JOIN_PREFIX,
     CROSS_JOIN_REASON_PLACEHOLDER, CROSS_JOIN_SUFFIX, CROSS_JOIN_UNNAMED_MESSAGE,
@@ -29,8 +28,6 @@ use crate::tree::main::join_chains::join_chains;
 
 const CROSS_JOIN_FIX_REASON: &str = "a keyed relationship requires user intent";
 
-/// Tokens in a constant `ON` condition such as `1 = 1`.
-const TRIVIAL_EQUALITY_TOKEN_COUNT: usize = 3;
 const FIRST_ROW: &str = "1";
 const ROW_GENERATOR_FUNCTIONS: [&str; 16] = [
     "unnest",
@@ -816,42 +813,6 @@ fn relation_anchor_candidates(tokens: &[Token], significant: &[usize], cross: Sp
         }
     }
     candidates
-}
-
-/// Every token after `ON` before `end`, including those nested in parentheses, stopping at a parenthesis the condition did not open.
-pub(super) fn condition_tokens(tokens: &[Token], on: usize, end: usize) -> Vec<usize> {
-    let mut open: usize = 0;
-    let mut found: Vec<usize> = Vec::new();
-    for (index, token) in tokens.iter().enumerate().take(end).skip(on + 1) {
-        match token.token_type {
-            TokenType::LParen => open += 1,
-            TokenType::RParen if open == 0 => break,
-            TokenType::RParen => open -= 1,
-            _ => {}
-        }
-        if !is_layout(token) && !is_comment(token) {
-            found.push(index);
-        }
-    }
-    found
-}
-
-pub(super) fn trivial_on_condition(tokens: &[Token], condition: &[usize]) -> bool {
-    let significant: Vec<&Token> = condition
-        .iter()
-        .map(|&index| &tokens[index])
-        .filter(|token| !matches!(token.token_type, TokenType::LParen | TokenType::RParen))
-        .collect();
-    significant.is_empty()
-        || significant.len() == 1 && significant[0].token_type == TokenType::True
-        || significant.len() == TRIVIAL_EQUALITY_TOKEN_COUNT
-            && significant[1].token_type == TokenType::Eq
-            && matches!(
-                significant[0].token_type,
-                TokenType::Number | TokenType::String | TokenType::True | TokenType::False
-            )
-            && significant[0].token_type == significant[2].token_type
-            && significant[0].text == significant[2].text
 }
 
 /// The source text from the start of `tokens[first]` to the end of `tokens[end - 1]`.
