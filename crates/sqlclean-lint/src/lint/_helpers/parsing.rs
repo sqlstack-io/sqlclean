@@ -8,7 +8,7 @@ use sqlquack_parse::parsing::main::checked_call_depth::checked_call_depth;
 use sqlquack_syntax::guard::main::enforce_lexed_tokens::enforce_lexed_tokens;
 use sqlquack_syntax::guard::main::has_function_call::has_function_call;
 use sqlquack_syntax::tokens::models::{Token, TokenType};
-use sqlquack_syntax::{ComplexityGuardOptions, Expression, ExpressionWalk, ParseOptions};
+use sqlquack_syntax::{CallMode, ComplexityGuardOptions, Expression, ExpressionWalk, ParseOptions};
 
 use crate::dialects::main::profile::profile;
 use crate::dialects::models::LintProfile;
@@ -18,7 +18,7 @@ use crate::lint::models::{LintDialect, ParsedSql};
 pub(crate) fn parse(
     sql: &str,
     dialect: LintDialect,
-    (empty_relation, max_call_depth): (Option<&str>, Option<usize>),
+    (empty_relation, max_call_depth, mode): (Option<&str>, Option<usize>, CallMode),
 ) -> Result<ParsedSql, String> {
     let max_call_depth: usize =
         checked_call_depth(max_call_depth.unwrap_or(MAX_FUNCTION_CALL_DEPTH))
@@ -62,7 +62,7 @@ pub(crate) fn parse(
         }),
     };
     let statements: Vec<Expression> =
-        (profile.statements)(parse_text, &options).map_err(|message| {
+        (profile.statements)(parse_text, &options, mode).map_err(|message| {
             call_depth_hint(
                 message,
                 max_call_depth,
@@ -83,15 +83,6 @@ pub(crate) fn parse(
         tokens,
         statements,
     })
-}
-
-/// The expressions starting a predicate `text` (tokenized as `tokens`), ignoring what follows.
-pub(crate) fn predicate_expressions(
-    text: &str,
-    tokens: &[Token],
-    dialect: LintDialect,
-) -> Result<Vec<Expression>, String> {
-    (profile(dialect).predicates)(text, tokens)
 }
 
 /// `sql` with each `FROM <empty_relation> ( )` blanked to spaces past Snowflake's `TABLE( )` rule; empty when none.

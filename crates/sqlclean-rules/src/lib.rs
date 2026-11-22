@@ -11,6 +11,7 @@ pub mod models;
 pub(crate) mod names;
 pub mod outputs;
 pub mod predicates;
+pub(crate) mod queries;
 pub mod rankings;
 pub mod relations;
 pub mod selects;

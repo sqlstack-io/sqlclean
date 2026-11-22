@@ -7,8 +7,7 @@ use sqlquack_syntax::{CallMode, Dialect, Expression, ParseOptions};
 pub(crate) fn shared_statements(
     sql: &str,
     dialect: Dialect,
-    options: &ParseOptions,
+    (options, mode): (&ParseOptions, CallMode),
 ) -> Result<Vec<Expression>, String> {
-    parse_statements_with(sql, dialect, options, CallMode::QueriesLocated)
-        .map_err(|error| error.to_string())
+    parse_statements_with(sql, dialect, options, mode).map_err(|error| error.to_string())
 }

@@ -1,15 +1,7 @@
-//! Remediation text that shows the exact configuration setting to write.
+//! `setting_help`: remediation text that shows the exact configuration setting to write.
 
 use crate::constants::SETTING_SNIPPET_INDENT;
-
-/// One setting a remediation tells the user to write.
-pub(crate) struct Setting<'a> {
-    pub(crate) purpose: &'a str,
-    pub(crate) config_file: &'a str,
-    pub(crate) section: &'a str,
-    pub(crate) key: &'a str,
-    pub(crate) value: &'a str,
-}
+use crate::quality::models::Setting;
 
 /// `<purpose>, set this in <config_file>:` followed by the section and `key = value`.
 pub(crate) fn setting_help(setting: &Setting<'_>) -> String {

@@ -6,7 +6,7 @@ use sqlquack_syntax::expressions::functions::models::WindowFunction;
 use sqlquack_syntax::expressions::queries::models::{NamedWindow, Over, Select};
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
-use crate::trees::_helpers::syntax::lower;
+use crate::queries::main::lower::lower;
 use crate::trees::main::call_name::call_name;
 use crate::trees::main::walk_in_scope::walk_in_scope;
 

@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
+use sqlclean_rules::models::{MacroOutput, RuleInput};
+
 use serde::{Deserialize, Serialize};
-use sqlclean_rules::models::RuleFinding;
 use sqlquack_syntax::Expression;
-use sqlquack_syntax::tokens::models::{Span, Token};
+use sqlquack_syntax::tokens::models::Token;
 
 /// A dialect lint reads, named by the parser that reads it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -23,54 +24,6 @@ pub struct ParsedSql {
     pub dialect: LintDialect,
     pub tokens: Vec<Token>,
     pub statements: Vec<Expression>,
-}
-
-#[derive(Debug, Default)]
-pub(crate) struct QueryFacts {
-    pub null_comparisons: Vec<Span>,
-    pub implicit_cartesian_joins: Vec<RuleFinding>,
-    pub joins_without_condition: Vec<RuleFinding>,
-    pub unordered_limits: Vec<Span>,
-    pub redundant_distincts: Vec<Span>,
-    pub positional_set_stars: Vec<RuleFinding>,
-    pub unused_cte_names: Vec<String>,
-    pub cross_joins: Vec<Span>,
-    pub cte_only_bodies: Vec<Span>,
-    pub terminal_selects: Vec<Span>,
-    pub nested_ctes: Vec<Span>,
-    pub recursive_ctes: Vec<Span>,
-    pub invalid_comment_attachments: Vec<Span>,
-    pub inline_query_relations: Vec<Span>,
-    pub additional: AdditionalQueryFacts,
-}
-
-#[derive(Debug, Default)]
-pub(crate) struct AdditionalQueryFacts {
-    pub bare_unions: Vec<RuleFinding>,
-    pub duplicate_table_aliases: Vec<Span>,
-    pub duplicate_output_aliases: Vec<Span>,
-    pub mixed_group_order_references: Vec<Span>,
-    pub redundant_else_nulls: Vec<RuleFinding>,
-    pub parenthesized_distincts: Vec<Span>,
-    pub constant_predicates: Vec<Span>,
-    pub consecutive_semicolons: Vec<Span>,
-    pub redundant_self_aliases: Vec<Span>,
-    pub count_one_literals: Vec<Span>,
-    pub unstable_row_numbers: Vec<Span>,
-    pub null_not_in_predicates: Vec<Span>,
-    pub set_arity_mismatches: Vec<RuleFinding>,
-    pub projected_stars: Vec<Span>,
-    pub unaliased_calculations: Vec<Span>,
-    pub unused_table_aliases: Vec<Span>,
-    pub null_rejected_left_joins: Vec<Span>,
-    pub implicit_inner_joins: Vec<Span>,
-    pub ambiguous_order_directions: Vec<Span>,
-    pub unqualified_multi_source_columns: Vec<Span>,
-    pub inconsistent_single_source_qualification: Vec<Span>,
-    pub unknown_relation_qualifiers: Vec<Span>,
-    pub simple_boolean_cases: Vec<RuleFinding>,
-    pub nested_else_cases: Vec<RuleFinding>,
-    pub unused_joined_relations: Vec<Span>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -140,16 +93,6 @@ pub struct SqlMacroOutput {
     pub relations: Vec<String>,
 }
 
-#[derive(Debug)]
-pub(crate) struct AdditionalFactOptions<'a> {
-    pub external_identifiers: &'a HashSet<String>,
-    pub dependency_identifiers: &'a HashSet<String>,
-    pub sql_macro_outputs: &'a [SqlMacroOutput],
-    pub allows_ceremonial_select: bool,
-    pub allows_dynamic_output_star: bool,
-    pub fixture_harness: Option<&'a FixtureHarness>,
-}
-
 #[derive(Debug, Serialize)]
 pub struct LintResponse {
     pub version: u32,
@@ -186,15 +129,20 @@ pub struct LintRuleMetadata {
     pub remediation: &'static str,
 }
 
-/// One lint request's explicit cross joins, with what is known about the relations they read.
+/// One lint request's Rules and what they read.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Report<'a> {
+    pub(crate) request: &'a LintRequest,
+    pub(crate) parsed: &'a ParsedSql,
+    pub(crate) enabled: &'a HashSet<String>,
+    pub(crate) input: &'a RuleInput<'a>,
+}
+
+/// The request's names as Rules compare them.
 #[derive(Debug)]
-pub(crate) struct CrossJoinRequest<'a> {
-    pub(crate) statements: &'a [Expression],
-    pub(crate) tokens: &'a [Token],
-    pub(crate) cross_spans: &'a [Span],
-    /// Declared keys by dependency sentinel; the empty key proves at most one row.
-    pub(crate) relation_keys: &'a HashMap<String, Vec<Vec<String>>>,
-    /// The relation name each dependency sentinel stands for.
-    pub(crate) relation_names: &'a HashMap<String, String>,
-    pub(crate) dialect: LintDialect,
+pub(crate) struct RequestFacts<'a> {
+    pub(crate) external: HashSet<String>,
+    pub(crate) dependencies: HashSet<String>,
+    pub(crate) read_by_host: HashSet<String>,
+    pub(crate) macro_outputs: Vec<MacroOutput<'a>>,
 }

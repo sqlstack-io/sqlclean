@@ -8,11 +8,15 @@ use sqlquack_syntax::expressions::queries::models::JoinKind;
 use sqlquack_syntax::expressions::queries::models::Select;
 
 use crate::models::RuleInput;
+use crate::queries::main::columns::columns;
+use crate::queries::main::lower::lower;
+use crate::queries::main::projections::projections;
+use crate::queries::main::qualifier::qualifier;
+use crate::queries::main::query_within::query_within;
+use crate::queries::main::sources::sources;
+use crate::queries::models::Projection;
 use crate::rankings::constants::FIRST_ROW;
 use crate::rankings::types::{InputKey, Keys};
-use crate::trees::_helpers::syntax::{
-    Projection, columns, lower, projections, qualifier, query_within, sources,
-};
 use crate::trees::main::is_row_number::is_row_number;
 
 /// Keys known for relations by name: declared upstream keys and earlier CTE outputs.

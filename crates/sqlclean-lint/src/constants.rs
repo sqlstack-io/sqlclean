@@ -1,10 +1,5 @@
 //! Constants shared by the engine modules, and the placeholders hosts write for template code.
 
-pub(crate) const SQL_WILDCARD: &str = "*";
-pub(crate) const OPEN_PAREN: &str = "(";
-pub(crate) const CLOSE_PAREN: &str = ")";
-pub(crate) const EMPTY_FIXTURE_QUERY_TOKEN_COUNT: usize = 6;
-pub(crate) const ENCLOSING_CTE_TOKEN_COUNT: usize = 3;
 /// The indent of each line of a configuration snippet printed in remediation text.
 pub(crate) const SETTING_SNIPPET_INDENT: &str = "            ";
 /// The configuration file remediation text names when the request does not name one.

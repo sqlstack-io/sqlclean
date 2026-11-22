@@ -14,3 +14,13 @@ pub(crate) fn query_order(node: &Expression) -> Option<&OrderBy> {
         _ => None,
     }
 }
+
+/// Whether `order` states a direction for some items and none for others.
+pub(crate) fn states_some_directions(order: &OrderBy) -> bool {
+    let stated: usize = order
+        .expressions
+        .iter()
+        .filter(|item| item.desc || item.explicit_asc)
+        .count();
+    stated > 0 && stated < order.expressions.len()
+}

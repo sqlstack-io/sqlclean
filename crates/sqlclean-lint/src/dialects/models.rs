@@ -1,15 +1,14 @@
 //! What a dialect's lint profile says.
 
-use crate::dialects::types::{ReadPredicates, ReadStatements, ReadTokens};
+use crate::dialects::types::{ReadStatements, ReadTokens};
 
 /// How one dialect's SQL is read, and the lint facts only it has.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct LintProfile {
     pub(crate) tokens: ReadTokens,
     pub(crate) statements: ReadStatements,
-    pub(crate) predicates: ReadPredicates,
-    /// The dialect's own parser reads join predicates, so they stop at the last token not a join side, and one that does not parse is skipped.
-    pub(crate) own_predicate_parser: bool,
+    /// The parser writes `IS DISTINCT FROM` as NOT over `IS NOT DISTINCT FROM`.
+    pub(crate) negated_distinct_from: bool,
     /// Other dialects' aggregates the dialect has none of, so a call of one has an unknown kind.
     pub(crate) foreign_aggregates: &'static [&'static str],
     /// The parser keeps aggregate calls as plain calls, so they are told apart by name.
@@ -20,10 +19,10 @@ pub(crate) struct LintProfile {
     pub(crate) single_argument_aggregates: &'static [&'static str],
     /// JSON parse functions that take one string argument, in upper case.
     pub(crate) json_parse_functions: &'static [&'static str],
-    /// Unquoted names fold to upper case.
-    pub(crate) folds_upper: bool,
-    /// Quoted names compare without case too.
-    pub(crate) quoted_names_ignore_case: bool,
+    /// The resolved name of a name as written, quoted or not, by SQLQuack's profile.
+    pub(crate) resolved_name: fn(&str, bool) -> String,
+    /// Whether two resolved names name the same object, by SQLQuack's profile.
+    pub(crate) same_name: fn(&str, &str) -> bool,
     /// The character that quotes a name.
     pub(crate) identifier_quote: char,
     /// `UNION DISTINCT` is valid, so a bare UNION may be spelled out.

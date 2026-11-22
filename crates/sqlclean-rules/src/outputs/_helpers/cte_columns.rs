@@ -10,9 +10,14 @@ use crate::models::{OutputFinding, OutputKind, Replacement, RuleEdit, RuleFindin
 use crate::outputs::_helpers::removal_safety::{
     expression_refusal, reads_whole_rows, select_refusal,
 };
-use crate::trees::_helpers::syntax::{
-    Projection, clauses_around, columns, lower, projections, qualifier, query_within, sources,
-};
+use crate::queries::main::clauses_around::clauses_around;
+use crate::queries::main::columns::columns;
+use crate::queries::main::lower::lower;
+use crate::queries::main::projections::projections;
+use crate::queries::main::qualifier::qualifier;
+use crate::queries::main::query_within::query_within;
+use crate::queries::main::sources::sources;
+use crate::queries::models::Projection;
 use crate::trees::main::is_generated::is_generated;
 use crate::trees::main::join_chains::join_chains;
 use crate::trees::main::walk_in_scope::walk_in_scope;

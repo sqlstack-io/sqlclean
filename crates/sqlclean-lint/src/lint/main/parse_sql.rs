@@ -11,5 +11,13 @@ pub fn parse_sql(
     let Some(parsed) = crate::dialects::main::lint_dialect::lint_dialect(dialect)? else {
         return Err(format!("SQLQuack does not parse the {dialect} dialect yet"));
     };
-    crate::lint::_helpers::parsing::parse(sql, parsed, (None, max_function_call_depth))
+    crate::lint::_helpers::parsing::parse(
+        sql,
+        parsed,
+        (
+            None,
+            max_function_call_depth,
+            sqlquack_syntax::CallMode::QueriesLocated,
+        ),
+    )
 }

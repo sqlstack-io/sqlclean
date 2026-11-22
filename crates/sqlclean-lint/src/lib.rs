@@ -1,4 +1,4 @@
-//! SQLClean's lint engine and built-in Rules, over SQLQuack's tokens and syntax trees.
+//! SQLClean's lint engine, which hands its built-in Rules SQLQuack's syntax trees.
 
 #![forbid(unsafe_code)]
 
@@ -18,7 +18,6 @@ pub mod quality;
 pub(crate) mod snowflake;
 #[cfg(feature = "sqlite")]
 pub(crate) mod sqlite;
-pub(crate) mod tree;
 
 pub use crate::lint::main::batch_engine::lint_batch_json;
 pub use crate::lint::main::catalogue::catalogue;

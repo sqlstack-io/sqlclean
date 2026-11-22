@@ -1,5 +1,6 @@
 //! The names that can refer to a relation.
 
+use sqlquack_syntax::expressions::queries::models::Join;
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
 /// Whether any node under `root` could refer to the relation named `name`.
@@ -25,4 +26,12 @@ pub(crate) fn node_mentions(node: &Expression, name: &str) -> bool {
             .is_some_and(|root| same(&root.name)),
         _ => false,
     }
+}
+
+/// Whether `join`'s relation or condition could refer to the relation named `name`.
+pub(crate) fn join_mentions(join: &Join, name: &str) -> bool {
+    std::iter::once(&join.this)
+        .chain(join.on.as_ref())
+        .chain(join.match_condition.as_ref())
+        .any(|part| mentions(part, name))
 }

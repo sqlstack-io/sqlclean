@@ -3,12 +3,11 @@
 use sqlquack_syntax::Expression;
 use sqlquack_syntax::tokens::models::Span;
 
+use crate::calls::constants::COUNT;
+use crate::calls::constants::ONE;
 use crate::models::{Replacement, RuleEdit, RuleFinding, RuleInput};
 use crate::trees::main::number_text::number_text;
 use crate::trees::main::statement_nodes::statement_nodes;
-
-const COUNT: &str = "COUNT";
-const ONE: &str = "1";
 
 /// The `1` of every COUNT(1), with `*` as the fix.
 pub fn count_ones(input: &RuleInput<'_>) -> Vec<RuleFinding> {

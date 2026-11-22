@@ -7,16 +7,15 @@ use crate::lint::constants::UNBUILT_DIALECT_FAILURE;
 pub(crate) fn unbuilt_profile() -> LintProfile {
     LintProfile {
         tokens: |_| Err(UNBUILT_DIALECT_FAILURE.to_owned()),
-        statements: |_, _| Err(UNBUILT_DIALECT_FAILURE.to_owned()),
-        predicates: |_, _| Err(UNBUILT_DIALECT_FAILURE.to_owned()),
-        own_predicate_parser: false,
+        statements: |_, _, _| Err(UNBUILT_DIALECT_FAILURE.to_owned()),
+        negated_distinct_from: false,
         foreign_aggregates: &[],
         plain_call_aggregates: false,
         named_aggregates: &[],
         single_argument_aggregates: &[],
         json_parse_functions: &[],
-        folds_upper: false,
-        quoted_names_ignore_case: false,
+        resolved_name: |name, _| name.to_owned(),
+        same_name: |left, right| left == right,
         identifier_quote: '"',
         union_distinct: false,
     }

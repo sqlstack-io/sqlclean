@@ -8,8 +8,10 @@ use crate::trees::main::statement_nodes::statement_nodes;
 
 /// The CTE names the dialect takes for an earlier one of their WITH.
 pub fn duplicate_cte_names(input: &RuleInput<'_>) -> Vec<RuleFinding> {
-    statement_nodes(input)
-        .filter_map(Expression::with_clause)
-        .flat_map(|with| repeated_names(&input.dialect, with.ctes.iter().map(|cte| &cte.alias)))
-        .collect()
+    let mut found: Vec<RuleFinding> = Vec::new();
+    for with in statement_nodes(input).filter_map(Expression::with_clause) {
+        let names = with.ctes.iter().map(|cte| &cte.alias);
+        found.extend(repeated_names(&input.dialect, names));
+    }
+    found
 }

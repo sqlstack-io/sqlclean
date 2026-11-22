@@ -5,10 +5,9 @@ use sqlquack_syntax::Expression;
 use crate::models::{RankingFinding, RuleInput};
 use crate::rankings::_helpers::keys::{covers, key_environment, window_columns};
 use crate::rankings::_helpers::ranking::{effective_over, ranking_windows};
+use crate::rankings::constants::ROW_NUMBER;
 use crate::rankings::constants::TIE_SENSITIVE_FUNCTIONS;
 use crate::trees::main::call_positions::call_positions;
-
-const ROW_NUMBER: &str = "ROW_NUMBER";
 
 /// The ranking windows with no order, an order not proven unique, or more sort keys than allowed.
 pub fn ranking_orders(input: &RuleInput<'_>) -> Vec<RankingFinding> {

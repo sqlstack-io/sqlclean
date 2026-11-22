@@ -117,9 +117,7 @@ fn names_another(scope: &QueryScope<'_>, (name, alias): (&str, Span)) -> bool {
             _ => None,
         };
         other
-            && [Some(relation.name), table]
-                .into_iter()
-                .flatten()
-                .any(|known| known.eq_ignore_ascii_case(name))
+            && (relation.name.eq_ignore_ascii_case(name)
+                || table.is_some_and(|known| known.eq_ignore_ascii_case(name)))
     })
 }

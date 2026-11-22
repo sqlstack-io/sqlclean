@@ -24,3 +24,5 @@ pub(crate) const DATE_PART_CALLS: [&str; 10] = [
     "TRY_DATEADD",
     "TRY_DATEDIFF",
 ];
+/// The name of a star read as a column.
+pub(crate) const WILDCARD: &str = "*";

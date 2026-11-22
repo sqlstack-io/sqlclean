@@ -3,7 +3,6 @@
 use sqlclean_rules::models::{Replacement, RuleEdit};
 use sqlquack_syntax::tokens::models::{Span, Token};
 
-use crate::lint::_helpers::engine::{char_slice, contains_comment};
 use crate::lint::models::LintEdit;
 
 /// `edit` on `sql`; none when it would lose or move a comment.
@@ -54,4 +53,26 @@ fn layout_end(sql: &str, start: usize) -> Option<usize> {
     let next: &str = rest.trim_start();
     let commented: bool = next.starts_with("--") || next.starts_with("/*");
     (!next.is_empty() && !commented).then_some(end)
+}
+
+pub(super) fn char_slice(sql: &str, start: usize, end: usize) -> Option<&str> {
+    if start > end {
+        return None;
+    }
+    let byte_start = char_offset_to_byte_offset(sql, start)?;
+    let byte_end = char_offset_to_byte_offset(sql, end)?;
+    sql.get(byte_start..byte_end)
+}
+
+fn char_offset_to_byte_offset(sql: &str, offset: usize) -> Option<usize> {
+    if offset == sql.chars().count() {
+        return Some(sql.len());
+    }
+    sql.char_indices()
+        .nth(offset)
+        .map(|(byte_offset, _)| byte_offset)
+}
+
+fn contains_comment(source: &str) -> bool {
+    source.contains("--") || source.contains("/*")
 }

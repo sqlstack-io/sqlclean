@@ -9,7 +9,7 @@ use sqlquack_syntax::traversal::models::QueryScope;
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
 use crate::models::RuleInput;
-use crate::relations::constants::{CONTEXT_VALUES, DATE_PART_CALLS};
+use crate::relations::constants::{CONTEXT_VALUES, DATE_PART_CALLS, WILDCARD};
 use crate::trees::main::is_generated::is_generated;
 use crate::trees::main::unwrapped::unwrapped;
 
@@ -36,7 +36,7 @@ pub(crate) fn references<'a>(input: &RuleInput<'_>, scope: &QueryScope<'a>) -> R
     };
     for &column in &scope.columns {
         let address: *const Column = std::ptr::from_ref(column);
-        if joined.contains(&address) || column.name.name == "*" {
+        if joined.contains(&address) || column.name.name == WILDCARD {
             continue;
         }
         match &column.table {
@@ -103,11 +103,7 @@ fn not_columns(select: &Select) -> NotColumns<'_> {
                     .extend(lambda.parameters.iter().map(|name| name.name.as_str()));
                 None
             }
-            Expression::Function(call) => call.args.first().filter(|_| {
-                DATE_PART_CALLS
-                    .iter()
-                    .any(|known| known.eq_ignore_ascii_case(&call.name))
-            }),
+            Expression::Function(call) if takes_date_part(&call.name) => call.args.first(),
             _ => None,
         };
         if let Some(Expression::Column(column)) = root {
@@ -175,4 +171,10 @@ pub(crate) fn clause_nodes(select: &Select) -> Vec<&Expression> {
             .map(|item| &item.this),
     );
     roots.into_iter().flat_map(|root| root.dfs()).collect()
+}
+
+fn takes_date_part(name: &str) -> bool {
+    DATE_PART_CALLS
+        .iter()
+        .any(|known| known.eq_ignore_ascii_case(name))
 }

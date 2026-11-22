@@ -2,9 +2,8 @@
 
 use crate::models::{RuleFinding, RuleInput};
 use crate::shapes::_helpers::terminals::{reads_last_cte, terminal};
+use crate::shapes::constants::CEREMONIAL_SELECT;
 use crate::trees::main::number_text::number_text;
-
-const CEREMONIAL_SELECT: &str = "1";
 
 /// After CTEs, the terminal step unless it lists columns of the last CTE alone.
 pub fn terminal_selects(input: &RuleInput<'_>) -> Vec<RuleFinding> {

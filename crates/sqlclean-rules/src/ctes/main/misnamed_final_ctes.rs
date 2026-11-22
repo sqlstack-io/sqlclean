@@ -3,10 +3,9 @@
 use sqlquack_syntax::expressions::queries::models::With;
 use sqlquack_syntax::{Expression, ExpressionWalk};
 
+use crate::ctes::constants::FINAL;
 use crate::models::{RuleFinding, RuleInput};
 use crate::trees::main::principal_query::principal_query;
-
-const FINAL: &str = "final";
 
 /// A query statement's last CTE not named final, and any CTE named final that is not last at the root.
 pub fn misnamed_final_ctes(input: &RuleInput<'_>) -> Vec<RuleFinding> {
