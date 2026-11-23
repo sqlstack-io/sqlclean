@@ -729,6 +729,55 @@ fn given_sql_a_token_scan_misreads_when_linting_then_its_findings_and_fixes_are_
             sql: "SELECT $1 AS v FROM @stage/2024/0",
             expected_findings: Ok(&[]),
         },
+        RulePinTestCase {
+            description: "an always-true condition inside a parenthesised join",
+            rule: "SQLCLEAN003",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT o.id FROM orders o JOIN (customers c JOIN regions r ON TRUE) ON o.customer_id = c.id",
+            expected_findings: Ok(&[("JOIN", None)]),
+        },
+        RulePinTestCase {
+            description: "STRAIGHT_JOIN without a condition",
+            rule: "SQLCLEAN003",
+            dialects: &["snowflake", "duckdb", "sqlite"],
+            sql: "SELECT o.id FROM orders o STRAIGHT_JOIN customers c",
+            expected_findings: Ok(&[("STRAIGHT_JOIN", None)]),
+        },
+        RulePinTestCase {
+            description: "a join whose condition follows a nested join",
+            rule: "SQLCLEAN003",
+            dialects: &["snowflake", "duckdb", "postgres", "sqlite", "bigquery"],
+            sql: "SELECT o.id FROM orders o JOIN customers c JOIN regions r ON r.id = c.region_id ON o.customer_id = c.id",
+            expected_findings: Ok(&[]),
+        },
+        RulePinTestCase {
+            description: "TABLE branches",
+            rule: "SQLCLEAN007",
+            dialects: &["postgres", "bigquery", "databricks"],
+            sql: "TABLE orders UNION ALL TABLE returns",
+            expected_findings: Ok(&[("UNION", None)]),
+        },
+        RulePinTestCase {
+            description: "FROM-first branches",
+            rule: "SQLCLEAN007",
+            dialects: &["duckdb"],
+            sql: "FROM orders UNION ALL FROM returns",
+            expected_findings: Ok(&[("UNION", None)]),
+        },
+        RulePinTestCase {
+            description: "UNION as a type",
+            rule: "SQLCLEAN008",
+            dialects: &["snowflake", "duckdb", "sqlite"],
+            sql: "SELECT CAST(x AS UNION(a INT, b VARCHAR)) AS u FROM t",
+            expected_findings: Ok(&[]),
+        },
     ];
 
     for test_case in test_cases {
