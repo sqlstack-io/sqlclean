@@ -34,13 +34,13 @@ sqlclean = { path = "crates/sqlclean" }
 sqlclean-lint = { path = "crates/sqlclean-lint", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlite"] }
 sqlclean-rules = { path = "crates/sqlclean-rules" }
 # SQLQuack's formatter, and the tokens and trees it and the lint Rules read, which replace Polyglot.
-sqlquack-fingerprint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "20e641d940ba63c28803a97c2fbdc12a74dadfda", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlite", "sqlserver"] }
-sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "20e641d940ba63c28803a97c2fbdc12a74dadfda", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlserver"] }
-sqlquack-parse = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "20e641d940ba63c28803a97c2fbdc12a74dadfda" }
-sqlquack-semantics = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "20e641d940ba63c28803a97c2fbdc12a74dadfda" }
-sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "20e641d940ba63c28803a97c2fbdc12a74dadfda" }
-sqlquack-tokenize = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "20e641d940ba63c28803a97c2fbdc12a74dadfda" }
-sqlquack-syntax-sqlserver = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "20e641d940ba63c28803a97c2fbdc12a74dadfda" }
+sqlquack-fingerprint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "5ebda9ac28a0ddc130a6313dd08263f30c64e8e9", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlite", "sqlserver"] }
+sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "5ebda9ac28a0ddc130a6313dd08263f30c64e8e9", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlserver"] }
+sqlquack-parse = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "5ebda9ac28a0ddc130a6313dd08263f30c64e8e9" }
+sqlquack-semantics = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "5ebda9ac28a0ddc130a6313dd08263f30c64e8e9" }
+sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "5ebda9ac28a0ddc130a6313dd08263f30c64e8e9" }
+sqlquack-tokenize = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "5ebda9ac28a0ddc130a6313dd08263f30c64e8e9" }
+sqlquack-syntax-sqlserver = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "5ebda9ac28a0ddc130a6313dd08263f30c64e8e9" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
