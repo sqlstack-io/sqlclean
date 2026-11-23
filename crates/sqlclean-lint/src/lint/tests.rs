@@ -1,7 +1,5 @@
 #[path = "tests/test_batch_lint.rs"]
 mod batch_lint;
-#[path = "tests/corpus.rs"]
-mod corpus;
 #[path = "tests/test_cross_joins.rs"]
 mod cross_joins;
 #[path = "tests/test_empty_fixture_lint.rs"]

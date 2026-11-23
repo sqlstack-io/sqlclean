@@ -33,8 +33,7 @@ pub(super) fn rendered(edit: &RuleEdit, sql: &str, tokens: &[Token]) -> Option<L
     })
 }
 
-/// `text` with a space before it unless whitespace or the start precedes character `start`, and after it
-/// unless whitespace or the end follows character `end`, so that it never runs into a neighbouring token.
+/// `text` with a space on each side where the source next to `start` or `end` is not layout or an end.
 fn spaced(sql: &str, start: usize, end: usize, text: &str) -> String {
     let bare = |next: Option<char>| next.is_some_and(|next| !next.is_whitespace());
     let before: Option<char> = start.checked_sub(1).and_then(|at| sql.chars().nth(at));

@@ -220,3 +220,14 @@ pub(crate) struct RulePinTestCase {
     pub(crate) expected_findings:
         Result<&'static [(&'static str, Option<&'static str>)], &'static str>,
 }
+
+/// A corpus of statements, linted on every dialect, against the findings accepted for it.
+pub(crate) struct LintCorpusTestCase {
+    pub(crate) description: &'static str,
+    /// The statements, one JSON object per line, relative to the crate.
+    pub(crate) statements: &'static str,
+    /// The accepted findings, relative to the crate.
+    pub(crate) accepted: &'static str,
+    /// The changed lines the corpus should show: none, once accepted.
+    pub(crate) expected_changes: &'static [&'static str],
+}
