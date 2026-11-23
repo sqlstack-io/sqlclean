@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: check check-ci check-docs-skill check-rust develop-native release-rehearsal skills test test-e2e test-integration test-rust test-unit verify
+.PHONY: accept-lint-corpus check check-ci check-docs-skill check-rust develop-native release-rehearsal skills test test-e2e test-integration test-rust test-unit verify
 
 check:
 	uv run ruff format .
@@ -20,6 +20,10 @@ check-ci:
 check-docs-skill:
 	uv run python -m scripts.check_docs_skill
 
+# Rewrites the lint corpus's accepted findings from the current engine; read and commit the diff.
+accept-lint-corpus:
+	SQLCLEAN_ACCEPT_LINT_CORPUS=1 cargo test -p sqlclean-lint --lib --quiet lint_corpus
+
 release-rehearsal:
 	bash .github/scripts/simulate_release.sh
 
@@ -28,6 +32,9 @@ skills:
 
 check-rust:
 	cargo fmt --check
+	@# The Rules read trees only: no crate they reach may tokenize or parse SQL.
+	@if cargo tree -p sqlclean-rules -e normal --prefix none | grep -E '^sqlquack-(tokenize|parse|syntax-)'; then \
+	  echo "sqlclean-rules must not reach a tokenizer or parser" >&2; exit 1; fi
 	cargo clippy --all-targets --quiet -- -D warnings
 
 develop-native:

@@ -2,6 +2,8 @@
 members = [
     "crates/sqlclean",
     "crates/sqlclean-cli",
+    "crates/sqlclean-lint",
+    "crates/sqlclean-rules",
 ]
 resolver = "2"
 
@@ -29,13 +31,16 @@ serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.10"
 similar = "2"
 sqlclean = { path = "crates/sqlclean" }
-# SQLQuack's formatter and lint engine, and the tokens and trees they read, which replace Polyglot.
-sqlquack-fingerprint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlite", "sqlserver"] }
-sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlserver"] }
-sqlquack-lint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlite"] }
-sqlquack-parse = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed" }
-sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed" }
-sqlquack-syntax-sqlserver = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "fe3d1caf5ed81981abf8abd1d00cc9d99462e6ed" }
+sqlclean-lint = { path = "crates/sqlclean-lint", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlite"] }
+sqlclean-rules = { path = "crates/sqlclean-rules" }
+# SQLQuack's formatter, and the tokens and trees it and the lint Rules read, which replace Polyglot.
+sqlquack-fingerprint = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "7a8501afa69eb846637e4eb85604d6726fc33174", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlite", "sqlserver"] }
+sqlquack-format = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "7a8501afa69eb846637e4eb85604d6726fc33174", features = ["bigquery", "databricks", "duckdb", "postgres", "snowflake", "sqlserver"] }
+sqlquack-parse = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "7a8501afa69eb846637e4eb85604d6726fc33174" }
+sqlquack-semantics = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "7a8501afa69eb846637e4eb85604d6726fc33174" }
+sqlquack-syntax = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "7a8501afa69eb846637e4eb85604d6726fc33174" }
+sqlquack-tokenize = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "7a8501afa69eb846637e4eb85604d6726fc33174" }
+sqlquack-syntax-sqlserver = { git = "https://github.com/sqlstack-io/sqlquack.git", rev = "7a8501afa69eb846637e4eb85604d6726fc33174" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -1,0 +1,2 @@
+# Test fixtures are read byte for byte (offsets, accepted findings), so every platform checks out LF.
+**/tests/fixtures/** text eol=lf
