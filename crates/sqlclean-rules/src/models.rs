@@ -99,6 +99,8 @@ pub struct RuleEdit {
 #[derive(Clone, Copy, Debug)]
 pub enum Replacement {
     Text(&'static str),
+    /// A word written between two tokens, set off by a space on each side the source leaves bare.
+    Spaced(&'static str),
     /// The source at `kept`, without the layout around it, between two fixed texts.
     Wrapped {
         before: &'static str,

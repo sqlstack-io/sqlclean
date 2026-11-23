@@ -38,7 +38,10 @@ pub(crate) fn corpus_changes() -> Result<Vec<String>, String> {
     let accepted: Vec<&str> = accepted.split_inclusive('\n').collect();
     let mut changes: Vec<String> = Vec::new();
     for index in 0..accepted.len().max(found.len()) {
-        let (before, after) = (accepted.get(index).copied(), found.get(index).map(String::as_str));
+        let (before, after) = (
+            accepted.get(index).copied(),
+            found.get(index).map(String::as_str),
+        );
         if before != after {
             changes.extend(before.map(|line| format!("-{line}")));
             changes.extend(after.map(|line| format!("+{line}")));
@@ -98,6 +101,7 @@ fn summary(response: &str) -> Result<String, String> {
 }
 
 fn fnv(text: &str) -> u64 {
-    text.bytes()
-        .fold(FNV_OFFSET, |hash, byte| (hash ^ u64::from(byte)).wrapping_mul(FNV_PRIME))
+    text.bytes().fold(FNV_OFFSET, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(FNV_PRIME)
+    })
 }

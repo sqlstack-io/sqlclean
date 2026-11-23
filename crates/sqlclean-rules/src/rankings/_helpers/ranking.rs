@@ -113,13 +113,7 @@ pub(crate) fn effective_over<'a>(over: &'a Over, windows: &[&'a NamedWindow]) ->
     }
 }
 
-/// Where the ranking call's name is written: a typed call keeps none, and begins its window with it.
+/// Where the ranking call's name is written; a typed call keeps none, so its whole window stands for it.
 pub(crate) fn named_at(ranking: &RankingWindow<'_>) -> Option<Span> {
-    call_positions(ranking.called).0.0.or_else(|| {
-        let window: Span = ranking.window.span.0?;
-        Some(Span {
-            end: window.start + ranking.function.len(),
-            ..window
-        })
-    })
+    call_positions(ranking.called).0.0.or(ranking.window.span.0)
 }

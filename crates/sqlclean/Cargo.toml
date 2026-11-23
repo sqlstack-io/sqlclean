@@ -19,6 +19,7 @@ sqlquack-fingerprint.workspace = true
 sqlquack-format.workspace = true
 sqlquack-parse.workspace = true
 sqlquack-syntax.workspace = true
+sqlquack-tokenize.workspace = true
 sqlquack-syntax-sqlserver.workspace = true
 rayon.workspace = true
 rustc-hash.workspace = true

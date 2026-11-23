@@ -16,6 +16,7 @@ pub(super) fn rendered(edit: &RuleEdit, sql: &str, tokens: &[Token]) -> Option<L
     };
     let replacement: String = match edit.replacement {
         Replacement::Text(text) => text.to_owned(),
+        Replacement::Spaced(text) => spaced(sql, edit.span.start, end, text),
         Replacement::Wrapped {
             before,
             kept,
@@ -30,6 +31,17 @@ pub(super) fn rendered(edit: &RuleEdit, sql: &str, tokens: &[Token]) -> Option<L
         end,
         replacement,
     })
+}
+
+/// `text` with a space before it unless whitespace or the start precedes character `start`, and after it
+/// unless whitespace or the end follows character `end`, so that it never runs into a neighbouring token.
+fn spaced(sql: &str, start: usize, end: usize, text: &str) -> String {
+    let bare = |next: Option<char>| next.is_some_and(|next| !next.is_whitespace());
+    let before: Option<char> = start.checked_sub(1).and_then(|at| sql.chars().nth(at));
+    let after: Option<char> = sql.chars().nth(end);
+    let lead: &str = if bare(before) { " " } else { "" };
+    let trail: &str = if bare(after) { " " } else { "" };
+    format!("{lead}{text}{trail}")
 }
 
 /// Whether a comment in any of the dialect's spellings is inside `span`, which whole tokens bound.

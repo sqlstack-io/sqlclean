@@ -21,6 +21,93 @@ fn given_each_rule_when_linting_then_its_findings_and_fixes_are_pinned() {
             expected_findings: Ok(&[("=", Some("SELECT id FROM orders WHERE shipped_at IS NULL"))]),
         },
         RulePinTestCase {
+            description: "a comparison with NULL without spaces",
+            rule: "SQLCLEAN001",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT id FROM orders WHERE total=NULL",
+            expected_findings: Ok(&[("=", Some("SELECT id FROM orders WHERE total IS NULL"))]),
+        },
+        RulePinTestCase {
+            description: "an inequality with NULL without spaces",
+            rule: "SQLCLEAN001",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT id FROM orders WHERE total<>NULL",
+            expected_findings: Ok(&[("<>", Some("SELECT id FROM orders WHERE total IS NOT NULL"))]),
+        },
+        RulePinTestCase {
+            description: "an inequality with NULL",
+            rule: "SQLCLEAN001",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT id FROM orders WHERE total <> NULL",
+            expected_findings: Ok(&[("<>", Some("SELECT id FROM orders WHERE total IS NOT NULL"))]),
+        },
+        RulePinTestCase {
+            description: "a comparison with a parenthesised NULL without spaces",
+            rule: "SQLCLEAN001",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT id FROM orders WHERE total=(NULL)",
+            expected_findings: Ok(&[("=", Some("SELECT id FROM orders WHERE total IS NULL"))]),
+        },
+        RulePinTestCase {
+            description: "a comparison with a parenthesised NULL",
+            rule: "SQLCLEAN001",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT id FROM orders WHERE total = (NULL)",
+            expected_findings: Ok(&[("=", Some("SELECT id FROM orders WHERE total IS NULL"))]),
+        },
+        RulePinTestCase {
+            description: "a comparison with NULL before more SQL without spaces",
+            rule: "SQLCLEAN001",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT id FROM orders WHERE (total=NULL)AND id>0",
+            expected_findings: Ok(&[(
+                "=",
+                Some("SELECT id FROM orders WHERE (total IS NULL)AND id>0"),
+            )]),
+        },
+        RulePinTestCase {
             description: "IS NULL",
             rule: "SQLCLEAN001",
             dialects: &[
@@ -576,6 +663,20 @@ fn given_each_rule_when_linting_then_its_findings_and_fixes_are_pinned() {
             expected_findings: Ok(&[("ROW_NUMBER", None)]),
         },
         RulePinTestCase {
+            description: "ROW_NUMBER without an order, written with spaces",
+            rule: "SQLCLEAN018",
+            dialects: &[
+                "snowflake",
+                "duckdb",
+                "postgres",
+                "sqlite",
+                "bigquery",
+                "databricks",
+            ],
+            sql: "SELECT ROW_NUMBER ( ) OVER (PARTITION BY region) AS n FROM orders",
+            expected_findings: Ok(&[("ROW_NUMBER", None)]),
+        },
+        RulePinTestCase {
             description: "NULL in NOT IN",
             rule: "SQLCLEAN019",
             dialects: &[
@@ -646,6 +747,13 @@ fn given_each_rule_when_linting_then_its_findings_and_fixes_are_pinned() {
             expected_findings: Ok(&[("*", None)]),
         },
         RulePinTestCase {
+            description: "a qualified star with EXCEPT, written with spaces",
+            rule: "SQLCLEAN021",
+            dialects: &["snowflake", "duckdb", "bigquery", "databricks"],
+            sql: "SELECT o . * EXCEPT (total) FROM orders o",
+            expected_findings: Ok(&[("o . * EXCEPT (total)", None)]),
+        },
+        RulePinTestCase {
             description: "an unnamed calculation",
             rule: "SQLCLEAN022",
             dialects: &[
@@ -686,6 +794,26 @@ fn given_each_rule_when_linting_then_its_findings_and_fixes_are_pinned() {
             ],
             sql: "SELECT id FROM orders o",
             expected_findings: Ok(&[("o", Some("SELECT id FROM orders "))]),
+        },
+        RulePinTestCase {
+            description: "an unused quoted LATERAL alias with a doubled quote",
+            rule: "SQLCLEAN023",
+            dialects: &["snowflake"],
+            sql: "SELECT s.id FROM orders s, LATERAL FLATTEN(input => s.items) \"a\"\"b\"",
+            expected_findings: Ok(&[(
+                "\"a\"\"b\"",
+                Some("SELECT s.id FROM orders s, LATERAL FLATTEN(input => s.items) "),
+            )]),
+        },
+        RulePinTestCase {
+            description: "an unused quoted LATERAL alias with a doubled quote, on PostgreSQL",
+            rule: "SQLCLEAN023",
+            dialects: &["postgres"],
+            sql: "SELECT s.id FROM orders s, LATERAL generate_series(1, 2) \"a\"\"b\"",
+            expected_findings: Ok(&[(
+                "\"a\"\"b\"",
+                Some("SELECT s.id FROM orders s, LATERAL generate_series(1, 2) "),
+            )]),
         },
         RulePinTestCase {
             description: "a used alias",

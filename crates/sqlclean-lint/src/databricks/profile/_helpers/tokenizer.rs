@@ -2,7 +2,8 @@
 
 use std::sync::LazyLock;
 
-use sqlquack_syntax::tokens::models::{TokenType, Tokenizer, TokenizerConfig};
+use sqlquack_syntax::tokens::models::TokenType;
+use sqlquack_tokenize::tokens::models::{Tokenizer, TokenizerConfig};
 
 /// Databricks' tokens as SQLClean read them: backtick names, `"` strings, `\` escapes, typed number suffixes.
 pub(crate) static DATABRICKS_TOKENIZER: LazyLock<Tokenizer> = LazyLock::new(|| {

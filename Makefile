@@ -32,6 +32,9 @@ skills:
 
 check-rust:
 	cargo fmt --check
+	@# The Rules read trees only: no crate they reach may tokenize or parse SQL.
+	@if cargo tree -p sqlclean-rules -e normal --prefix none | grep -E '^sqlquack-(tokenize|parse|syntax-)'; then \
+	  echo "sqlclean-rules must not reach a tokenizer or parser" >&2; exit 1; fi
 	cargo clippy --all-targets --quiet -- -D warnings
 
 develop-native:

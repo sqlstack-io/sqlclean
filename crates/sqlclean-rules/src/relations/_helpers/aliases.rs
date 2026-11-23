@@ -53,13 +53,7 @@ fn written_aliases<'a>(scope: &QueryScope<'a>) -> Vec<WrittenAlias<'a>> {
             continue;
         }
         if let Expression::Lateral(lateral) = item {
-            if let (Some(name), Some(whole)) = (&lateral.alias, lateral.span.0) {
-                let quotes: usize = if lateral.alias_quoted { 2 } else { 0 };
-                let length: usize = name.chars().count() + quotes;
-                let span: Span = Span {
-                    start: whole.end.saturating_sub(length),
-                    ..whole
-                };
+            if let (Some(name), Some(span)) = (&lateral.alias, lateral.alias_span.0) {
                 found.push(WrittenAlias {
                     name,
                     span,

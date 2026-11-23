@@ -48,7 +48,7 @@ fn null_test(node: &Expression, operation: &BinaryOp) -> Option<RuleEdit> {
     };
     Some(RuleEdit {
         span,
-        replacement: Replacement::Text(replacement),
+        replacement: Replacement::Spaced(replacement),
         trailing_layout: false,
     })
 }

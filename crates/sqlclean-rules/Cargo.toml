@@ -8,8 +8,10 @@ publish.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
-# A Rule is handed a tree and never SQL or tokens. Keep every parser out of these dependencies: a
-# Rule that needs one is missing a fact or a position, which belongs in SQLQuack.
+# A Rule is handed a tree and never SQL or tokens. sqlquack-syntax holds the tree and no tokenizer or
+# parser (those are in sqlquack-tokenize and the parser crates), and `make check-rust` fails if any
+# crate these depend on reaches one. A Rule that needs more is missing a fact or a position, which
+# belongs in SQLQuack.
 [dependencies]
 sqlquack-syntax.workspace = true
 

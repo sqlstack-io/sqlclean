@@ -2,7 +2,7 @@
 
 use std::sync::LazyLock;
 
-use sqlquack_syntax::tokens::models::{Tokenizer, TokenizerConfig};
+use sqlquack_tokenize::tokens::models::{Tokenizer, TokenizerConfig};
 
 /// BigQuery's tokens as SQLClean read them: backtick names, three string quotes, `#` comments.
 pub(crate) static BIGQUERY_TOKENIZER: LazyLock<Tokenizer> = LazyLock::new(|| {

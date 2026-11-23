@@ -40,7 +40,7 @@ pub(crate) fn asterisk(item: &Expression, written: Span) -> Option<Span> {
     let start: usize = match (&star.table, is_modified(star)) {
         (None, _) => whole.start,
         (Some(_), false) => return Some(last_character(whole)),
-        (Some(table), true) => table.span?.end + 1,
+        (Some(_), true) => return Some(whole),
     };
     Some(Span {
         start,
