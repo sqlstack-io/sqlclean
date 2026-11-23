@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.12.0](https://github.com/sqlstack-io/sqlclean/compare/v0.11.1...v0.12.0) (2026-11-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* findings and fixes of the built-in Rules change as listed above, so a CI step that compares SQLClean's output, or an allowlist of findings, needs updating. SQLClean now builds on SQLQuack's located trees, which needs the SQLQuack release that removes `sqlquack-lint` and moves its tokenizer into `sqlquack-tokenize`.
+
+### Features
+
+* run every built-in Rule on SQLQuack's located syntax tree ([#98](https://github.com/sqlstack-io/sqlclean/issues/98)) ([178a92b](https://github.com/sqlstack-io/sqlclean/commit/178a92b605906622298e4da82694ccdf4330bea3))
+
 ## [0.11.1](https://github.com/sqlstack-io/sqlclean/compare/v0.11.0...v0.11.1) (2026-11-19)
 
 
