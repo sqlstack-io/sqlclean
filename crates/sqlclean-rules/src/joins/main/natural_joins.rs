@@ -26,5 +26,5 @@ fn natural_keywords(join: &Join) -> Option<Span> {
             | JoinKind::NaturalSemi
             | JoinKind::NaturalAnti
     );
-    Some(join.kind_span.0?.through(join.keyword_span.0?)).filter(|_| natural)
+    natural.then_some(join.kind_span.0?.through(join.keyword_span.0?))
 }

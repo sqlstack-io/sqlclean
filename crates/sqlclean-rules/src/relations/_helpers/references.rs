@@ -130,7 +130,7 @@ fn is_column_reference(input: &RuleInput<'_>, (names, column): (&NotColumns<'_>,
         .any(|(alias, span)| span.start < written.start && same(alias));
     !names.dotted.contains(&std::ptr::from_ref(column))
         && !is_generated(input, name)
-        && !(CONTEXT_VALUES.iter().any(|value| same(value)) && !column.name.quoted)
+        && (column.name.quoted || !CONTEXT_VALUES.iter().any(|value| same(value)))
         && !input
             .settings
             .external_identifiers

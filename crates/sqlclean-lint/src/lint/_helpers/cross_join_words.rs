@@ -30,10 +30,10 @@ pub(super) fn cross_join_findings(report: &Report<'_>) -> Vec<LintDiagnostic> {
     sqlclean_rules::cross_joins(report.input)
         .into_iter()
         .map(|finding| {
-            let relation: Option<String> = match &finding.relation {
-                Some(name) => Some(relation_name(&report.request.sql, name, &sentinels)),
-                None => None,
-            };
+            let relation: Option<String> = finding
+                .relation
+                .as_ref()
+                .map(|name| relation_name(&report.request.sql, name, &sentinels));
             LintDiagnostic {
                 code: CROSS_JOIN.code,
                 message: match &relation {

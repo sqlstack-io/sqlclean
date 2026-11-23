@@ -25,8 +25,7 @@ fn negated_list(node: &Expression) -> Option<Span> {
         },
         _ => return None,
     };
-    let holds_null: bool =
-        list.query.is_none() && list.expressions.iter().any(|value| is_null(value));
+    let holds_null: bool = list.query.is_none() && list.expressions.iter().any(is_null);
     list.operator_span.operator().filter(|_| holds_null)
 }
 
