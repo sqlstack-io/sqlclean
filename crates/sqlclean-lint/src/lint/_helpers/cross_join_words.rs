@@ -30,10 +30,8 @@ pub(super) fn cross_join_findings(report: &Report<'_>) -> Vec<LintDiagnostic> {
     sqlclean_rules::cross_joins(report.input)
         .into_iter()
         .map(|finding| {
-            let relation: Option<String> = finding
-                .relation
-                .as_ref()
-                .map(|name| relation_name(&report.request.sql, name, &sentinels));
+            let relation: Option<String> =
+                finding_relation(&report.request.sql, finding.relation.as_ref(), &sentinels);
             LintDiagnostic {
                 code: CROSS_JOIN.code,
                 message: match &relation {
@@ -51,6 +49,16 @@ pub(super) fn cross_join_findings(report: &Report<'_>) -> Vec<LintDiagnostic> {
             }
         })
         .collect()
+}
+
+/// The written name of a cross join's relation, when the finding names one.
+fn finding_relation(
+    sql: &str,
+    relation: Option<&JoinedName<'_>>,
+    sentinels: &HashMap<String, &str>,
+) -> Option<String> {
+    let name: &JoinedName<'_> = relation?;
+    Some(relation_name(sql, name, sentinels))
 }
 
 fn relation_name(sql: &str, name: &JoinedName<'_>, sentinels: &HashMap<String, &str>) -> String {
