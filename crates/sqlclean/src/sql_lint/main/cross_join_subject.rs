@@ -3,5 +3,5 @@
 /// The `(relation, cte)` a cross join finding message names, `None` for the generic message.
 #[must_use]
 pub fn cross_join_subject(message: &str) -> Option<(String, Option<String>)> {
-    sqlquack_lint::cross_join_subject(message)
+    sqlclean_lint::cross_join_subject(message)
 }

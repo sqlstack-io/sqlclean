@@ -1,0 +1,48 @@
+[package]
+name = "sqlclean-lint"
+version.workspace = true
+description = "SQLClean's lint engine over SQLQuack, for the built-in Rules that read its syntax trees."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+# Each dialect's lint profile; a dialect left out is refused as not built in.
+[features]
+default = []
+bigquery = ["native-parsers", "sqlquack-parse/bigquery", "sqlquack-semantics/bigquery"]
+databricks = ["native-parsers", "sqlquack-parse/databricks", "sqlquack-semantics/databricks"]
+duckdb = ["shared-statements", "sqlquack-semantics/duckdb"]
+postgres = ["native-parsers", "shared-parser", "sqlquack-parse/postgres", "sqlquack-semantics/postgres"]
+snowflake = ["shared-statements", "sqlquack-semantics/snowflake"]
+sqlite = ["shared-statements", "sqlquack-semantics/sqlite"]
+# What several dialects' profiles share: their own strict parsers, the shared tokenizer, and the
+# shared statement parser.
+native-parsers = []
+shared-parser = []
+shared-statements = ["shared-parser"]
+
+[dependencies]
+rayon.workspace = true
+sqlclean-rules.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlquack-parse.workspace = true
+sqlquack-semantics.workspace = true
+sqlquack-syntax.workspace = true
+sqlquack-tokenize.workspace = true
+
+[dev-dependencies]
+# The tests lint every dialect.
+sqlclean-lint = { workspace = true, features = [
+  "bigquery",
+  "databricks",
+  "duckdb",
+  "postgres",
+  "snowflake",
+  "sqlite",
+] }
+
+[lints]
+workspace = true

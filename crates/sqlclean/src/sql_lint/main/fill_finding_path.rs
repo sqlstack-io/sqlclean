@@ -3,5 +3,5 @@
 /// `remediation` with the path placeholder of a printed exception entry replaced by `path`.
 #[must_use]
 pub fn fill_finding_path(remediation: &str, path: &str) -> String {
-    sqlquack_lint::fill_finding_path(remediation, path)
+    sqlclean_lint::fill_finding_path(remediation, path)
 }

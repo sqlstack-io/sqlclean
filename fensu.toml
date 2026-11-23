@@ -46,7 +46,7 @@ reason = "Integration surface: SQLBuild folds token texts for its fingerprints t
 [[targets.rust.rule_exceptions]]
 rule = "FPRSL105"
 path = "crates/sqlclean/src/sql_tokens/main/projection_spans.rs"
-reason = "Integration surface: SQLBuild reads projection spans through this entry; SQLQuack's lint engine has its own copy."
+reason = "Integration surface: SQLBuild reads projection spans through this entry; the lint engine has its own copy."
 
 [targets.rust.rule_options.FPRSR311]
 # `skill/` is the agent skill the `sqlclean skills` command embeds; scripts.generate_docs_skill writes its references.

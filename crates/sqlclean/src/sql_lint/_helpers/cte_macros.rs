@@ -2,8 +2,9 @@
 
 use std::collections::BTreeSet;
 
+use sqlquack_syntax::Dialect;
 use sqlquack_syntax::tokens::models::TokenType;
-use sqlquack_syntax::{Dialect, LosslessToken, TokenKind};
+use sqlquack_tokenize::{LosslessToken, TokenKind};
 
 use crate::constants::INTERPOLATION_PLACEHOLDER_PREFIX;
 

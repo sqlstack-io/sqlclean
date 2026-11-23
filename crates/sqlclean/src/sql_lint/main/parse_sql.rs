@@ -8,5 +8,5 @@ pub fn parse_sql(
     dialect: &str,
     max_function_call_depth: Option<usize>,
 ) -> Result<ParsedSql, String> {
-    sqlquack_lint::parse_sql(sql, dialect, max_function_call_depth)
+    sqlclean_lint::parse_sql(sql, dialect, max_function_call_depth)
 }

@@ -1,6 +1,6 @@
-//! The lint request, response and parse types, which SQLQuack's lint engine defines.
+//! The lint request, response and parse types, which the lint engine defines.
 
-use sqlquack_lint::lint::models as lint;
+use sqlclean_lint::lint::models as lint;
 
 /// SQL text tokenized and parsed under one dialect by SQLQuack.
 pub type ParsedSql = lint::ParsedSql;

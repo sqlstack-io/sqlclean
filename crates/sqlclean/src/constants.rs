@@ -1,6 +1,6 @@
-//! The placeholders hosts write for template code, the same values SQLQuack's lint engine reads.
+//! The placeholders hosts write for template code, the same values the lint engine reads.
 
-use sqlquack_lint::constants as lint;
+use sqlclean_lint::constants as lint;
 
 /// The configuration file remediation text names when the request does not name one.
 pub const DEFAULT_CONFIG_FILE: &str = lint::DEFAULT_CONFIG_FILE;
