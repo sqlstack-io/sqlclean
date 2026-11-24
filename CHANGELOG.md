@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/sqlstack-io/sqlclean/compare/v0.12.0...v0.12.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **rules:** read unparenthesised VALUES and UNPIVOT aliases as relations ([#100](https://github.com/sqlstack-io/sqlclean/issues/100)) ([8400d63](https://github.com/sqlstack-io/sqlclean/commit/8400d639464305ba78812cefaf2371c93df00e48))
+
 ## [0.12.0](https://github.com/sqlstack-io/sqlclean/compare/v0.11.1...v0.12.0) (2026-11-23)
 
 
