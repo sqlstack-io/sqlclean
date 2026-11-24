@@ -1,23 +1,22 @@
-//! `redundant_self_aliases`: SQLCLEAN016's columns aliased to their own name.
+//! `redundant_self_aliases`: SQLCLEAN016's columns aliased to an exact copy of their name.
 
 use sqlquack_syntax::Expression;
 use sqlquack_syntax::expressions::names::models::Identifier;
 use sqlquack_syntax::tokens::models::Span;
 
 use crate::models::{RuleFinding, RuleInput};
-use crate::names::main::resolved::resolved;
 use crate::trees::main::selects::selects;
 
-/// The `AS name` after a column of the same resolved name, from the end of the column.
+/// The `AS name` copying its column's name exactly, case and quoting included, on every dialect.
 pub fn redundant_self_aliases(input: &RuleInput<'_>) -> Vec<RuleFinding> {
     selects(input)
         .flat_map(|select| &select.expressions)
-        .filter_map(|item| self_alias(input, item))
+        .filter_map(self_alias)
         .map(|span| RuleFinding { span, fix: None })
         .collect()
 }
 
-fn self_alias(input: &RuleInput<'_>, item: &Expression) -> Option<Span> {
+fn self_alias(item: &Expression) -> Option<Span> {
     let Expression::Alias(alias) = item else {
         return None;
     };
@@ -30,7 +29,7 @@ fn self_alias(input: &RuleInput<'_>, item: &Expression) -> Option<Span> {
         _ => return None,
     };
     let (column, named): (Span, Span) = (written?, alias.alias.span?);
-    let same: bool = resolved(&input.dialect, name) == resolved(&input.dialect, &alias.alias);
+    let same: bool = name.name == alias.alias.name && name.quoted == alias.alias.quoted;
     same.then(|| Span::new(column.end, named.end, named.line, named.column))
 }
 

@@ -2,6 +2,7 @@
 
 use crate::models::{RuleFinding, RuleInput};
 use crate::relations::_helpers::references::references;
+use crate::relations::_helpers::unqualified::{is_macro_parameter, is_merged, using_columns};
 
 /// The unqualified column references of scopes that read several relations.
 pub fn unqualified_columns(input: &RuleInput<'_>) -> Vec<RuleFinding> {
@@ -19,10 +20,14 @@ pub fn unqualified_columns(input: &RuleInput<'_>) -> Vec<RuleFinding> {
             if sources <= 1 {
                 continue;
             }
+            let merged: Vec<&str> = using_columns(scope.select);
             found.extend(
                 references(input, &scope)
                     .unqualified
                     .into_iter()
+                    .filter(|column| {
+                        !is_merged(&merged, column) && !is_macro_parameter(input, column)
+                    })
                     .filter_map(|column| column.name.span.or(column.span))
                     .map(|span| RuleFinding { span, fix: None }),
             );

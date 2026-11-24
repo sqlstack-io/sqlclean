@@ -28,7 +28,7 @@ Run `sqlclean rules <CODE>` for a Rule's remediation.
 | `SQLCLEAN013` | DISTINCT is written as though it were a function | No | Safe |
 | `SQLCLEAN014` | Predicate compares identical constant values | No | — |
 | `SQLCLEAN015` | Empty statement follows another terminator | No | Safe |
-| `SQLCLEAN016` | Expression is aliased to its existing name | No | — |
+| `SQLCLEAN016` | Expression is aliased to an exact copy of its name | No | — |
 | `SQLCLEAN017` | Row count uses a constant expression | No | Safe |
 | `SQLCLEAN018` | ROW_NUMBER has no deterministic ordering | Yes | — |
 | `SQLCLEAN019` | NOT IN list contains NULL and can reject every row | Yes | — |

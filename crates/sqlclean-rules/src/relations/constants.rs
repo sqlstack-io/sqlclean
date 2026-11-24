@@ -11,18 +11,19 @@ pub(crate) const CONTEXT_VALUES: [&str; 8] = [
     "CURRENT_TIMESTAMP",
     "CURRENT_USER",
 ];
-/// Calls whose first argument may be a date part written as a bare word.
-pub(crate) const DATE_PART_CALLS: [&str; 10] = [
-    "DATEADD",
-    "DATEDIFF",
-    "DATE_PART",
-    "DATEPART",
-    "TIMEADD",
-    "TIMEDIFF",
-    "TIMESTAMPADD",
-    "TIMESTAMPDIFF",
-    "TRY_DATEADD",
-    "TRY_DATEDIFF",
+/// Calls with an argument that may be a date part written as a bare word, and its position.
+pub(crate) const DATE_PART_CALLS: [(&str, usize); 11] = [
+    ("DATEADD", 0),
+    ("DATEDIFF", 0),
+    ("DATE_PART", 0),
+    ("DATEPART", 0),
+    ("LAST_DAY", 1),
+    ("TIMEADD", 0),
+    ("TIMEDIFF", 0),
+    ("TIMESTAMPADD", 0),
+    ("TIMESTAMPDIFF", 0),
+    ("TRY_DATEADD", 0),
+    ("TRY_DATEDIFF", 0),
 ];
 /// The name of a star read as a column.
 pub(crate) const WILDCARD: &str = "*";

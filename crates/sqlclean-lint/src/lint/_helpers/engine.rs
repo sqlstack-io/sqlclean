@@ -92,7 +92,7 @@ pub(super) const CONSECUTIVE_SEMICOLON: LintRuleMetadata = LintRuleMetadata {
 };
 pub(super) const REDUNDANT_SELF_ALIAS: LintRuleMetadata = LintRuleMetadata {
     code: "SQLCLEAN016",
-    message: "Expression is aliased to its existing name",
+    message: "Expression is aliased to an exact copy of its name",
     remediation: "Remove the self-alias when the inferred output identity remains stable.",
 };
 pub(super) const COUNT_ONE: LintRuleMetadata = LintRuleMetadata {

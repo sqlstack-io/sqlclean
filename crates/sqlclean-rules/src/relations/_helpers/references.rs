@@ -108,7 +108,9 @@ fn not_columns(select: &Select) -> NotColumns<'_> {
                     .extend(lambda.parameters.iter().map(|name| name.name.as_str()));
                 None
             }
-            Expression::Function(call) if takes_date_part(&call.name) => call.args.first(),
+            Expression::Function(call) => {
+                date_part_argument(&call.name).and_then(|at| call.args.get(at))
+            }
             _ => None,
         };
         if let Some(Expression::Column(column)) = root {
@@ -187,8 +189,10 @@ pub(crate) fn clause_nodes(select: &Select) -> Vec<&Expression> {
     roots.into_iter().flat_map(|root| root.dfs()).collect()
 }
 
-fn takes_date_part(name: &str) -> bool {
+/// The position of the argument of call `name` that may be a date part written as a bare word.
+fn date_part_argument(name: &str) -> Option<usize> {
     DATE_PART_CALLS
         .iter()
-        .any(|known| known.eq_ignore_ascii_case(name))
+        .find(|(known, _)| known.eq_ignore_ascii_case(name))
+        .map(|(_, position)| *position)
 }

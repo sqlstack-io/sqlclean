@@ -5,5 +5,6 @@ pub(crate) mod mentions;
 pub(crate) mod references;
 pub(crate) mod rejections;
 pub(crate) mod styles;
+pub(crate) mod unqualified;
 pub(crate) mod unread;
 pub(crate) mod visibility;
