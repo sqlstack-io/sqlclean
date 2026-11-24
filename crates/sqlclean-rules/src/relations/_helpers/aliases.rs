@@ -45,11 +45,14 @@ pub(crate) fn unused_aliases(scope: &QueryScope<'_>, select: &Expression) -> Vec
     found
 }
 
+/// Aliases written in a scope, leaving out bare VALUES (not every dialect places their alias) and UNPIVOT (found with the wrapped ones).
 fn written_aliases<'a>(scope: &QueryScope<'a>) -> Vec<WrittenAlias<'a>> {
     let mut found: Vec<WrittenAlias<'a>> = Vec::new();
     for relation in &scope.relations {
         let item: &'a Expression = relation.item;
-        if has_column_aliases(item) {
+        if has_column_aliases(item)
+            || matches!(item, Expression::Values(_) | Expression::Unpivot(_))
+        {
             continue;
         }
         if let Expression::Lateral(lateral) = item {
